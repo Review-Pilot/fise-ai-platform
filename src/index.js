@@ -2,7 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
- * Release: same-origin srcdoc dashboard embedding.
+ * Release: support handoff and unified chatbot launcher.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -836,6 +836,40 @@ async function saveAssistantReply(env, context) {
   await env.DB.batch(statements);
 }
 
+function finalizeAssistantReply(rawReply, bot, userMessage = "") {
+  const raw = String(rawReply || "");
+  const leadEnabled = Boolean(growthAccess(bot) && Number(bot.lead_capture_enabled));
+  const requestedLead = /\[\[FISE_LEAD_FORM\]\]/i.test(raw);
+  const teamOffer = /\[\[FISE_TEAM_OFFER\]\]/i.test(raw);
+  let reply = raw.replace(/\s*\[\[FISE_(?:LEAD_FORM|TEAM_OFFER)\]\]\s*/gi, "").trim();
+
+  if (teamOffer) {
+    return {
+      reply: "I'm unable to help with that. If you would like, I can connect you with our support team.",
+      showLeadForm: false,
+      supportFallback: true
+    };
+  }
+
+  const internalReference = /(?:files? (?:you|the visitor|we) (?:uploaded|provided)|uploaded files?|source files?|scanned (?:files?|documents?|pages?)|knowledge base|training data|missing documents?)/i.test(reply);
+  const unavailableWording = /(?:\bI (?:do not|don't|cannot|can't) have\b|\bI (?:could not|couldn't) find\b|\b(?:information|details|pricing|prices?) (?:is|are) not (?:available|provided|listed|included)\b)/i.test(reply);
+  const supportFallback = internalReference || unavailableWording;
+  if (supportFallback) {
+    const pricingQuestion = /\b(?:price|prices|pricing|plan|plans|cost|costs|fee|fees|rate|rates)\b/i.test(String(userMessage || ""));
+    const contactLink = raw.match(/\[([^\]]*(?:contact|support)[^\]]*)\]\((https?:\/\/[^\s)]+)\)/i);
+    reply = pricingQuestion
+      ? "For **pricing information**, please contact our support team."
+      : "I'm unable to assist with that. Please contact our support team for help.";
+    if (contactLink) reply += `\n\n[Contact support](${contactLink[2]})`;
+  }
+
+  return {
+    reply: reply || "I'm unable to assist with that. Please contact our support team for help.",
+    showLeadForm: Boolean(leadEnabled && (requestedLead || supportFallback)),
+    supportFallback
+  };
+}
+
 function streamCachedReply(reply, conversationId, sources, showLeadForm, headers) {
   return new Response([
     ndjson({ type: "meta", conversation_id: conversationId, cached: true }),
@@ -864,7 +898,6 @@ function openAIStreamResponse(openaiResponse, env, context, headers) {
   const stream = new ReadableStream({
     async start(controller) {
       let buffer = "";
-      let visibleBuffer = "";
       let streamedText = "";
       let completed = null;
       const send = (value) => controller.enqueue(encoder.encode(ndjson(value)));
@@ -884,12 +917,6 @@ function openAIStreamResponse(openaiResponse, env, context, headers) {
             try { event = JSON.parse(payload); } catch { continue; }
             if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
               streamedText += event.delta;
-              visibleBuffer += event.delta;
-              if (visibleBuffer.length > 32) {
-                const safePart = visibleBuffer.slice(0, -32);
-                visibleBuffer = visibleBuffer.slice(-32);
-                send({ type: "delta", delta: safePart });
-              }
             } else if (event.type === "response.completed" && event.response) {
               completed = event.response;
             } else if (event.type === "response.failed" || event.type === "error") {
@@ -901,14 +928,13 @@ function openAIStreamResponse(openaiResponse, env, context, headers) {
 
         const rawReply = outputText(completed || {}) || streamedText;
         if (!rawReply.trim()) throw new Error("The assistant returned an empty answer");
-        const showLeadForm = growthAccess(context.bot) && Number(context.bot.lead_capture_enabled) && /\[\[FISE_LEAD_FORM\]\]/i.test(rawReply);
-        const reply = rawReply.replace(/\s*\[\[FISE_(?:LEAD_FORM|TEAM_OFFER)\]\]\s*/gi, "").trim() || "Please share your details and the team will help you directly.";
-        const alreadySent = streamedText.slice(0, Math.max(0, streamedText.length - visibleBuffer.length));
-        const remaining = reply.startsWith(alreadySent) ? reply.slice(alreadySent.length) : "";
-        if (remaining) send({ type: "delta", delta: remaining });
-        const sources = await citedSources(env, context.bot.id, citedFileIds(completed || {}));
-        await saveAssistantReply(env, { ...context, reply, sources, usage: completed?.usage || {} });
-        send({ type: "done", reply, conversation_id: context.conversationId, sources, show_lead_form: Boolean(showLeadForm), cached: false });
+        const finalized = finalizeAssistantReply(rawReply, context.bot, context.userMessage || "");
+        const reply = finalized.reply;
+        if (reply) send({ type: "delta", delta: reply });
+        const cited = await citedSources(env, context.bot.id, citedFileIds(completed || {}));
+        const sources = finalized.supportFallback ? [] : cited;
+        await saveAssistantReply(env, { ...context, reply, sources, cacheHash: finalized.showLeadForm ? "" : context.cacheHash, usage: completed?.usage || {} });
+        send({ type: "done", reply, conversation_id: context.conversationId, sources, show_lead_form: finalized.showLeadForm, cached: false });
       } catch (error) {
         console.error("OpenAI streaming error", error);
         send({ type: "error", error: "The assistant could not answer right now. Please try again." });
@@ -1002,7 +1028,7 @@ async function chatResponse(request, env) {
   `).bind(crypto.randomUUID(), conversationId, recordedMessage, now).run();
 
   const lastAssistant = [...history].reverse().find((item) => item.role === "assistant")?.content || "";
-  if (growthAccess(bot) && Number(bot.lead_capture_enabled) && affirmative(message) && /speak with (?:someone|a member) from (?:our|the) team/i.test(lastAssistant)) {
+  if (growthAccess(bot) && Number(bot.lead_capture_enabled) && affirmative(message) && /(?:speak with (?:someone|a member) from (?:our|the) team|connect you with (?:our|the) support team|contact (?:our|the) support team)/i.test(lastAssistant)) {
     const reply = "Of course — share your details below and a member of the team can contact you.";
     await saveAssistantReply(env, { bot, conversationId, pageUrl, reply });
     return json({ reply, conversation_id: conversationId, sources: [], show_lead_form: true }, 200, corsHeaders(auth.origin));
@@ -1012,7 +1038,7 @@ async function chatResponse(request, env) {
   const normalizedQuestion = message.toLowerCase().replace(/\s+/g, " ").trim();
   const popularMatch = !attachmentId && history.length === 0 && parseQuestions(bot.popular_questions_json)
     .some((question) => question.toLowerCase().replace(/\s+/g, " ").trim() === normalizedQuestion);
-  const cacheHash = popularMatch ? await sha256(`${bot.id}|${normalizedQuestion}|${bot.answer_length}|${bot.formality}`) : "";
+  const cacheHash = popularMatch ? await sha256(`support-handoff-v2|${bot.id}|${normalizedQuestion}|${bot.answer_length}|${bot.formality}`) : "";
   if (cacheHash) {
     const cached = await env.DB.prepare(`
       SELECT reply,sources_json FROM response_cache
@@ -1036,11 +1062,11 @@ async function chatResponse(request, env) {
     "Use clean business writing. Ignore irrelevant slogans, jokes, slang, signatures, navigation clutter and noisy fragments found in source pages.",
     "Format the answer for easy scanning: use two or three short paragraphs, blank lines between distinct points, and bullets only when they improve clarity.",
     "Highlight one to three genuinely important phrases with Markdown bold using **double asterisks**. Do not overuse bold.",
-    "Do not invent prices, policies, features or contact details. If the answer is not available, say so briefly and direct the visitor to the business contact page.",
-    "When a relevant website source is available, end with at most one useful Markdown link in the form [Page name](https://example.com/page).",
+    "Do not invent prices, policies, features or contact details. Never mention the knowledge base, training data, scans, uploaded files, source files or missing documents to the visitor. Never say 'I do not have that information', 'I don't have specific details', 'I could not find that', or similar wording.",
+    "For pricing questions: if exact prices are available in the business information, state them accurately and link to the pricing page. If exact pricing is unavailable, say 'For pricing information, please contact our support team.' Do not guess. For any other request you cannot answer confidently, say 'I'm unable to assist with that. Please contact our support team for help.' When a relevant website support, contact or pricing page is available, include at most one useful Markdown link in the form [Page name](https://example.com/page).",
     growthAccess(bot) && Number(bot.lead_capture_enabled)
-      ? "Lead capture is an important goal. For contact support, a quote, callback, sales help or human assistance, answer briefly and end with [[FISE_LEAD_FORM]]. For a completely unrelated question such as weather, sport, personal favourites or general trivia, say: 'I’m not sure about that. Would you like to speak with someone from our team?' and end with [[FISE_TEAM_OFFER]]. Do not immediately show the form for an unrelated question; wait for the visitor to agree. Never display or explain either marker."
-      : "If the visitor asks for human help, direct them briefly to the business contact page.",
+      ? "Lead capture is an important goal. For unavailable pricing, missing business information, contact support, a quote, callback, sales help or human assistance, answer briefly and end with [[FISE_LEAD_FORM]] so the support survey opens and is logged as a lead. For a completely unrelated or useless question such as personal preferences, weather, sport or general trivia, say exactly: 'I'm unable to help with that. If you would like, I can connect you with our support team.' and end with [[FISE_TEAM_OFFER]]. Do not immediately show the survey for an unrelated question; wait for the visitor to agree. Never display or explain either marker."
+      : "If exact pricing is unavailable or the visitor asks for information you cannot answer, direct them briefly to the business support or contact page. For a completely unrelated question, say: 'I'm unable to help with that. Please contact our support team if you need assistance.'",
     bot.instructions || ""
   ].filter(Boolean).join("\n");
 
@@ -1070,7 +1096,7 @@ async function chatResponse(request, env) {
     return json({ error: "The assistant could not answer right now. Please try again." }, 502, corsHeaders(auth.origin));
   }
   if (wantsStream && openaiResponse.ok && openaiResponse.body) {
-    return openAIStreamResponse(openaiResponse, env, { bot, conversationId, pageUrl, attachmentId, cacheHash }, corsHeaders(auth.origin));
+    return openAIStreamResponse(openaiResponse, env, { bot, conversationId, pageUrl, attachmentId, cacheHash, userMessage: message }, corsHeaders(auth.origin));
   }
   try {
     data = await openaiResponse.json().catch(() => ({}));
@@ -1087,11 +1113,12 @@ async function chatResponse(request, env) {
     console.error("OpenAI empty response", data.status, JSON.stringify(data.incomplete_details || {}));
     return json({ error: "The assistant could not complete that answer. Please try once more." }, 502, corsHeaders(auth.origin));
   }
-  const showLeadForm = growthAccess(bot) && Number(bot.lead_capture_enabled) && /\[\[FISE_LEAD_FORM\]\]/i.test(rawReply);
-  const reply = rawReply.replace(/\s*\[\[FISE_(?:LEAD_FORM|TEAM_OFFER)\]\]\s*/gi, "").trim() || "Please share your details and the team will help you directly.";
-  const sources = await citedSources(env, bot.id, citedFileIds(data));
-  await saveAssistantReply(env, { bot, conversationId, pageUrl, reply, usage: data.usage || {}, cacheHash, sources });
-  return json({ reply, conversation_id: conversationId, sources, show_lead_form: Boolean(showLeadForm) }, 200, corsHeaders(auth.origin));
+  const finalized = finalizeAssistantReply(rawReply, bot, message);
+  const reply = finalized.reply;
+  const cited = await citedSources(env, bot.id, citedFileIds(data));
+  const sources = finalized.supportFallback ? [] : cited;
+  await saveAssistantReply(env, { bot, conversationId, pageUrl, reply, usage: data.usage || {}, cacheHash: finalized.showLeadForm ? "" : cacheHash, sources });
+  return json({ reply, conversation_id: conversationId, sources, show_lead_form: finalized.showLeadForm }, 200, corsHeaders(auth.origin));
 }
 
 function fileExtension(name) {
@@ -1568,7 +1595,7 @@ function widgetBootstrapV2() {
         .callout:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(15,23,42,.22)}
         .launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:68px;height:68px;display:grid;place-items:center;border:3px solid ${borderColour};border-radius:21px;color:#fff;background:${colour};box-shadow:0 18px 42px ${colour}55,0 6px 18px rgba(15,23,42,.18);cursor:pointer;transition:transform .18s,box-shadow .18s}
         .launcher:hover{transform:translateY(-3px) scale(1.025);box-shadow:0 22px 48px ${colour}65,0 8px 20px rgba(15,23,42,.2)}
-        .launcher svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+        .launcher svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
         .panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid rgba(203,213,225,.9);border-radius:24px;background:#fff;box-shadow:0 34px 95px rgba(15,23,42,.3);transition:width .2s,height .2s,inset .2s}
         .panel>*{min-width:0;max-width:100%}
         .panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(480px,calc(100vw - 36px));height:min(740px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}
@@ -1592,7 +1619,7 @@ function widgetBootstrapV2() {
         @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:8px 10px 10px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr)}.question:nth-child(n+5){display:none}.identity{justify-content:flex-start;gap:7px}.generic-chat-icon{width:34px;height:34px}.head strong{font-size:13px}.head small{max-width:150px}.history-trigger{left:10px;min-width:116px;transform:none}.history-trigger:hover{transform:translateY(-1px)}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}.quick-menu{right:-39px}}
       </style>
       <div class="callout">Need help with anything? 👋</div>
-      <button class="launcher" type="button" aria-label="Open chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 18.5 3 21v-5.2A8.2 8.2 0 0 1 2 12C2 6.9 6.5 3 12 3s10 3.9 10 9-4.5 9-10 9a11 11 0 0 1-5.5-1.5Z"/><path d="M7.5 12h.01M12 12h.01M16.5 12h.01"/></svg></button>
+      <button class="launcher" type="button" aria-label="Open chat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg></button>
       <section class="panel ${safe(config.default_size || "standard")}" aria-label="Chat with ${safe(config.name)}">
         <header class="head">
           <button class="history-trigger" type="button" title="Chat History" aria-label="Chat History"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg><span class="history-label">Chat History</span></button>
@@ -1908,7 +1935,7 @@ function serveWidgetTest(request) {
   const autoOpen = embed
     ? `<script>(()=>{let attempts=0;const timer=setInterval(()=>{attempts+=1;const host=document.getElementById('fise-chat-widget');const root=host?.shadowRoot;const launcher=root?.querySelector('.launcher');const panel=root?.querySelector('.panel');if(launcher&&panel){launcher.click();panel.classList.remove('standard','large');panel.classList.add('fullscreen');clearInterval(timer)}else if(attempts>120){clearInterval(timer)}},100)})();</script>`
     : "";
-  const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:80px 0}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}</style></head><body>${intro}<script src="${escapeHtml(origin)}/widget.js?v=20260824-656" data-chatbot-key="${escapeHtml(key)}"></script>${autoOpen}</body></html>`;
+  const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:80px 0}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}</style></head><body>${intro}<script src="${escapeHtml(origin)}/widget.js?v=20260829-support-1" data-chatbot-key="${escapeHtml(key)}"></script>${autoOpen}</body></html>`;
   const scriptPolicy = embed ? "'self' 'unsafe-inline'" : "'self'";
   const framePolicy = embed ? "'self'" : "'none'";
   return new Response(content, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": `default-src 'self'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors ${framePolicy}; base-uri 'none'`, "permissions-policy": "microphone=(self)", "x-content-type-options": "nosniff", "x-frame-options": embed ? "SAMEORIGIN" : "DENY" } });
@@ -4921,7 +4948,7 @@ function dashboardPage(
                 </div>
                 <code class="embed-code"
                   >&lt;script
-                  src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260824-656&quot;
+                  src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260829-support-1&quot;
                   data-chatbot-key=&quot;${escapeHtml(bot.public_key)}&quot;&gt;&lt;/script&gt;</code
                 >
               </div>`
