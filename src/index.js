@@ -6640,6 +6640,7 @@ async function chatbotPurgeMaintenance(request, env) {
   if (String(form.get("action") || "") !== "preview")
     return json({ error: "Preview only" }, 400);
 
+  try {
   const emailPlaceholders = CHATBOT_PURGE_EMAILS.map(() => "?").join(",");
   const accounts = await env.DB.prepare(
     `SELECT u.id AS user_id,u.email,c.id AS chatbot_id,c.name,c.public_key,
@@ -6704,6 +6705,21 @@ async function chatbotPurgeMaintenance(request, env) {
     related_counts: relatedCounts,
     foreign_keys: foreignKeys,
   });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        mode: "read-only-error",
+        message: String(error?.message || error || "Unknown preview error"),
+      }),
+      {
+        status: 500,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      },
+    );
+  }
 }
 
 export default {
