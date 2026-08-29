@@ -2,6 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
+ * Release: email verification confirmation.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
