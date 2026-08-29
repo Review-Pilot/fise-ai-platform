@@ -2,7 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
- * Release: trusted cross-origin dashboard embedding.
+ * Release: trusted cross-origin dashboard frames.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -4985,7 +4985,10 @@ function dashboardPage(
 
 const BASE_CONTENT_SECURITY_POLICY =
   "default-src 'self'; style-src 'unsafe-inline'; script-src 'self'; " +
-  "img-src 'self' data:; base-uri 'none'; form-action 'self'";
+  "img-src 'self' data:; " +
+  "frame-src 'self' https://fise-ai-platform.seb-slabbert1.workers.dev " +
+  "https://*.seb-slabbert1.workers.dev; " +
+  "base-uri 'none'; form-action 'self'";
 
 function htmlResponse(content, status = 200, extraHeaders = {}) {
   return new Response(content, {
