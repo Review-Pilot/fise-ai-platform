@@ -2910,6 +2910,26 @@ const requestedStyles = html`
     cursor:pointer; }
   .account-dialog small { display:block; margin-top:16px; color:#788493;
     line-height:1.45; }
+  .account-access-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+    margin:0 0 20px; padding:5px; border-radius:12px; background:#f0f4f8; }
+  .account-access-tab { min-height:40px; padding:0 8px; border:0; border-radius:9px;
+    color:#536174; background:transparent; cursor:pointer; font-size:12px;
+    font-weight:850; }
+  .account-access-tab.active { color:#071126; background:#fff;
+    box-shadow:0 2px 8px rgba(7,17,38,.09); }
+  .account-access-panel { display:none; }
+  .account-access-panel.active { display:block; }
+  .account-field { margin-top:13px; }
+  .password-field { position:relative; }
+  .password-field input { padding-right:72px; }
+  .password-toggle { position:absolute; right:8px; bottom:8px; min-height:38px;
+    padding:0 10px; border:0; border-radius:8px; color:#1769e0;
+    background:#eef5ff; cursor:pointer; font-size:12px; font-weight:850; }
+  .account-setup { display:none; }
+  .account-setup.show { display:block; }
+  .account-standard.hide { display:none; }
+  .account-note { margin:14px 0 0; padding:12px 13px; border-radius:10px;
+    color:#536174; background:#f5f7fa; font-size:12px; line-height:1.5; }
   .account-sent { display:none; margin:0 0 18px; padding:13px 14px;
     border:1px solid #a9d9bd; border-radius:11px; color:#167044;
     background:#effaf3; font-size:14px; line-height:1.45; }
@@ -2973,6 +2993,12 @@ const requestedStyles = html`
   .profile-detail small { display:block; margin-bottom:6px; color:#748092;
     font-size:12px; font-weight:700; }
   .profile-detail strong { overflow-wrap:anywhere; }
+  .subscription-status { display:inline-flex; align-items:center; gap:7px; }
+  .subscription-status::before { content:""; width:9px; height:9px;
+    border-radius:50%; background:#b42318; }
+  .subscription-status.active { color:#167044; }
+  .subscription-status.active::before { background:#22a45d; }
+  .subscription-status.none,.subscription-status.inactive { color:#b42318; }
   .profile-testing-plan { margin-top:18px; padding:20px; border:1px solid #cfe0f5;
     border-radius:14px; background:#f3f8ff; }
   .profile-testing-plan > strong { display:block; margin-bottom:5px; font-size:17px; }
@@ -3136,11 +3162,11 @@ function referenceFooter() {
 }
 
 function accountModal() {
-  return html`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><h2 id="account-title">Sign in to Fise AI</h2><p>Enter your email address and we will send you a secure sign-in link for your profile, chatbot settings and customer dashboard.</p><div class="account-sent" id="account-sent">Check your email and open the secure Fise AI sign-in link. After verification, close that window and return here.</div><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a sign-in link</button></form><small>Use the same email address whenever you return to Fise AI.</small></section></div>`;
+  return html`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field"><label for="register-username">Username</label><input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"></div><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email or username</label><input id="signin-identifier" name="identifier" autocomplete="username" maxlength="254" required placeholder="Email or username"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a one-time link</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a username and password before continuing.</p><form method="post" action="/api/account/credentials"><label for="setup-username">Username</label><input id="setup-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div></div></section></div>`;
 }
 
 function profileDrawer() {
-  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>Temporary testing control. Switch plans freely without payment while Fise AI is being tested.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Plan to test<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply test plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
+  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbot</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and secure sign-in details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Password</small><strong id="profile-password">Protected and hidden</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Subscription status</small><strong class="subscription-status none" id="profile-subscription-status">None</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbot</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>Temporary testing control. Switch plans freely without payment while Fise AI is being tested.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Plan to test<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply test plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
 }
 
 function prepareReferenceBody(body, c) {
@@ -3237,10 +3263,21 @@ function referenceJavascript() {
     const demoSignin=document.getElementById('demo-signin');
     const modal=document.getElementById('account-modal');
     const email=document.getElementById('account-email');
+    const accountStandard=document.getElementById('account-standard');
+    const accountSetup=document.getElementById('account-setup');
     const profile=document.getElementById('profile-layer');
     let authenticated=false;
     let profileLoaded=false;
     function openAccount(){modal?.classList.add('open');modal?.setAttribute('aria-hidden','false');setTimeout(()=>email?.focus(),30)}
+    function showAccountView(name){
+      accountStandard?.classList.toggle('hide',name==='setup');
+      accountSetup?.classList.toggle('show',name==='setup');
+      document.querySelectorAll('[data-account-view]').forEach((button)=>button.classList.toggle('active',button.dataset.accountView===name));
+      document.querySelectorAll('[data-account-panel]').forEach((panel)=>panel.classList.toggle('active',panel.dataset.accountPanel===name));
+      openAccount();
+      const focusTarget=name==='setup'?document.getElementById('setup-username'):document.querySelector('[data-account-panel="'+name+'"] input');
+      setTimeout(()=>focusTarget?.focus(),30);
+    }
     function closeAccount(){modal?.classList.remove('open');modal?.setAttribute('aria-hidden','true')}
     function closeProfile(){profile?.classList.remove('open');profile?.setAttribute('aria-hidden','true')}
     function selectProfileTab(name){
@@ -3329,11 +3366,16 @@ function referenceJavascript() {
       if(!response.ok)throw new Error('Profile unavailable');
       const data=await response.json();
       profileText('profile-email',data.account?.email);
-      profileText('profile-name',data.account?.name||'Not added yet');
+      profileText('profile-name',data.account?.username||'Not added yet');
+      profileText('profile-password',data.account?.password_set?'Set and protected':'Not set');
       profileText('profile-created',data.account?.created_at?new Date(data.account.created_at).toLocaleDateString():'—');
-      profileText('profile-plan',titleCase(data.subscription?.plan_code||'Starter'));
-      profileText('profile-subscription-status',titleCase(data.subscription?.status||'Active'));
-      profileText('profile-provider',titleCase(data.subscription?.provider||'Fise AI'));
+      profileText('profile-plan',data.subscription?.plan_code?titleCase(data.subscription.plan_code):'None');
+      const subscriptionStatus=document.getElementById('profile-subscription-status');
+      const displayStatus=String(data.subscription?.display_status||'None').toLowerCase();
+      profileText('profile-subscription-status',titleCase(displayStatus));
+      subscriptionStatus?.classList.remove('active','none','inactive');
+      subscriptionStatus?.classList.add(displayStatus==='active'?'active':displayStatus==='inactive'?'inactive':'none');
+      profileText('profile-provider',data.subscription?.provider?titleCase(data.subscription.provider):'None');
       const planSelect=document.getElementById('profile-plan-select');
       if(planSelect){
         const currentPlan=String(data.subscription?.plan_code||'free').toLowerCase();
@@ -3359,6 +3401,14 @@ function referenceJavascript() {
     demoSignin?.addEventListener('click',openAccount);
     document.querySelectorAll('[data-close-account]').forEach((button)=>button.addEventListener('click',closeAccount));
     document.querySelectorAll('[data-close-profile]').forEach((button)=>button.addEventListener('click',closeProfile));
+    document.querySelectorAll('[data-account-view]').forEach((button)=>button.addEventListener('click',()=>showAccountView(button.dataset.accountView)));
+    document.querySelectorAll('[data-password-toggle]').forEach((button)=>button.addEventListener('click',()=>{
+      const input=document.getElementById(button.dataset.passwordToggle);
+      if(!input)return;
+      const showing=input.type==='text';
+      input.type=showing?'password':'text';
+      button.textContent=showing?'Show':'Hide';
+    }));
     document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.addEventListener('click',()=>selectProfileTab(button.dataset.profileTab)));
     const planForm=document.getElementById('profile-plan-form');
     planForm?.addEventListener('submit',async(event)=>{
@@ -3381,6 +3431,9 @@ function referenceJavascript() {
         if(!response.ok)throw new Error(data.error||'Could not change the testing plan');
         profileText('profile-plan',titleCase(data.subscription?.plan_code||select.value));
         profileText('profile-subscription-status',titleCase(data.subscription?.status||'active'));
+        const statusNode=document.getElementById('profile-subscription-status');
+        statusNode?.classList.remove('none','inactive');
+        statusNode?.classList.add('active');
         profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
         message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||select.value)+'. No payment was charged.';
       }catch(error){
@@ -3408,7 +3461,10 @@ function referenceJavascript() {
             demoLink?.classList.remove('requires-signin');
             if(demoLock)demoLock.hidden=true;
             if(demoFrame&&demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame);
-            if(params.get('signed_in')==='1'||params.get('profile')==='1'||(!wasAuthenticated&&params.get('sent')==='1'))openProfile();
+            if(status.credentials_required){
+              closeProfile();
+              showAccountView('setup');
+            }else if(params.get('signed_in')==='1'||params.get('profile')==='1'||(!wasAuthenticated&&params.get('sent')==='1'))openProfile();
           }else{
             demoLink?.classList.add('requires-signin');
             if(demoLock)demoLock.hidden=false;
@@ -4608,6 +4664,7 @@ const MAGIC_LINK_SECONDS = 60 * 15;
 const CHATBOT_DELETE_LINK_SECONDS = 60 * 30;
 const CHATBOT_DELETE_REQUEST_LIMIT = 3;
 const DIRECT_EMAIL_LOGIN = false;
+const PASSWORD_ITERATIONS = 120000;
 
 const sharedStyles = html`
   :root { color-scheme:light; --blue:#1769e0; --blue2:#0d55bd; --dark:#102033;
@@ -4872,55 +4929,40 @@ function loginPage(message = "", isError = false, embedded = false) {
     html` <main class="wrap">
       <section class="shell">
         <div class="eyebrow">Customer platform</div>
-        <h1>Sign in to Fise AI</h1>
-        <p class="lead">
-          Enter your email address and we will send you a secure sign-in link.
-          After signing in, you will return to the Fise AI homepage and can
-          open My profile.
-        </p>
+        <h1>Access Fise AI</h1>
+        <p class="lead">Create your account the first time, or sign in using your password or a one-time email link.</p>
         ${notice}
+        <h2>First time here?</h2>
+        <form method="post" action="/api/auth/register">
+          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
+          <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+          <label for="register-username-page">Username</label><input id="register-username-page" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username" />
+          <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
+          <button class="btn full" type="submit">Create account</button>
+        </form>
+        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
+        <h2>Sign in with password</h2>
+        <form method="post" action="/api/auth/password">
+          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
+          <label for="identifier-page">Email or username</label><input id="identifier-page" name="identifier" autocomplete="username" maxlength="254" required />
+          <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
+          <button class="btn full" type="submit">Sign in with password</button>
+        </form>
+        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
+        <h2>Sign in with email</h2>
         <form method="post" action="/api/auth/request">
           ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="email">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autocomplete="email"
-            maxlength="254"
-            required
-            placeholder="you@company.com"
-          />
-          <button class="btn full" type="submit">Email me a sign-in link</button>
+          <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+          <button class="btn full" type="submit">Email me a one-time link</button>
         </form>
-        <p class="fine">
-          Use the same email address whenever you want to return to this
-          dashboard.
-        </p>
+        <p class="fine">Passwords are stored as protected one-way hashes and cannot be displayed from storage.</p>
       </section>
     </main>`,
   );
 }
 
-function verificationSuccessPage() {
-  return documentPage(
-    "Successfully verified",
-    html` <main class="wrap">
-      <section class="shell" style="text-align:center">
-        <div
-          aria-hidden="true"
-          style="width:64px;height:64px;display:grid;place-items:center;margin:0 auto 22px;border-radius:50%;color:#fff;background:var(--ok);font-size:34px;font-weight:900"
-        >
-          ✓
-        </div>
-        <div class="eyebrow">Email verified</div>
-        <h1>Successfully verified</h1>
-        <p class="lead" style="margin:0 auto">
-          You can close this window now and return to your browser.
-        </p>
-      </section>
-    </main>`,
-  );
+function verificationPage(success = true, message = "You can close this window and return to the Fise sign-in page.") {
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}.fine{margin-top:20px;font-size:12px}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p><p class="fine">This is a one-time verification window. It does not contain your Fise profile or dashboard.</p></main></body></html>`;
 }
 
 function dashboardPage(
@@ -5107,7 +5149,7 @@ function dashboardPage(
       <div class="dashboard-head">
         <div>
           <div class="eyebrow">Customer dashboard</div>
-          <h1>Your chatbots</h1>
+          <h1>Your chatbot</h1>
           <p class="muted">Signed in as ${escapeHtml(user.email)}</p>
         </div>
       </div>
@@ -5220,6 +5262,97 @@ function normalizeEmail(value) {
   return email;
 }
 
+function normalizeUsername(value) {
+  const username = String(value || "").trim().replace(/\s+/g, " ");
+  if (username.length < 3 || username.length > 40) return "";
+  if (!/^[\p{L}\p{N}._ -]+$/u.test(username)) return "";
+  return username;
+}
+
+let accountAuthSchemaPromise;
+async function ensureAccountAuthSchema(env) {
+  if (!accountAuthSchemaPromise) {
+    accountAuthSchemaPromise = (async () => {
+      const info = await env.DB.prepare("PRAGMA table_info(users)").all();
+      const columns = new Set((info.results || []).map((row) => row.name));
+      const additions = [
+        ["username", "TEXT"],
+        ["password_hash", "TEXT"],
+        ["password_salt", "TEXT"],
+        ["password_iterations", "INTEGER"],
+      ];
+      for (const [name, type] of additions) {
+        if (!columns.has(name))
+          await env.DB.prepare(`ALTER TABLE users ADD COLUMN ${name} ${type}`).run();
+      }
+      await env.DB.prepare(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_nocase ON users(username COLLATE NOCASE)",
+      ).run();
+    })().catch((error) => {
+      accountAuthSchemaPromise = null;
+      throw error;
+    });
+  }
+  return accountAuthSchemaPromise;
+}
+
+function bytesToBase64Url(bytes) {
+  let binary = "";
+  for (const value of bytes) binary += String.fromCharCode(value);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function base64UrlToBytes(value) {
+  const padded = String(value).replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(String(value).length / 4) * 4, "=");
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function passwordDigest(password, salt, iterations = PASSWORD_ITERATIONS) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    key,
+    256,
+  );
+  return bytesToBase64Url(new Uint8Array(bits));
+}
+
+async function makePasswordRecord(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return {
+    hash: await passwordDigest(password, salt),
+    salt: bytesToBase64Url(salt),
+    iterations: PASSWORD_ITERATIONS,
+  };
+}
+
+async function passwordMatches(password, user) {
+  if (!user?.password_hash || !user?.password_salt) return false;
+  const actual = await passwordDigest(
+    password,
+    base64UrlToBytes(user.password_salt),
+    Number(user.password_iterations || PASSWORD_ITERATIONS),
+  );
+  const expected = String(user.password_hash);
+  if (actual.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < actual.length; index++)
+    difference |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
+  return difference === 0;
+}
+
+function validPassword(value) {
+  const password = String(value || "");
+  return password.length >= 8 && password.length <= 128 ? password : "";
+}
+
 function dashboardReturnUrl(request, values = {}) {
   const params = new URLSearchParams();
   if (new URL(request.url).searchParams.get("embed") === "1")
@@ -5254,13 +5387,15 @@ function sameOrigin(request) {
 }
 
 async function currentUser(request, env) {
+  await ensureAccountAuthSchema(env);
   const token = cookieValue(request, SESSION_COOKIE);
   if (!token) return null;
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1000);
   return env.DB.prepare(
     `
-    SELECT users.id, users.email, users.name, users.created_at
+    SELECT users.id, users.email, users.name, users.username, users.created_at,
+      CASE WHEN users.password_hash IS NOT NULL AND users.password_hash != '' THEN 1 ELSE 0 END AS password_set
     FROM sessions JOIN users ON users.id = sessions.user_id
     WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'
   `,
@@ -5269,7 +5404,22 @@ async function currentUser(request, env) {
     .first();
 }
 
+async function createUserSession(userId, env, destination) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const nowIso = new Date().toISOString();
+  const sessionToken = randomToken();
+  const sessionHash = await hashToken(sessionToken);
+  await env.DB.prepare(
+    "INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)",
+  )
+    .bind(sessionHash, userId, nowSeconds + SESSION_SECONDS, nowIso)
+    .run();
+  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
+  return redirect(destination, { "set-cookie": cookie });
+}
+
 async function createEmailSession(email, env, destination = "/?signed_in=1") {
+  await ensureAccountAuthSchema(env);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const nowIso = new Date().toISOString();
   let user = await env.DB.prepare("SELECT id,email FROM users WHERE email = ?")
@@ -5292,15 +5442,83 @@ async function createEmailSession(email, env, destination = "/?signed_in=1") {
       .run();
   }
 
-  const sessionToken = randomToken();
-  const sessionHash = await hashToken(sessionToken);
+  return createUserSession(user.id, env, destination);
+}
+
+async function registerAccount(request, env) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  await ensureAccountAuthSchema(env);
+  const form = await request.formData();
+  const email = normalizeEmail(form.get("email"));
+  const username = normalizeUsername(form.get("username"));
+  const password = validPassword(form.get("password"));
+  const embedded = String(form.get("embed") || "") === "1";
+  if (!email || !username || !password)
+    return htmlResponse(loginPage("Enter a valid email, a 3–40 character username, and a password of at least 8 characters.", true, embedded), 400);
+  const existing = await env.DB.prepare(
+    "SELECT id,email,username,password_hash FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
+  ).bind(email, username).first();
+  if (existing)
+    return htmlResponse(loginPage(
+      existing.email === email
+        ? "An account already uses this email. Sign in with your password or one-time email link."
+        : "That username is already in use. Choose another username.",
+      true,
+      embedded,
+    ), 409);
+  const record = await makePasswordRecord(password);
+  const userId = crypto.randomUUID();
+  const now = new Date().toISOString();
   await env.DB.prepare(
-    "INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)",
-  )
-    .bind(sessionHash, user.id, nowSeconds + SESSION_SECONDS, nowIso)
-    .run();
-  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
-  return redirect(destination, { "set-cookie": cookie });
+    "INSERT INTO users (id,email,username,password_hash,password_salt,password_iterations,status,created_at,updated_at) VALUES (?,?,?,?,?,?,'active',?,?)",
+  ).bind(userId, email, username, record.hash, record.salt, record.iterations, now, now).run();
+  return createUserSession(userId, env, embedded ? "/dashboard?embed=1" : "/?profile=1");
+}
+
+async function passwordLogin(request, env) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  await ensureAccountAuthSchema(env);
+  const form = await request.formData();
+  const identifier = String(form.get("identifier") || "").trim();
+  const password = String(form.get("password") || "");
+  const embedded = String(form.get("embed") || "") === "1";
+  const user = await env.DB.prepare(
+    "SELECT id,email,username,password_hash,password_salt,password_iterations,status FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
+  ).bind(normalizeEmail(identifier), identifier).first();
+  if (!user || user.status !== "active" || !(await passwordMatches(password, user))) {
+    const legacy = user && !user.password_hash;
+    return htmlResponse(loginPage(
+      legacy
+        ? "Use the one-time email link once, then Fise will ask you to create a username and password."
+        : "The email or username and password do not match.",
+      true,
+      embedded,
+    ), 401);
+  }
+  await env.DB.prepare("UPDATE users SET updated_at=? WHERE id=?")
+    .bind(new Date().toISOString(), user.id).run();
+  return createUserSession(user.id, env, embedded ? "/dashboard?embed=1" : "/?profile=1");
+}
+
+async function saveAccountCredentials(request, env) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  const user = await currentUser(request, env);
+  if (!user) return redirect("/login");
+  const form = await request.formData();
+  const username = normalizeUsername(form.get("username"));
+  const password = validPassword(form.get("password"));
+  if (!username || !password)
+    return htmlResponse(loginPage("Choose a valid 3–40 character username and a password of at least 8 characters.", true), 400);
+  const duplicate = await env.DB.prepare(
+    "SELECT id FROM users WHERE username=? COLLATE NOCASE AND id!=? LIMIT 1",
+  ).bind(username, user.id).first();
+  if (duplicate)
+    return htmlResponse(loginPage("That username is already in use. Choose another username.", true), 409);
+  const record = await makePasswordRecord(password);
+  await env.DB.prepare(
+    "UPDATE users SET username=?,password_hash=?,password_salt=?,password_iterations=?,updated_at=? WHERE id=?",
+  ).bind(username, record.hash, record.salt, record.iterations, new Date().toISOString(), user.id).run();
+  return redirect("/?profile=1");
 }
 
 async function requestMagicLink(request, env) {
@@ -5415,10 +5633,11 @@ async function requestMagicLink(request, env) {
 }
 
 async function verifyMagicLink(request, env) {
+  await ensureAccountAuthSchema(env);
   const url = new URL(request.url);
   const token = url.searchParams.get("token") || "";
   if (token.length < 20)
-    return htmlResponse(loginPage("This sign-in link is invalid.", true), 400);
+    return htmlResponse(verificationPage(false, "This verification link is invalid. Return to the original sign-in page and request a new one."), 400);
 
   const tokenHash = await hashToken(token);
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -5429,10 +5648,7 @@ async function verifyMagicLink(request, env) {
     .first();
   if (!link || link.used_at || Number(link.expires_at) <= nowSeconds) {
     return htmlResponse(
-      loginPage(
-        "This sign-in link has expired or has already been used. Request a new one.",
-        true,
-      ),
+      verificationPage(false, "This one-time link has expired or has already been used. Return to the original sign-in page to request a new one."),
       400,
     );
   }
@@ -5445,10 +5661,7 @@ async function verifyMagicLink(request, env) {
     .run();
   if (Number(claimed.meta?.changes || 0) !== 1) {
     return htmlResponse(
-      loginPage(
-        "This sign-in link has expired or has already been used. Request a new one.",
-        true,
-      ),
+      verificationPage(false, "This one-time link has expired or has already been used. Return to the original sign-in page to request a new one."),
       400,
     );
   }
@@ -5458,14 +5671,9 @@ async function verifyMagicLink(request, env) {
     .first();
   if (!user) {
     const userId = crypto.randomUUID();
-    await env.DB.batch([
-      env.DB.prepare(
-        "INSERT INTO users (id,email,status,created_at,updated_at) VALUES (?,?,'active',?,?)",
-      ).bind(userId, link.email, nowIso, nowIso),
-      env.DB.prepare(
-        "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'manual','starter','active',?,?)",
-      ).bind(crypto.randomUUID(), userId, nowIso, nowIso),
-    ]);
+    await env.DB.prepare(
+      "INSERT INTO users (id,email,status,created_at,updated_at) VALUES (?,?,'active',?,?)",
+    ).bind(userId, link.email, nowIso, nowIso).run();
     user = { id: userId, email: link.email };
   } else {
     await env.DB.prepare("UPDATE users SET updated_at = ? WHERE id = ?")
@@ -5483,7 +5691,7 @@ async function verifyMagicLink(request, env) {
     .run();
 
   const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
-  return htmlResponse(verificationSuccessPage(), 200, {
+  return htmlResponse(verificationPage(true), 200, {
     "set-cookie": cookie,
   });
 }
@@ -5881,17 +6089,23 @@ async function accountProfile(request, env) {
       .all(),
     readWebsiteContent(env),
   ]);
+  const rawSubscriptionStatus = String(subscription?.status || "").toLowerCase();
+  const subscriptionWithDisplay = subscription
+    ? {
+        ...subscription,
+        display_status: ["active", "trialing"].includes(rawSubscriptionStatus)
+          ? "Active"
+          : "Inactive",
+      }
+    : null;
   return json({
     account: {
       email: user.email,
-      name: user.name || "",
+      username: user.username || "",
+      password_set: Boolean(Number(user.password_set || 0)),
       created_at: user.created_at || "",
     },
-    subscription: subscription || {
-      plan_code: "starter",
-      status: "active",
-      provider: "Fise AI",
-    },
+    subscription: subscriptionWithDisplay,
     chatbots: chatbotResult.results || [],
     affiliate: {
       status: "Not enrolled",
@@ -7298,14 +7512,26 @@ export default {
       if (publicWebsiteResponse) return publicWebsiteResponse;
       if (url.pathname === "/api/auth/status" && request.method === "GET") {
         const user = await currentUser(request, env);
-        return json({ authenticated: Boolean(user), email: user?.email || "" });
+        return json({
+          authenticated: Boolean(user),
+          email: user?.email || "",
+          credentials_required: Boolean(user && !Number(user.password_set || 0)),
+        });
       }
+      if (url.pathname === "/auth/complete" && request.method === "GET")
+        return htmlResponse(verificationPage(false, "This verification window has finished. You can close it and return to the original sign-in page."));
       if (url.pathname === "/api/account/profile" && request.method === "GET")
         return accountProfile(request, env);
       if (url.pathname === "/api/account/testing-plan" && request.method === "POST")
         return changeTestingPlan(request, env);
       if (url.pathname === "/api/auth/request" && request.method === "POST")
         return requestMagicLink(request, env);
+      if (url.pathname === "/api/auth/register" && request.method === "POST")
+        return registerAccount(request, env);
+      if (url.pathname === "/api/auth/password" && request.method === "POST")
+        return passwordLogin(request, env);
+      if (url.pathname === "/api/account/credentials" && request.method === "POST")
+        return saveAccountCredentials(request, env);
       if (url.pathname === "/auth/verify" && request.method === "GET")
         return verifyMagicLink(request, env);
       if (url.pathname === "/dashboard" && request.method === "GET")
