@@ -2,7 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
- * Release: embedded chatbot onboarding.
+ * Release: trusted cross-origin dashboard embedding.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -4983,6 +4983,10 @@ function dashboardPage(
   );
 }
 
+const BASE_CONTENT_SECURITY_POLICY =
+  "default-src 'self'; style-src 'unsafe-inline'; script-src 'self'; " +
+  "img-src 'self' data:; base-uri 'none'; form-action 'self'";
+
 function htmlResponse(content, status = 200, extraHeaders = {}) {
   return new Response(content, {
     status,
@@ -4990,7 +4994,7 @@ function htmlResponse(content, status = 200, extraHeaders = {}) {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       "content-security-policy":
-        "default-src 'self'; style-src 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'self'",
+        BASE_CONTENT_SECURITY_POLICY + "; frame-ancestors 'self'",
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
       "x-frame-options": "SAMEORIGIN",
@@ -4998,6 +5002,19 @@ function htmlResponse(content, status = 200, extraHeaders = {}) {
       ...extraHeaders,
     },
   });
+}
+
+function embeddedHtmlResponse(content, status = 200, extraHeaders = {}) {
+  const response = htmlResponse(content, status, {
+    ...extraHeaders,
+    "content-security-policy":
+      BASE_CONTENT_SECURITY_POLICY +
+      "; frame-ancestors 'self' " +
+      "https://fise-ai-website.seb-slabbert1.workers.dev " +
+      "https://*.seb-slabbert1.workers.dev",
+  });
+  response.headers.delete("x-frame-options");
+  return response;
 }
 
 function json(data, status = 200) {
@@ -5736,16 +5753,16 @@ async function showDashboard(request, env) {
     message = url.searchParams.get("error");
     isError = true;
   }
-  return htmlResponse(
-    dashboardPage(
-      user,
-      result.results || [],
-      new URL(request.url).origin,
-      message,
-      isError,
-      url.searchParams.get("embed") === "1",
-    ),
+  const embedded = url.searchParams.get("embed") === "1";
+  const content = dashboardPage(
+    user,
+    result.results || [],
+    new URL(request.url).origin,
+    message,
+    isError,
+    embedded,
   );
+  return embedded ? embeddedHtmlResponse(content) : htmlResponse(content);
 }
 
 function dashboardProgressJavascript() {
@@ -7056,7 +7073,7 @@ export default {
       if (url.pathname === "/demo-chat" && request.method === "GET") {
         const user = await currentUser(request, env);
         if (!user) {
-          return htmlResponse(
+          return embeddedHtmlResponse(
             `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then your chatbot dashboard will open here.</p><a href="/?open_signin=1" target="_top">Sign in</a></section></body></html>`,
           );
         }
@@ -7079,7 +7096,9 @@ export default {
         const embedded = url.searchParams.get("embed") === "1";
         if (user)
           return redirect(embedded ? "/dashboard?embed=1" : "/?profile=1");
-        return htmlResponse(loginPage("", false, embedded));
+        return embedded
+          ? embeddedHtmlResponse(loginPage("", false, true))
+          : htmlResponse(loginPage("", false, false));
       }
       // The exact public landing page contains the real same-origin platform.
       // Keep /demo as a convenient address for its embedded demo section.
