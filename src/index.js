@@ -2,7 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
- * Release: email verification confirmation.
+ * Release: embedded chatbot onboarding.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -24,7 +24,8 @@ function redirect(location) {
   return new Response(null, { status: 303, headers: { location, "cache-control": "no-store" } });
 }
 
-function renderScanControls(bot) {
+function renderScanControls(bot, embedded = false) {
+  const scanAction = embedded ? "/api/scans/start?embed=1" : "/api/scans/start";
   const status = bot.scan_status || "not_started";
   const found = Number(bot.pages_found || 0);
   const processed = Number(bot.pages_processed || 0);
@@ -45,7 +46,7 @@ function renderScanControls(bot) {
     return `<div class="scan-box success">
       <strong>Website knowledge added</strong>
       <p>${processed} page${processed === 1 ? "" : "s"} processed. The chatbot knowledge base is ready for testing.</p>
-      <form method="post" action="/api/scans/start">
+      <form method="post" action="${scanAction}">
         <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
         <button class="btn" type="submit">Scan website again</button>
       </form>
@@ -59,7 +60,7 @@ function renderScanControls(bot) {
     <p>Fise will find and securely process up to ${MAX_PAGES} public pages from ${escapeHtml(bot.website_url || "the website")}.</p>
     <p class="scan-time-note">This can take up to 5 minutes.</p>
     ${retryText}
-    <form method="post" action="/api/scans/start">
+    <form method="post" action="${scanAction}">
       <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
       <button class="btn" type="submit">Scan website</button>
     </form>
@@ -296,21 +297,21 @@ async function stableId(value) {
 }
 
 async function startWebsiteScan(request, env, user) {
-  if (!env.SCAN_QUEUE) return redirect("/dashboard?error=" + encodeURIComponent("The Cloudflare scan queue is not configured."));
+  if (!env.SCAN_QUEUE) return redirect(dashboardReturnUrl(request, { error: "The Cloudflare scan queue is not configured." }));
   const form = await request.formData();
   const chatbotId = String(form.get("chatbot_id") || "");
   const bot = await env.DB.prepare(`
     SELECT id,user_id,website_url,vector_store_id FROM chatbots WHERE id = ? AND user_id = ?
   `).bind(chatbotId, user.id).first();
-  if (!bot) return redirect("/dashboard?error=" + encodeURIComponent("Chatbot not found."));
+  if (!bot) return redirect(dashboardReturnUrl(request, { error: "Chatbot not found." }));
   if (!bot.vector_store_id || !isSafePublicUrl(bot.website_url)) {
-    return redirect("/dashboard?error=" + encodeURIComponent("The chatbot website or knowledge store is invalid."));
+    return redirect(dashboardReturnUrl(request, { error: "The chatbot website or knowledge store is invalid." }));
   }
 
   const active = await env.DB.prepare(`
     SELECT id FROM crawl_jobs WHERE chatbot_id = ? AND status IN ('queued','discovering','running','indexing') LIMIT 1
   `).bind(bot.id).first();
-  if (active) return redirect("/dashboard?scan=started");
+  if (active) return redirect(dashboardReturnUrl(request, { scan: "started" }));
 
   const jobId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -326,10 +327,10 @@ async function startWebsiteScan(request, env, user) {
     await env.DB.prepare("UPDATE crawl_jobs SET status='failed',error_message=?,updated_at=? WHERE id=?")
       .bind(String(error?.message || error).slice(0, 500), now, jobId).run();
     await env.DB.prepare("UPDATE chatbots SET status='setup',updated_at=? WHERE id=?").bind(now, bot.id).run();
-    return redirect("/dashboard?error=" + encodeURIComponent("The website scan could not be queued."));
+    return redirect(dashboardReturnUrl(request, { error: "The website scan could not be queued." }));
   }
 
-  return redirect("/dashboard?scan=started");
+  return redirect(dashboardReturnUrl(request, { scan: "started" }));
 }
 
 async function processDiscovery(body, env) {
@@ -2679,7 +2680,7 @@ async function handlePublicWebsiteLegacy(request, env) {
 }
 
 const referenceStyles = html`
-  :root{--ink:#071126;--muted:#647083;--cyan:#20c6d8;--cyan-dark:#139cc3;--soft:#f7f9fb;--line:#e4e8ed;color-scheme:light;scroll-behavior:smooth}*{box-sizing:border-box}html{scroll-padding-top:94px}body{margin:0;color:var(--ink);background:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit}.video-container{width:min(1640px,calc(100% - 96px));margin:auto}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #e7eaee;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:var(--ink);font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#29b9e6,#20d6cf);box-shadow:0 11px 25px rgba(24,190,211,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#131b2d;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#159fba}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#071126;font-weight:800!important;box-shadow:0 8px 20px rgba(7,17,38,.1)}.video-menu{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:24px}.reference-hero{padding:74px 0 87px}.reference-hero-grid{display:grid;grid-template-columns:1fr .96fr;align-items:center;gap:76px}.hero-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;padding:9px 17px;border:1px solid #cceef2;border-radius:999px;color:#177b92;background:#f5fdfe;font-size:15px;font-weight:750}.hero-pill svg{width:17px;height:17px}.reference-hero h1{max-width:780px;margin:0 0 28px;font-size:clamp(58px,4.7vw,82px);line-height:1.02;letter-spacing:-.052em}.reference-hero h1 span{color:#1db8d4}.reference-hero-copy{max-width:770px;margin:0 0 42px;color:#4d5868;font-size:21px;line-height:1.55}.reference-actions{display:flex;flex-wrap:wrap;gap:16px}.reference-button{display:inline-flex;min-height:64px;padding:0 28px;align-items:center;justify-content:center;gap:13px;border:1px solid #e1e5e9;border-radius:12px;color:var(--ink);background:#fff;font-size:17px;font-weight:750;text-decoration:none;box-shadow:0 7px 17px rgba(11,19,35,.04)}.reference-button.dark{border-color:#071126;color:#fff;background:#071126;box-shadow:0 12px 24px rgba(7,17,38,.14)}.reference-button svg{width:19px;height:19px}.hero-trust{display:flex;gap:30px;margin-top:43px;color:#687486;font-size:16px}.hero-trust span{display:flex;align-items:center;gap:10px}.hero-trust svg{width:21px;height:21px;color:#1aa6c2}.hero-media-wrap{position:relative}.hero-media{height:430px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(circle at 76% 28%,#14243e 0,#071126 68%);box-shadow:0 30px 55px rgba(7,17,38,.13)}.hero-play{width:96px;height:96px;display:grid;place-items:center;border:1px solid #354059;border-radius:50%;color:#d8deeb;background:#1b2942}.hero-play svg{width:42px;height:42px;margin-left:7px}.hero-media-label{position:absolute;left:0;right:0;top:63%;color:#b6bfce;text-align:center;font-size:16px}.assistant-badge{position:absolute;left:-38px;bottom:-40px;display:flex;align-items:center;gap:15px;padding:18px 26px;border:1px solid #e5e9ed;border-radius:16px;background:#fff;box-shadow:0 19px 35px rgba(12,24,45,.15)}.assistant-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(145deg,#2cb5e5,#22d5cc)}.assistant-badge strong{display:block;margin-bottom:3px;font-size:16px}.assistant-badge small{color:#8993a2;font-size:14px}.customer-stories{padding:105px 0 112px;background:var(--soft)}.center-heading{text-align:center}.reference-eyebrow{margin-bottom:17px;color:#159dbb;font-size:14px;font-weight:850;letter-spacing:.03em;text-transform:uppercase}.center-heading h2,.left-heading h2{margin:0;color:var(--ink);font-size:clamp(42px,3.2vw,58px);line-height:1.1;letter-spacing:-.04em}.center-heading p,.left-heading p{margin:18px 0 0;color:#5f6a7a;font-size:18px;line-height:1.55}.testimonial-shell{max-width:1130px;margin:70px auto 0}.testimonial-card{position:relative;min-height:320px;padding:58px 62px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 7px 22px rgba(15,24,42,.025)}.review-stars{margin-bottom:31px;color:#f7bb18;font-size:27px;letter-spacing:3px}.testimonial-card blockquote{max-width:920px;margin:0;color:#3c4656;font-size:23px;line-height:1.55}.quote-mark{position:absolute;right:38px;top:24px;color:#eff2f5;font:900 80px/1 Georgia,serif}.review-person{display:flex;align-items:center;gap:17px;margin-top:34px}.review-avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;color:#fff;background:#25d6a8;font-weight:800}.review-person strong{display:block;font-size:16px}.review-person span{display:block;margin-top:3px;color:#778293;font-size:15px}.carousel-controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px}.carousel-arrow{width:53px;height:53px;border:1px solid var(--line);border-radius:50%;color:#2d3748;background:#fff;font-size:28px;cursor:pointer}.carousel-dots{display:flex;align-items:center;gap:8px}.carousel-dot{width:10px;height:10px;border:0;border-radius:999px;background:#d3d9df;padding:0;cursor:pointer}.carousel-dot.active{width:31px;background:#139cc3}.features-section{padding:118px 0 148px}.left-heading{max-width:890px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:73px}.feature-card{min-height:350px;padding:43px 42px;border:1px solid var(--line);border-radius:21px;background:#fff}.feature-card:first-child{border-color:#b9e9ef;box-shadow:0 10px 25px rgba(29,190,210,.05)}.feature-icon{width:69px;height:69px;display:grid;place-items:center;margin-bottom:34px;border-radius:16px;color:#149fc1;background:#effbfd}.feature-card:nth-child(2) .feature-icon{background:#d8f2f7}.feature-icon svg{width:34px;height:34px}.feature-card h3{margin:0 0 18px;font-size:24px;letter-spacing:-.02em}.feature-card p{margin:0;color:#596577;font-size:19px;line-height:1.6}.steps-section{padding:112px 0 148px;color:#fff;background:radial-gradient(circle at 50% 45%,#10304b 0,#071126 70%)}.steps-section .center-heading h2{color:#fff}.steps-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:90px;margin-top:78px}.steps-grid:before{content:"";position:absolute;left:9%;right:9%;top:43px;border-top:1px dashed #31425a}.step-card{position:relative;z-index:1}.step-icon{width:75px;height:75px;display:grid;place-items:center;margin-bottom:35px;border-radius:18px;color:#fff;background:linear-gradient(145deg,#27afe2,#20d9cf);box-shadow:0 12px 28px rgba(22,195,211,.18)}.step-icon svg{width:34px;height:34px}.step-number{position:absolute;right:0;top:-10px;padding:7px 13px;border:1px solid #31425a;border-radius:999px;color:#69788d;background:#16233a;font-size:13px}.step-card h3{margin:0 0 16px;font-size:23px}.step-card p{margin:0;color:#9ba7ba;font-size:18px;line-height:1.55}.demo-section{padding:174px 0 122px;background:#f8fafc}.demo-toolbar{display:flex;align-items:center;justify-content:space-between;margin:68px 0 30px}.device-switch{display:flex;padding:5px;border:1px solid #dfe4ea;border-radius:12px;background:#fff}.device-button{display:inline-flex;min-height:43px;padding:0 18px;align-items:center;gap:9px;border:0;border-radius:9px;color:#384354;background:transparent;font-weight:650;cursor:pointer}.device-button.active{color:#fff;background:#071126}.device-button svg{width:17px;height:17px}.open-tab{display:inline-flex;min-height:52px;padding:0 22px;align-items:center;gap:10px;border:1px solid #dfe4ea;border-radius:10px;color:#263142;background:#fff;font-weight:650;text-decoration:none}.demo-browser{max-width:100%;margin:auto;overflow:hidden;border:1px solid #e0e5eb;border-radius:21px;background:#fff;box-shadow:0 22px 43px rgba(26,39,57,.11);transition:max-width .25s ease}.demo-browser.tablet{max-width:940px}.demo-browser.mobile{max-width:520px}.demo-browser-top{height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #e6e9ed;background:#fbfcfd}.demo-dot{width:17px;height:17px;border-radius:50%}.demo-dot.red{background:#ef568a}.demo-dot.yellow{background:#f6c72d}.demo-dot.green{background:#2ed7a1}.demo-address{margin-left:18px;color:#697486;font-size:14px}.demo-browser iframe{display:block;width:100%;height:650px;border:0;background:#eef2f7}.pricing-section{padding:127px 0 136px;background:#f8fafc}.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:29px;margin-top:69px}.pricing-card{position:relative;display:flex;min-height:720px;padding:47px 43px 32px;flex-direction:column;border:1px solid #e0e5ea;border-radius:20px;background:#fff;box-shadow:0 12px 25px rgba(17,29,47,.025)}.pricing-card.popular{border:2px solid #20afd0;box-shadow:0 16px 34px rgba(17,159,190,.08)}.popular-label{position:absolute;left:50%;top:-18px;padding:7px 21px;border-radius:999px;color:#fff;background:#149fc2;font-size:14px;font-weight:750;transform:translateX(-50%);white-space:nowrap}.pricing-card h3{margin:0 0 20px;font-size:29px}.price-intro{min-height:58px;margin:0 0 48px;color:#697486;font-size:17px;line-height:1.55}.video-price{margin:0 0 33px;font-size:42px;font-weight:850;letter-spacing:-.04em}.video-price small{margin-left:6px;color:#7c8796;font-size:17px;font-weight:500;letter-spacing:0}.video-feature-list{display:grid;gap:24px;margin:0 0 42px;padding:0;list-style:none;color:#4c5868;font-size:16px}.video-feature-list li{display:flex;gap:14px}.video-feature-list li:before{content:"✓";color:#139fbc;font-size:19px;font-weight:900}.pricing-card .reference-button{width:100%;margin-top:auto;min-height:59px}.closing-section{padding:115px 0 170px}.closing-card{padding:98px 42px 90px;border-radius:33px;color:#fff;background:linear-gradient(120deg,#159bc8,#1fd0d3);box-shadow:0 28px 55px rgba(25,181,205,.16);text-align:center}.closing-card h2{margin:0 0 25px;color:#fff;font-size:clamp(42px,3.5vw,61px);letter-spacing:-.04em}.closing-card p{max-width:870px;margin:0 auto 43px;color:#e8ffff;font-size:22px;line-height:1.5}.closing-actions{display:flex;justify-content:center;gap:16px}.closing-actions .reference-button:last-child{border-color:rgba(255,255,255,.25);color:#fff;background:transparent}.reference-footer{padding:92px 0 35px;background:#f7f9fb}.reference-footer-grid{display:grid;grid-template-columns:1.15fr repeat(3,.75fr);gap:100px}.reference-footer .video-logo{font-size:21px}.reference-footer .video-logo-mark{width:51px;height:51px}.reference-footer-summary{max-width:370px;margin:29px 0 0;color:#737e8d;font-size:17px;line-height:1.65}.reference-footer h3{margin:8px 0 29px;font-size:17px}.reference-footer a{display:block;margin:0 0 23px;color:#7d8795;font-size:16px;text-decoration:none}.reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:82px;padding-top:33px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:14px}.simple-reference{min-height:62vh;padding:110px 0}.simple-reference article{max-width:860px}.simple-reference h1{margin:0 0 26px;font-size:58px;letter-spacing:-.04em}.simple-reference p{color:#5f6a7a;font-size:19px;line-height:1.7}.powered-by-bolt,.made-in-bolt,[data-bolt],#bolt-badge{display:none!important}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}.reference-hero-grid{grid-template-columns:1fr}.hero-media-wrap{margin-top:30px}.assistant-badge{left:20px}.feature-grid,.pricing-grid,.steps-grid{grid-template-columns:1fr}.steps-grid:before{display:none}.feature-card{min-height:0}.pricing-card{min-height:0}.reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}.demo-browser iframe{height:560px}}@media(max-width:720px){html{scroll-padding-top:78px}.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid var(--line)}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.reference-hero{padding:48px 0 65px}.reference-hero h1{font-size:49px}.reference-hero-copy{font-size:18px}.hero-pill{margin-bottom:25px}.hero-media{height:310px}.assistant-badge{bottom:-42px;padding:12px 16px}.customer-stories{padding:90px 0}.testimonial-card{padding:36px 27px}.testimonial-card blockquote{font-size:19px}.features-section,.steps-section,.demo-section,.pricing-section,.closing-section{padding:85px 0}.feature-grid{gap:18px}.feature-card{padding:30px}.demo-toolbar{align-items:flex-start;gap:17px;flex-direction:column}.device-switch{width:100%;overflow:auto}.device-button{padding:0 12px}.demo-browser iframe{height:620px}.closing-card{padding:70px 22px}.closing-actions{align-items:stretch;flex-direction:column}.reference-footer-grid{grid-template-columns:1fr;gap:28px}.reference-footer-bottom{flex-direction:column}.hero-trust{align-items:flex-start;flex-direction:column;gap:15px}.video-container{width:min(100% - 28px,1640px)}}
+  :root{--ink:#071126;--muted:#647083;--cyan:#20c6d8;--cyan-dark:#139cc3;--soft:#f7f9fb;--line:#e4e8ed;color-scheme:light;scroll-behavior:smooth}*{box-sizing:border-box}html{scroll-padding-top:94px}body{margin:0;color:var(--ink);background:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit}.video-container{width:min(1640px,calc(100% - 96px));margin:auto}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #e7eaee;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:var(--ink);font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#29b9e6,#20d6cf);box-shadow:0 11px 25px rgba(24,190,211,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#131b2d;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#159fba}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#071126;font-weight:800!important;box-shadow:0 8px 20px rgba(7,17,38,.1)}.video-menu{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:24px}.reference-hero{padding:74px 0 87px}.reference-hero-grid{display:grid;grid-template-columns:1fr .96fr;align-items:center;gap:76px}.hero-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;padding:9px 17px;border:1px solid #cceef2;border-radius:999px;color:#177b92;background:#f5fdfe;font-size:15px;font-weight:750}.hero-pill svg{width:17px;height:17px}.reference-hero h1{max-width:780px;margin:0 0 28px;font-size:clamp(58px,4.7vw,82px);line-height:1.02;letter-spacing:-.052em}.reference-hero h1 span{color:#1db8d4}.reference-hero-copy{max-width:770px;margin:0 0 42px;color:#4d5868;font-size:21px;line-height:1.55}.reference-actions{display:flex;flex-wrap:wrap;gap:16px}.reference-button{display:inline-flex;min-height:64px;padding:0 28px;align-items:center;justify-content:center;gap:13px;border:1px solid #e1e5e9;border-radius:12px;color:var(--ink);background:#fff;font-size:17px;font-weight:750;text-decoration:none;box-shadow:0 7px 17px rgba(11,19,35,.04)}.reference-button.dark{border-color:#071126;color:#fff;background:#071126;box-shadow:0 12px 24px rgba(7,17,38,.14)}.reference-button svg{width:19px;height:19px}.hero-trust{display:flex;gap:30px;margin-top:43px;color:#687486;font-size:16px}.hero-trust span{display:flex;align-items:center;gap:10px}.hero-trust svg{width:21px;height:21px;color:#1aa6c2}.hero-media-wrap{position:relative}.hero-media{height:430px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(circle at 76% 28%,#14243e 0,#071126 68%);box-shadow:0 30px 55px rgba(7,17,38,.13)}.hero-play{width:96px;height:96px;display:grid;place-items:center;border:1px solid #354059;border-radius:50%;color:#d8deeb;background:#1b2942}.hero-play svg{width:42px;height:42px;margin-left:7px}.hero-media-label{position:absolute;left:0;right:0;top:63%;color:#b6bfce;text-align:center;font-size:16px}.assistant-badge{position:absolute;left:-38px;bottom:-40px;display:flex;align-items:center;gap:15px;padding:18px 26px;border:1px solid #e5e9ed;border-radius:16px;background:#fff;box-shadow:0 19px 35px rgba(12,24,45,.15)}.assistant-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(145deg,#2cb5e5,#22d5cc)}.assistant-badge strong{display:block;margin-bottom:3px;font-size:16px}.assistant-badge small{color:#8993a2;font-size:14px}.customer-stories{padding:105px 0 112px;background:var(--soft)}.center-heading{text-align:center}.reference-eyebrow{margin-bottom:17px;color:#159dbb;font-size:14px;font-weight:850;letter-spacing:.03em;text-transform:uppercase}.center-heading h2,.left-heading h2{margin:0;color:var(--ink);font-size:clamp(42px,3.2vw,58px);line-height:1.1;letter-spacing:-.04em}.center-heading p,.left-heading p{margin:18px 0 0;color:#5f6a7a;font-size:18px;line-height:1.55}.testimonial-shell{max-width:1130px;margin:70px auto 0}.testimonial-card{position:relative;min-height:320px;padding:58px 62px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 7px 22px rgba(15,24,42,.025)}.review-stars{margin-bottom:31px;color:#f7bb18;font-size:27px;letter-spacing:3px}.testimonial-card blockquote{max-width:920px;margin:0;color:#3c4656;font-size:23px;line-height:1.55}.quote-mark{position:absolute;right:38px;top:24px;color:#eff2f5;font:900 80px/1 Georgia,serif}.review-person{display:flex;align-items:center;gap:17px;margin-top:34px}.review-avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;color:#fff;background:#25d6a8;font-weight:800}.review-person strong{display:block;font-size:16px}.review-person span{display:block;margin-top:3px;color:#778293;font-size:15px}.carousel-controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px}.carousel-arrow{width:53px;height:53px;border:1px solid var(--line);border-radius:50%;color:#2d3748;background:#fff;font-size:28px;cursor:pointer}.carousel-dots{display:flex;align-items:center;gap:8px}.carousel-dot{width:10px;height:10px;border:0;border-radius:999px;background:#d3d9df;padding:0;cursor:pointer}.carousel-dot.active{width:31px;background:#139cc3}.features-section{padding:118px 0 148px}.left-heading{max-width:890px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:73px}.feature-card{min-height:350px;padding:43px 42px;border:1px solid var(--line);border-radius:21px;background:#fff}.feature-card:first-child{border-color:#b9e9ef;box-shadow:0 10px 25px rgba(29,190,210,.05)}.feature-icon{width:69px;height:69px;display:grid;place-items:center;margin-bottom:34px;border-radius:16px;color:#149fc1;background:#effbfd}.feature-card:nth-child(2) .feature-icon{background:#d8f2f7}.feature-icon svg{width:34px;height:34px}.feature-card h3{margin:0 0 18px;font-size:24px;letter-spacing:-.02em}.feature-card p{margin:0;color:#596577;font-size:19px;line-height:1.6}.steps-section{padding:112px 0 148px;color:#fff;background:radial-gradient(circle at 50% 45%,#10304b 0,#071126 70%)}.steps-section .center-heading h2{color:#fff}.steps-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:90px;margin-top:78px}.steps-grid:before{content:"";position:absolute;left:9%;right:9%;top:43px;border-top:1px dashed #31425a}.step-card{position:relative;z-index:1}.step-icon{width:75px;height:75px;display:grid;place-items:center;margin-bottom:35px;border-radius:18px;color:#fff;background:linear-gradient(145deg,#27afe2,#20d9cf);box-shadow:0 12px 28px rgba(22,195,211,.18)}.step-icon svg{width:34px;height:34px}.step-number{position:absolute;right:0;top:-10px;padding:7px 13px;border:1px solid #31425a;border-radius:999px;color:#69788d;background:#16233a;font-size:13px}.step-card h3{margin:0 0 16px;font-size:23px}.step-card p{margin:0;color:#9ba7ba;font-size:18px;line-height:1.55}.demo-section{padding:174px 0 122px;background:#f8fafc}.demo-toolbar{display:flex;align-items:center;justify-content:space-between;margin:68px 0 30px}.device-switch{display:flex;padding:5px;border:1px solid #dfe4ea;border-radius:12px;background:#fff}.device-button{display:inline-flex;min-height:43px;padding:0 18px;align-items:center;gap:9px;border:0;border-radius:9px;color:#384354;background:transparent;font-weight:650;cursor:pointer}.device-button.active{color:#fff;background:#071126}.device-button svg{width:17px;height:17px}.open-tab{display:inline-flex;min-height:52px;padding:0 22px;align-items:center;gap:10px;border:1px solid #dfe4ea;border-radius:10px;color:#263142;background:#fff;font-weight:650;text-decoration:none}.demo-browser{position:relative;max-width:100%;margin:auto;overflow:hidden;border:1px solid #e0e5eb;border-radius:21px;background:#fff;box-shadow:0 22px 43px rgba(26,39,57,.11);transition:max-width .25s ease}.demo-browser.tablet{max-width:940px}.demo-browser.mobile{max-width:520px}.demo-browser-top{height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #e6e9ed;background:#fbfcfd}.demo-dot{width:17px;height:17px;border-radius:50%}.demo-dot.red{background:#ef568a}.demo-dot.yellow{background:#f6c72d}.demo-dot.green{background:#2ed7a1}.demo-address{margin-left:18px;color:#697486;font-size:14px}.demo-browser iframe{display:block;width:100%;height:650px;border:0;background:#eef2f7}.pricing-section{padding:127px 0 136px;background:#f8fafc}.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:29px;margin-top:69px}.pricing-card{position:relative;display:flex;min-height:720px;padding:47px 43px 32px;flex-direction:column;border:1px solid #e0e5ea;border-radius:20px;background:#fff;box-shadow:0 12px 25px rgba(17,29,47,.025)}.pricing-card.popular{border:2px solid #20afd0;box-shadow:0 16px 34px rgba(17,159,190,.08)}.popular-label{position:absolute;left:50%;top:-18px;padding:7px 21px;border-radius:999px;color:#fff;background:#149fc2;font-size:14px;font-weight:750;transform:translateX(-50%);white-space:nowrap}.pricing-card h3{margin:0 0 20px;font-size:29px}.price-intro{min-height:58px;margin:0 0 48px;color:#697486;font-size:17px;line-height:1.55}.video-price{margin:0 0 33px;font-size:42px;font-weight:850;letter-spacing:-.04em}.video-price small{margin-left:6px;color:#7c8796;font-size:17px;font-weight:500;letter-spacing:0}.video-feature-list{display:grid;gap:24px;margin:0 0 42px;padding:0;list-style:none;color:#4c5868;font-size:16px}.video-feature-list li{display:flex;gap:14px}.video-feature-list li:before{content:"✓";color:#139fbc;font-size:19px;font-weight:900}.pricing-card .reference-button{width:100%;margin-top:auto;min-height:59px}.closing-section{padding:115px 0 170px}.closing-card{padding:98px 42px 90px;border-radius:33px;color:#fff;background:linear-gradient(120deg,#159bc8,#1fd0d3);box-shadow:0 28px 55px rgba(25,181,205,.16);text-align:center}.closing-card h2{margin:0 0 25px;color:#fff;font-size:clamp(42px,3.5vw,61px);letter-spacing:-.04em}.closing-card p{max-width:870px;margin:0 auto 43px;color:#e8ffff;font-size:22px;line-height:1.5}.closing-actions{display:flex;justify-content:center;gap:16px}.closing-actions .reference-button:last-child{border-color:rgba(255,255,255,.25);color:#fff;background:transparent}.reference-footer{padding:92px 0 35px;background:#f7f9fb}.reference-footer-grid{display:grid;grid-template-columns:1.15fr repeat(3,.75fr);gap:100px}.reference-footer .video-logo{font-size:21px}.reference-footer .video-logo-mark{width:51px;height:51px}.reference-footer-summary{max-width:370px;margin:29px 0 0;color:#737e8d;font-size:17px;line-height:1.65}.reference-footer h3{margin:8px 0 29px;font-size:17px}.reference-footer a{display:block;margin:0 0 23px;color:#7d8795;font-size:16px;text-decoration:none}.reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:82px;padding-top:33px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:14px}.simple-reference{min-height:62vh;padding:110px 0}.simple-reference article{max-width:860px}.simple-reference h1{margin:0 0 26px;font-size:58px;letter-spacing:-.04em}.simple-reference p{color:#5f6a7a;font-size:19px;line-height:1.7}.powered-by-bolt,.made-in-bolt,[data-bolt],#bolt-badge{display:none!important}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}.reference-hero-grid{grid-template-columns:1fr}.hero-media-wrap{margin-top:30px}.assistant-badge{left:20px}.feature-grid,.pricing-grid,.steps-grid{grid-template-columns:1fr}.steps-grid:before{display:none}.feature-card{min-height:0}.pricing-card{min-height:0}.reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}.demo-browser iframe{height:560px}}@media(max-width:720px){html{scroll-padding-top:78px}.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid var(--line)}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.reference-hero{padding:48px 0 65px}.reference-hero h1{font-size:49px}.reference-hero-copy{font-size:18px}.hero-pill{margin-bottom:25px}.hero-media{height:310px}.assistant-badge{bottom:-42px;padding:12px 16px}.customer-stories{padding:90px 0}.testimonial-card{padding:36px 27px}.testimonial-card blockquote{font-size:19px}.features-section,.steps-section,.demo-section,.pricing-section,.closing-section{padding:85px 0}.feature-grid{gap:18px}.feature-card{padding:30px}.demo-toolbar{align-items:flex-start;gap:17px;flex-direction:column}.device-switch{width:100%;overflow:auto}.device-button{padding:0 12px}.demo-browser iframe{height:620px}.closing-card{padding:70px 22px}.closing-actions{align-items:stretch;flex-direction:column}.reference-footer-grid{grid-template-columns:1fr;gap:28px}.reference-footer-bottom{flex-direction:column}.hero-trust{align-items:flex-start;flex-direction:column;gap:15px}.video-container{width:min(100% - 28px,1640px)}}
 `;
 
 const requestedStyles = html`
@@ -2852,7 +2853,7 @@ const requestedStyles = html`
   .demo-fullscreen svg { width:18px; height:18px; }
   .demo-browser:fullscreen { width:100vw; max-width:none; height:100vh;
     border:0; border-radius:0; background:#fff; }
-  .demo-browser:fullscreen iframe { height:calc(100vh - 64px); }
+  .demo-browser:fullscreen iframe { height:100vh; }
   .checkout-card { max-width:720px; margin:auto; padding:42px;
     border:1px solid #dce8ec; border-radius:22px; background:#fff;
     box-shadow:0 18px 46px rgba(23,64,77,.08); }
@@ -2899,7 +2900,7 @@ const requestedStyles = html`
   .video-demo-link.requires-signin:hover .demo-access-tip,
   .video-demo-link.requires-signin:focus .demo-access-tip { opacity:1;
     visibility:visible; transform:translate(-50%,0); }
-  .demo-lock { position:absolute; inset:64px 0 0; z-index:3; display:grid;
+  .demo-lock { position:absolute; inset:0; z-index:3; display:grid;
     place-items:center; padding:26px; background:rgba(247,250,252,.94);
     backdrop-filter:blur(7px); }
   .demo-lock[hidden] { display:none; }
@@ -2946,6 +2947,9 @@ const requestedStyles = html`
     font-size:12px; font-weight:700; }
   .profile-detail strong { overflow-wrap:anywhere; }
   .profile-bots { display:grid; gap:13px; }
+  .profile-dashboard-frame { display:block; width:100%;
+    height:calc(100vh - 205px); min-height:640px; border:1px solid #dde5eb;
+    border-radius:16px; background:#f7fafc; }
   .profile-bot-top { display:flex; align-items:flex-start; justify-content:space-between;
     gap:12px; }
   .profile-bot h4 { margin:0 0 4px; font-size:18px; }
@@ -2968,6 +2972,7 @@ const requestedStyles = html`
     .footer-legal-links { justify-content:flex-start; }
     .account-dialog { padding:31px 23px 25px; }
     .profile-drawer { width:100%; grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+    .profile-dashboard-frame { height:calc(100vh - 250px); min-height:560px; }
     .profile-side { padding:18px; }
     .profile-side-title { margin:0 4px 13px; }
     .profile-tabs { grid-template-columns:1fr 1fr; }
@@ -3091,7 +3096,7 @@ function accountModal() {
 }
 
 function profileDrawer() {
-  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbots</h3><p class="profile-intro">Open each chatbot’s settings, leads and working dashboard.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbots…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
+  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
 }
 
 function prepareReferenceBody(body, c) {
@@ -3114,8 +3119,8 @@ function prepareReferenceBody(body, c) {
     "Use the working Fise AI website assistant right here, without leaving the page.",
   );
   value = value.replace(
-    "fise-ai-platform.seb-slabbert1.workers.dev/login",
-    "fise-ai-platform.seb-slabbert1.workers.dev/demo-chat",
+    /<div class="demo-browser-top">[\s\S]*?<\/div>/,
+    "",
   );
   value = value.replace('iframe src="/login?embed=1"', 'iframe src="/demo-chat"');
   value = value.replace(
@@ -3199,25 +3204,15 @@ function referenceJavascript() {
     }
     function profileText(id,value){const node=document.getElementById(id);if(node)node.textContent=value||'—'}
     function titleCase(value){return String(value||'').replace(/[-_]/g,' ').replace(/\b\w/g,(letter)=>letter.toUpperCase())}
-    function renderChatbots(chatbots){
+    function renderChatbots(){
       const list=document.getElementById('profile-chatbots');
       if(!list)return;
-      list.replaceChildren();
-      if(!chatbots?.length){const empty=document.createElement('div');empty.className='profile-empty';empty.textContent='No chatbot has been created yet.';list.appendChild(empty);return}
-      for(const bot of chatbots){
-        const card=document.createElement('article');card.className='profile-bot';
-        const top=document.createElement('div');top.className='profile-bot-top';
-        const identity=document.createElement('div');
-        const heading=document.createElement('h4');heading.textContent=bot.name||'Fise chatbot';
-        const detail=document.createElement('p');detail.textContent=[bot.business_name,bot.model].filter(Boolean).join(' · ');
-        identity.append(heading,detail);
-        const status=document.createElement('span');status.className='profile-status';status.textContent=bot.status||'setup';
-        top.append(identity,status);
-        const actions=document.createElement('div');actions.className='profile-bot-actions';
-        const links=[['Settings','/dashboard/chatbots/'+encodeURIComponent(bot.id)+'/settings'],['Leads','/dashboard/chatbots/'+encodeURIComponent(bot.id)+'/leads'],['Dashboard','/dashboard']];
-        for(const [label,href] of links){const link=document.createElement('a');link.href=href;link.textContent=label;actions.appendChild(link)}
-        card.append(top,actions);list.appendChild(card);
-      }
+      const frame=document.createElement('iframe');
+      frame.className='profile-dashboard-frame';
+      frame.src='/dashboard?embed=1';
+      frame.title='Fise chatbot dashboard';
+      frame.loading='eager';
+      list.replaceChildren(frame);
     }
     async function loadProfile(){
       if(profileLoaded)return;
@@ -4833,7 +4828,7 @@ function dashboardPage(
                   <small>Model</small><code>${escapeHtml(bot.model)}</code>
                 </div>
               </div>
-              ${renderScanControls(bot)}
+              ${renderScanControls(bot, embedded)}
               ${
           bot.status === "ready"
             ? html` <div class="widget-tools">
@@ -4876,7 +4871,7 @@ function dashboardPage(
                 </p>
                 <form
                   method="post"
-                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request"
+                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}"
                 >
                   <button class="btn danger" type="submit">
                     Email deletion confirmation
@@ -4904,7 +4899,7 @@ function dashboardPage(
           Fise will automatically create a separate OpenAI knowledge store for
           this chatbot.
         </p>
-        <form method="post" action="/api/chatbots">
+        <form method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
           <label for="business_name">Business name</label>
           <input
             id="business_name"
@@ -5059,6 +5054,18 @@ function normalizeEmail(value) {
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return "";
   return email;
+}
+
+function dashboardReturnUrl(request, values = {}) {
+  const params = new URLSearchParams();
+  if (new URL(request.url).searchParams.get("embed") === "1")
+    params.set("embed", "1");
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined && value !== null && value !== "")
+      params.set(key, String(value));
+  }
+  const query = params.toString();
+  return "/dashboard" + (query ? "?" + query : "");
 }
 
 function sameOrigin(request) {
@@ -5358,14 +5365,13 @@ async function requestChatbotDeletion(request, env, chatbotId) {
   if (!user) return redirect("/login");
   if (!env.RESEND_API_KEY)
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent("Email service is not configured."),
+      dashboardReturnUrl(request, { error: "Email service is not configured." }),
     );
 
   const bot = await ownedChatbot(env, user.id, chatbotId);
   if (!bot)
     return redirect(
-      "/dashboard?error=" + encodeURIComponent("Chatbot not found."),
+      dashboardReturnUrl(request, { error: "Chatbot not found." }),
     );
 
   await ensureChatbotDeletionSchema(env);
@@ -5386,10 +5392,7 @@ async function requestChatbotDeletion(request, env, chatbotId) {
     .first();
   if (Number(recent?.total || 0) >= CHATBOT_DELETE_REQUEST_LIMIT)
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "Too many deletion emails were requested. Please wait 10 minutes.",
-        ),
+      dashboardReturnUrl(request, { error: "Too many deletion emails were requested. Please wait 10 minutes." }),
     );
 
   const token = randomToken();
@@ -5456,13 +5459,10 @@ async function requestChatbotDeletion(request, env, chatbotId) {
       .bind(tokenHash)
       .run();
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "The deletion email could not be sent. Please try again.",
-        ),
+      dashboardReturnUrl(request, { error: "The deletion email could not be sent. Please try again." }),
     );
   }
-  return redirect("/dashboard?delete_email=sent");
+  return redirect(dashboardReturnUrl(request, { delete_email: "sent" }));
 }
 
 async function chatbotDeletionToken(env, token) {
@@ -6850,10 +6850,10 @@ async function createChatbot(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
   const user = await currentUser(request, env);
-  if (!user) return redirect("/login");
+  if (!user) return redirect(new URL(request.url).searchParams.get("embed") === "1" ? "/login?embed=1" : "/login");
   if (!env.OPENAI_API_KEY)
     return redirect(
-      "/dashboard?error=" + encodeURIComponent("OpenAI is not configured."),
+      dashboardReturnUrl(request, { error: "OpenAI is not configured." }),
     );
 
   const existing = await env.DB.prepare(
@@ -6863,10 +6863,7 @@ async function createChatbot(request, env) {
     .first();
   if (existing)
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "This testing version currently allows one chatbot per account.",
-        ),
+      dashboardReturnUrl(request, { error: "This testing version currently allows one chatbot per account." }),
     );
 
   const form = await request.formData();
@@ -6902,10 +6899,7 @@ async function createChatbot(request, env) {
     !/^#[0-9a-fA-F]{6}$/.test(colour)
   ) {
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "Check the chatbot form and enter a valid website URL.",
-        ),
+      dashboardReturnUrl(request, { error: "Check the chatbot form and enter a valid website URL." }),
     );
   }
 
@@ -6943,14 +6937,11 @@ async function createChatbot(request, env) {
     if (vectorStoreId) await deleteVectorStore(env, vectorStoreId);
     console.error("Create chatbot error", error);
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          error.message || "The chatbot could not be created.",
-        ),
+      dashboardReturnUrl(request, { error: error.message || "The chatbot could not be created." }),
     );
   }
 
-  return redirect("/dashboard?created=1");
+  return redirect(dashboardReturnUrl(request, { created: "1" }));
 }
 
 async function logout(request, env) {
@@ -7066,30 +7057,10 @@ export default {
         const user = await currentUser(request, env);
         if (!user) {
           return htmlResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then the working chatbot demo will open here.</p><a href="/?open_signin=1" target="_top">Sign in</a></section></body></html>`,
+            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then your chatbot dashboard will open here.</p><a href="/?open_signin=1" target="_top">Sign in</a></section></body></html>`,
           );
         }
-        const demoBot = await env.DB.prepare(
-          `SELECT public_key FROM chatbots
-           WHERE user_id = ? AND public_key IS NOT NULL AND public_key <> ''
-             AND status = 'ready'
-           ORDER BY created_at ASC
-           LIMIT 1`,
-        )
-          .bind(user.id)
-          .first();
-        const key = String(demoBot?.public_key || "");
-        if (!key) {
-          return htmlResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise AI demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#fff;font-family:Inter,system-ui,sans-serif}.message{max-width:520px;text-align:center}.message h1{font-size:32px}.message p{color:#637083;line-height:1.6}</style></head><body><section class="message"><h1>The live assistant is being prepared</h1><p>Please check back shortly. The demo will appear here automatically as soon as a Fise chatbot is ready.</p></section></body></html>`,
-          );
-        }
-        const demoUrl = new URL(request.url);
-        demoUrl.pathname = "/widget/test";
-        demoUrl.search = "";
-        demoUrl.searchParams.set("key", key);
-        demoUrl.searchParams.set("embed", "1");
-        return serveWidgetTest(new Request(demoUrl, request));
+        return redirect("/dashboard?embed=1");
       }
       if (url.pathname === "/widget/test" && request.method === "GET") {
         const user = await currentUser(request, env);
