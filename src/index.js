@@ -2,6 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
+ * Release: email verification confirmation.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -3086,7 +3087,7 @@ function referenceFooter() {
 }
 
 function accountModal() {
-  return html`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><h2 id="account-title">Sign in to Fise AI</h2><p>Enter your email address and we will send you a secure sign-in link for your profile, chatbot settings and customer dashboard.</p><div class="account-sent" id="account-sent">Check your email and open the secure Fise AI sign-in link. It will take you straight to your dashboard.</div><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a sign-in link</button></form><small>Use the same email address whenever you return to Fise AI.</small></section></div>`;
+  return html`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><h2 id="account-title">Sign in to Fise AI</h2><p>Enter your email address and we will send you a secure sign-in link for your profile, chatbot settings and customer dashboard.</p><div class="account-sent" id="account-sent">Check your email and open the secure Fise AI sign-in link. After verification, close that window and return here.</div><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a sign-in link</button></form><small>Use the same email address whenever you return to Fise AI.</small></section></div>`;
 }
 
 function profileDrawer() {
@@ -3253,27 +3254,37 @@ function referenceJavascript() {
     document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.addEventListener('click',()=>selectProfileTab(button.dataset.profileTab)));
     document.addEventListener('keydown',(event)=>{if(event.key==='Escape'){closeAccount();closeProfile()}});
     const params=new URLSearchParams(location.search);
-    fetch('/api/auth/status',{credentials:'same-origin'})
-      .then((response)=>response.ok?response.json():Promise.reject())
-      .then((status)=>{
-        authenticated=Boolean(status.authenticated);
-        if(authenticated){
-          if(account){account.textContent='My profile';account.href='#profile';account.dataset.authenticated='true'}
-          demoLink?.classList.remove('requires-signin');
-          if(demoLock)demoLock.hidden=true;
-          if(params.get('signed_in')==='1'||params.get('profile')==='1')openProfile();
-        }else{
-          demoLink?.classList.add('requires-signin');
-          if(demoLock)demoLock.hidden=false;
-          if(params.get('sent')==='1'){
-            document.getElementById('account-sent')?.classList.add('show');
-            openAccount();
+    let authPoll=0;
+    function stopAuthPoll(){
+      if(authPoll){clearInterval(authPoll);authPoll=0}
+    }
+    function refreshAuthStatus(){
+      return fetch('/api/auth/status',{credentials:'same-origin'})
+        .then((response)=>response.ok?response.json():Promise.reject())
+        .then((status)=>{
+          const wasAuthenticated=authenticated;
+          authenticated=Boolean(status.authenticated);
+          if(authenticated){
+            stopAuthPoll();
+            if(account){account.textContent='My profile';account.href='#profile';account.dataset.authenticated='true'}
+            demoLink?.classList.remove('requires-signin');
+            if(demoLock)demoLock.hidden=true;
+            if(params.get('signed_in')==='1'||params.get('profile')==='1'||(!wasAuthenticated&&params.get('sent')==='1'))openProfile();
+          }else{
+            demoLink?.classList.add('requires-signin');
+            if(demoLock)demoLock.hidden=false;
+            if(params.get('sent')==='1'){
+              document.getElementById('account-sent')?.classList.add('show');
+              openAccount();
+            }
+            if(params.get('open_signin')==='1')openAccount();
           }
-          if(params.get('open_signin')==='1')openAccount();
-        }
-        if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key)))history.replaceState({},'',location.pathname+location.hash);
-      })
-      .catch(()=>{});
+          if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key)))history.replaceState({},'',location.pathname+location.hash);
+        })
+        .catch(()=>{});
+    }
+    refreshAuthStatus();
+    if(params.get('sent')==='1')authPoll=setInterval(refreshAuthStatus,2500);
   })();`;
 }
 
@@ -4745,6 +4756,27 @@ function loginPage(message = "", isError = false, embedded = false) {
   );
 }
 
+function verificationSuccessPage() {
+  return documentPage(
+    "Successfully verified",
+    html` <main class="wrap">
+      <section class="shell" style="text-align:center">
+        <div
+          aria-hidden="true"
+          style="width:64px;height:64px;display:grid;place-items:center;margin:0 auto 22px;border-radius:50%;color:#fff;background:var(--ok);font-size:34px;font-weight:900"
+        >
+          ✓
+        </div>
+        <div class="eyebrow">Email verified</div>
+        <h1>Successfully verified</h1>
+        <p class="lead" style="margin:0 auto">
+          You can close this window now and return to your browser.
+        </p>
+      </section>
+    </main>`,
+  );
+}
+
 function dashboardPage(
   user,
   chatbots,
@@ -5257,7 +5289,9 @@ async function verifyMagicLink(request, env) {
     .run();
 
   const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
-  return redirect("/?signed_in=1", { "set-cookie": cookie });
+  return htmlResponse(verificationSuccessPage(), 200, {
+    "set-cookie": cookie,
+  });
 }
 
 async function accountProfile(request, env) {
