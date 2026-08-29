@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --dry-run",
+    "deploy:staging": "wrangler deploy --config wrangler.staging.jsonc",
     "dev": "wrangler dev",
     "start": "wrangler dev"
   },
