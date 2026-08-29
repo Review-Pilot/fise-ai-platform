@@ -2,7 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
- * Release: email verification confirmation.
+ * Release: embedded chatbot onboarding.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -24,7 +24,8 @@ function redirect(location) {
   return new Response(null, { status: 303, headers: { location, "cache-control": "no-store" } });
 }
 
-function renderScanControls(bot) {
+function renderScanControls(bot, embedded = false) {
+  const scanAction = embedded ? "/api/scans/start?embed=1" : "/api/scans/start";
   const status = bot.scan_status || "not_started";
   const found = Number(bot.pages_found || 0);
   const processed = Number(bot.pages_processed || 0);
@@ -45,7 +46,7 @@ function renderScanControls(bot) {
     return `<div class="scan-box success">
       <strong>Website knowledge added</strong>
       <p>${processed} page${processed === 1 ? "" : "s"} processed. The chatbot knowledge base is ready for testing.</p>
-      <form method="post" action="/api/scans/start">
+      <form method="post" action="${scanAction}">
         <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
         <button class="btn" type="submit">Scan website again</button>
       </form>
@@ -59,7 +60,7 @@ function renderScanControls(bot) {
     <p>Fise will find and securely process up to ${MAX_PAGES} public pages from ${escapeHtml(bot.website_url || "the website")}.</p>
     <p class="scan-time-note">This can take up to 5 minutes.</p>
     ${retryText}
-    <form method="post" action="/api/scans/start">
+    <form method="post" action="${scanAction}">
       <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
       <button class="btn" type="submit">Scan website</button>
     </form>
@@ -296,21 +297,21 @@ async function stableId(value) {
 }
 
 async function startWebsiteScan(request, env, user) {
-  if (!env.SCAN_QUEUE) return redirect("/dashboard?error=" + encodeURIComponent("The Cloudflare scan queue is not configured."));
+  if (!env.SCAN_QUEUE) return redirect(dashboardReturnUrl(request, { error: "The Cloudflare scan queue is not configured." }));
   const form = await request.formData();
   const chatbotId = String(form.get("chatbot_id") || "");
   const bot = await env.DB.prepare(`
     SELECT id,user_id,website_url,vector_store_id FROM chatbots WHERE id = ? AND user_id = ?
   `).bind(chatbotId, user.id).first();
-  if (!bot) return redirect("/dashboard?error=" + encodeURIComponent("Chatbot not found."));
+  if (!bot) return redirect(dashboardReturnUrl(request, { error: "Chatbot not found." }));
   if (!bot.vector_store_id || !isSafePublicUrl(bot.website_url)) {
-    return redirect("/dashboard?error=" + encodeURIComponent("The chatbot website or knowledge store is invalid."));
+    return redirect(dashboardReturnUrl(request, { error: "The chatbot website or knowledge store is invalid." }));
   }
 
   const active = await env.DB.prepare(`
     SELECT id FROM crawl_jobs WHERE chatbot_id = ? AND status IN ('queued','discovering','running','indexing') LIMIT 1
   `).bind(bot.id).first();
-  if (active) return redirect("/dashboard?scan=started");
+  if (active) return redirect(dashboardReturnUrl(request, { scan: "started" }));
 
   const jobId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -326,10 +327,10 @@ async function startWebsiteScan(request, env, user) {
     await env.DB.prepare("UPDATE crawl_jobs SET status='failed',error_message=?,updated_at=? WHERE id=?")
       .bind(String(error?.message || error).slice(0, 500), now, jobId).run();
     await env.DB.prepare("UPDATE chatbots SET status='setup',updated_at=? WHERE id=?").bind(now, bot.id).run();
-    return redirect("/dashboard?error=" + encodeURIComponent("The website scan could not be queued."));
+    return redirect(dashboardReturnUrl(request, { error: "The website scan could not be queued." }));
   }
 
-  return redirect("/dashboard?scan=started");
+  return redirect(dashboardReturnUrl(request, { scan: "started" }));
 }
 
 async function processDiscovery(body, env) {
@@ -2852,7 +2853,7 @@ const requestedStyles = html`
   .demo-fullscreen svg { width:18px; height:18px; }
   .demo-browser:fullscreen { width:100vw; max-width:none; height:100vh;
     border:0; border-radius:0; background:#fff; }
-  .demo-browser:fullscreen iframe { height:calc(100vh - 64px); }
+  .demo-browser:fullscreen iframe { height:100vh; }
   .checkout-card { max-width:720px; margin:auto; padding:42px;
     border:1px solid #dce8ec; border-radius:22px; background:#fff;
     box-shadow:0 18px 46px rgba(23,64,77,.08); }
@@ -2946,6 +2947,9 @@ const requestedStyles = html`
     font-size:12px; font-weight:700; }
   .profile-detail strong { overflow-wrap:anywhere; }
   .profile-bots { display:grid; gap:13px; }
+  .profile-dashboard-frame { display:block; width:100%;
+    height:calc(100vh - 205px); min-height:640px; border:1px solid #dde5eb;
+    border-radius:16px; background:#f7fafc; }
   .profile-bot-top { display:flex; align-items:flex-start; justify-content:space-between;
     gap:12px; }
   .profile-bot h4 { margin:0 0 4px; font-size:18px; }
@@ -2968,6 +2972,7 @@ const requestedStyles = html`
     .footer-legal-links { justify-content:flex-start; }
     .account-dialog { padding:31px 23px 25px; }
     .profile-drawer { width:100%; grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+    .profile-dashboard-frame { height:calc(100vh - 250px); min-height:560px; }
     .profile-side { padding:18px; }
     .profile-side-title { margin:0 4px 13px; }
     .profile-tabs { grid-template-columns:1fr 1fr; }
@@ -3091,7 +3096,7 @@ function accountModal() {
 }
 
 function profileDrawer() {
-  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbots</h3><p class="profile-intro">Open each chatbot’s settings, leads and working dashboard.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbots…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
+  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
 }
 
 function prepareReferenceBody(body, c) {
@@ -3114,8 +3119,8 @@ function prepareReferenceBody(body, c) {
     "Use the working Fise AI website assistant right here, without leaving the page.",
   );
   value = value.replace(
-    "fise-ai-platform.seb-slabbert1.workers.dev/login",
-    "fise-ai-platform.seb-slabbert1.workers.dev/demo-chat",
+    /<div class="demo-browser-top">[\s\S]*?<\/div>/,
+    "",
   );
   value = value.replace('iframe src="/login?embed=1"', 'iframe src="/demo-chat"');
   value = value.replace(
@@ -3199,25 +3204,15 @@ function referenceJavascript() {
     }
     function profileText(id,value){const node=document.getElementById(id);if(node)node.textContent=value||'—'}
     function titleCase(value){return String(value||'').replace(/[-_]/g,' ').replace(/\b\w/g,(letter)=>letter.toUpperCase())}
-    function renderChatbots(chatbots){
+    function renderChatbots(){
       const list=document.getElementById('profile-chatbots');
       if(!list)return;
-      list.replaceChildren();
-      if(!chatbots?.length){const empty=document.createElement('div');empty.className='profile-empty';empty.textContent='No chatbot has been created yet.';list.appendChild(empty);return}
-      for(const bot of chatbots){
-        const card=document.createElement('article');card.className='profile-bot';
-        const top=document.createElement('div');top.className='profile-bot-top';
-        const identity=document.createElement('div');
-        const heading=document.createElement('h4');heading.textContent=bot.name||'Fise chatbot';
-        const detail=document.createElement('p');detail.textContent=[bot.business_name,bot.model].filter(Boolean).join(' · ');
-        identity.append(heading,detail);
-        const status=document.createElement('span');status.className='profile-status';status.textContent=bot.status||'setup';
-        top.append(identity,status);
-        const actions=document.createElement('div');actions.className='profile-bot-actions';
-        const links=[['Settings','/dashboard/chatbots/'+encodeURIComponent(bot.id)+'/settings'],['Leads','/dashboard/chatbots/'+encodeURIComponent(bot.id)+'/leads'],['Dashboard','/dashboard']];
-        for(const [label,href] of links){const link=document.createElement('a');link.href=href;link.textContent=label;actions.appendChild(link)}
-        card.append(top,actions);list.appendChild(card);
-      }
+      const frame=document.createElement('iframe');
+      frame.className='profile-dashboard-frame';
+      frame.src='/dashboard?embed=1';
+      frame.title='Fise chatbot dashboard';
+      frame.loading='eager';
+      list.replaceChildren(frame);
     }
     async function loadProfile(){
       if(profileLoaded)return;
@@ -4833,7 +4828,7 @@ function dashboardPage(
                   <small>Model</small><code>${escapeHtml(bot.model)}</code>
                 </div>
               </div>
-              ${renderScanControls(bot)}
+              ${renderScanControls(bot, embedded)}
               ${
           bot.status === "ready"
             ? html` <div class="widget-tools">
@@ -4876,7 +4871,7 @@ function dashboardPage(
                 </p>
                 <form
                   method="post"
-                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request"
+                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}"
                 >
                   <button class="btn danger" type="submit">
                     Email deletion confirmation
@@ -4904,7 +4899,7 @@ function dashboardPage(
           Fise will automatically create a separate OpenAI knowledge store for
           this chatbot.
         </p>
-        <form method="post" action="/api/chatbots">
+        <form method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
           <label for="business_name">Business name</label>
           <input
             id="business_name"
@@ -5059,6 +5054,18 @@ function normalizeEmail(value) {
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return "";
   return email;
+}
+
+function dashboardReturnUrl(request, values = {}) {
+  const params = new URLSearchParams();
+  if (new URL(request.url).searchParams.get("embed") === "1")
+    params.set("embed", "1");
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined && value !== null && value !== "")
+      params.set(key, String(value));
+  }
+  const query = params.toString();
+  return "/dashboard" + (query ? "?" + query : "");
 }
 
 function sameOrigin(request) {
@@ -5358,14 +5365,13 @@ async function requestChatbotDeletion(request, env, chatbotId) {
   if (!user) return redirect("/login");
   if (!env.RESEND_API_KEY)
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent("Email service is not configured."),
+      dashboardReturnUrl(request, { error: "Email service is not configured." }),
     );
 
   const bot = await ownedChatbot(env, user.id, chatbotId);
   if (!bot)
     return redirect(
-      "/dashboard?error=" + encodeURIComponent("Chatbot not found."),
+      dashboardReturnUrl(request, { error: "Chatbot not found." }),
     );
 
   await ensureChatbotDeletionSchema(env);
@@ -5386,10 +5392,7 @@ async function requestChatbotDeletion(request, env, chatbotId) {
     .first();
   if (Number(recent?.total || 0) >= CHATBOT_DELETE_REQUEST_LIMIT)
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "Too many deletion emails were requested. Please wait 10 minutes.",
-        ),
+      dashboardReturnUrl(request, { error: "Too many deletion emails were requested. Please wait 10 minutes." }),
     );
 
   const token = randomToken();
@@ -5456,13 +5459,10 @@ async function requestChatbotDeletion(request, env, chatbotId) {
       .bind(tokenHash)
       .run();
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "The deletion email could not be sent. Please try again.",
-        ),
+      dashboardReturnUrl(request, { error: "The deletion email could not be sent. Please try again." }),
     );
   }
-  return redirect("/dashboard?delete_email=sent");
+  return redirect(dashboardReturnUrl(request, { delete_email: "sent" }));
 }
 
 async function chatbotDeletionToken(env, token) {
@@ -6850,10 +6850,10 @@ async function createChatbot(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
   const user = await currentUser(request, env);
-  if (!user) return redirect("/login");
+  if (!user) return redirect(new URL(request.url).searchParams.get("embed") === "1" ? "/login?embed=1" : "/login");
   if (!env.OPENAI_API_KEY)
     return redirect(
-      "/dashboard?error=" + encodeURIComponent("OpenAI is not configured."),
+      dashboardReturnUrl(request, { error: "OpenAI is not configured." }),
     );
 
   const existing = await env.DB.prepare(
@@ -6863,10 +6863,7 @@ async function createChatbot(request, env) {
     .first();
   if (existing)
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "This testing version currently allows one chatbot per account.",
-        ),
+      dashboardReturnUrl(request, { error: "This testing version currently allows one chatbot per account." }),
     );
 
   const form = await request.formData();
@@ -6902,10 +6899,7 @@ async function createChatbot(request, env) {
     !/^#[0-9a-fA-F]{6}$/.test(colour)
   ) {
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          "Check the chatbot form and enter a valid website URL.",
-        ),
+      dashboardReturnUrl(request, { error: "Check the chatbot form and enter a valid website URL." }),
     );
   }
 
@@ -6943,14 +6937,11 @@ async function createChatbot(request, env) {
     if (vectorStoreId) await deleteVectorStore(env, vectorStoreId);
     console.error("Create chatbot error", error);
     return redirect(
-      "/dashboard?error=" +
-        encodeURIComponent(
-          error.message || "The chatbot could not be created.",
-        ),
+      dashboardReturnUrl(request, { error: error.message || "The chatbot could not be created." }),
     );
   }
 
-  return redirect("/dashboard?created=1");
+  return redirect(dashboardReturnUrl(request, { created: "1" }));
 }
 
 async function logout(request, env) {
@@ -7066,30 +7057,10 @@ export default {
         const user = await currentUser(request, env);
         if (!user) {
           return htmlResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then the working chatbot demo will open here.</p><a href="/?open_signin=1" target="_top">Sign in</a></section></body></html>`,
+            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then your chatbot dashboard will open here.</p><a href="/?open_signin=1" target="_top">Sign in</a></section></body></html>`,
           );
         }
-        const demoBot = await env.DB.prepare(
-          `SELECT public_key FROM chatbots
-           WHERE user_id = ? AND public_key IS NOT NULL AND public_key <> ''
-             AND status = 'ready'
-           ORDER BY created_at ASC
-           LIMIT 1`,
-        )
-          .bind(user.id)
-          .first();
-        const key = String(demoBot?.public_key || "");
-        if (!key) {
-          return htmlResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise AI demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#fff;font-family:Inter,system-ui,sans-serif}.message{max-width:520px;text-align:center}.message h1{font-size:32px}.message p{color:#637083;line-height:1.6}</style></head><body><section class="message"><h1>The live assistant is being prepared</h1><p>Please check back shortly. The demo will appear here automatically as soon as a Fise chatbot is ready.</p></section></body></html>`,
-          );
-        }
-        const demoUrl = new URL(request.url);
-        demoUrl.pathname = "/widget/test";
-        demoUrl.search = "";
-        demoUrl.searchParams.set("key", key);
-        demoUrl.searchParams.set("embed", "1");
-        return serveWidgetTest(new Request(demoUrl, request));
+        return redirect("/dashboard?embed=1");
       }
       if (url.pathname === "/widget/test" && request.method === "GET") {
         const user = await currentUser(request, env);
