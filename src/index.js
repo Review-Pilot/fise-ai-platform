@@ -3498,7 +3498,19 @@ const { WEBSITE_DEFAULTS, escapeWebsiteHtml: esc, readWebsiteContent, saveWebsit
 const html = String.raw;
 const MAX_WORKERS = 5;
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
-const MAX_VIDEO_UPLOAD_BYTES = 90 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_BYTES = 20 * 1024 * 1024;
+const SAFE_INLINE_MEDIA_TYPES = new Set([
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/ogg",
+  "video/webm",
+]);
+const BLOCKED_ACTIVE_MEDIA_TYPE = /(?:text\/html|application\/xhtml\+xml|image\/svg\+xml|(?:application|text)\/xml|javascript)/i;
+const BLOCKED_ACTIVE_MEDIA_EXTENSION = /\.(?:html?|xhtml|svg|xml|js|mjs|cjs)$/i;
 const NAVIGATION_KEYS = [
   "nav_chatbots_enabled",
   "nav_demo_label",
@@ -3885,15 +3897,21 @@ async function uploadMedia(request, env, user) {
       return json(
         {
           error: String(file.type || "").startsWith("video/")
-            ? "The video is larger than 90 MB."
+            ? "The video is larger than 20 MB."
             : "The file is larger than 20 MB.",
         },
         413,
       );
     const blocked =
-      /\b(?:javascript|x-sh|x-msdownload)\b/i.test(file.type) ||
-      /\.(?:js|mjs|cjs|exe|bat|cmd|ps1|sh)$/i.test(file.name);
-    if (blocked) return json({ error: "That file type is not allowed." }, 400);
+      BLOCKED_ACTIVE_MEDIA_TYPE.test(file.type) ||
+      BLOCKED_ACTIVE_MEDIA_EXTENSION.test(file.name) ||
+      /\b(?:x-sh|x-msdownload)\b/i.test(file.type) ||
+      /\.(?:exe|bat|cmd|ps1|sh)$/i.test(file.name);
+    if (blocked)
+      return json(
+        { error: "Active web pages, scripts and executable files are not allowed." },
+        415,
+      );
     const id = crypto.randomUUID(),
       name = safeFileName(file.name),
       mime = file.type || "application/octet-stream",
@@ -3952,12 +3970,15 @@ async function serveWebsiteMedia(request, env) {
   if (!row) return new Response("Not found", { status: 404 });
   const object = await storage.get(row.r2_key);
   if (!object) return new Response("Not found", { status: 404 });
+  const mime = String(row.mime_type || "application/octet-stream").toLowerCase();
+  const disposition = SAFE_INLINE_MEDIA_TYPES.has(mime) ? "inline" : "attachment";
   return new Response(object.body, {
     headers: {
-      "content-type": row.mime_type,
+      "content-type": mime,
       "content-length": String(object.size),
       "cache-control": "public,max-age=86400",
-      "content-disposition": `inline; filename="${safeFileName(row.file_name)}"`,
+      "content-disposition": `${disposition}; filename="${safeFileName(row.file_name)}"`,
+      "content-security-policy": "sandbox; default-src 'none'",
       "x-content-type-options": "nosniff",
     },
   });
@@ -4158,6 +4179,14 @@ async function processAiTask(env, taskId) {
     .bind(taskId)
     .first();
   if (!task || task.status === "completed") return;
+  if (!isWebsiteAdmin({ email: task.user_email }, env)) {
+    await failAiTask(
+      env,
+      { taskId },
+      new Error("Website Studio administrator access is required."),
+    );
+    return;
+  }
   const now = new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(
@@ -5004,6 +5033,17 @@ function normalizeEmail(value) {
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return "";
   return email;
+}
+
+function isWebsiteAdmin(user, env) {
+  const approved = String(
+    env.WEBSITE_STUDIO_ADMIN_EMAILS || "sebslabbert1@gmail.com",
+  )
+    .split(",")
+    .map(normalizeEmail)
+    .filter(Boolean);
+  const email = normalizeEmail(user?.email);
+  return Boolean(email && approved.includes(email));
 }
 
 function sameOrigin(request) {
@@ -6365,7 +6405,9 @@ async function showLeads(request, env, chatbotId) {
 }
 
 function csvCell(value) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  let text = String(value ?? "");
+  if (/^\s*[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
 }
 
 async function downloadLeads(request, env, chatbotId) {
@@ -6731,6 +6773,11 @@ export default {
       if (url.pathname === "/dashboard/website" && request.method === "GET") {
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
+        if (!isWebsiteAdmin(user, env))
+          return redirect(
+            "/dashboard?error=" +
+              encodeURIComponent("Website Studio administrator access is required."),
+          );
         return showWebsiteEditor(
           env,
           user,
@@ -6742,6 +6789,8 @@ export default {
           return json({ error: "Invalid request origin" }, 403);
         const user = await currentUser(request, env);
         if (!user) return json({ error: "Sign in again" }, 401);
+        if (!isWebsiteAdmin(user, env))
+          return json({ error: "Website Studio administrator access is required." }, 403);
         return handleWebsiteStudioApi(request, env, user);
       }
       if (url.pathname === "/api/website" && request.method === "POST") {
@@ -6749,6 +6798,8 @@ export default {
           return json({ error: "Invalid request origin" }, 403);
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
+        if (!isWebsiteAdmin(user, env))
+          return json({ error: "Website Studio administrator access is required." }, 403);
         return updateWebsiteContent(request, env, user);
       }
       if (url.pathname === "/api/scans/status" && request.method === "GET")
