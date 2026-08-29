@@ -6656,44 +6656,27 @@ async function chatbotPurgeMaintenance(request, env) {
   const chatbotIds = (accounts.results || [])
     .map((row) => row.chatbot_id)
     .filter(Boolean);
-  const schemaTables = await env.DB.prepare(
-    `SELECT name AS table_name
-       FROM sqlite_schema
-      WHERE type='table' AND name NOT LIKE 'sqlite_%'
-      ORDER BY name`,
-  ).all();
-  const tables = [];
-  const foreignKeys = [];
-  for (const schemaRow of schemaTables.results || []) {
-    const table = String(schemaRow.table_name || "");
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) continue;
-    const columns = await env.DB.prepare(`PRAGMA table_info("${table}")`).all();
-    if ((columns.results || []).some((column) => column.name === "chatbot_id"))
-      tables.push({ table_name: table });
-    const keys = await env.DB.prepare(`PRAGMA foreign_key_list("${table}")`).all();
-    for (const key of keys.results || []) {
-      foreignKeys.push({
-        child_table: table,
-        parent_table: key.table,
-        child_column: key.from,
-        parent_column: key.to,
-        on_delete: key.on_delete,
-      });
-    }
-  }
-
   const relatedCounts = {};
+  const relatedErrors = {};
   if (chatbotIds.length) {
     const idPlaceholders = chatbotIds.map(() => "?").join(",");
-    for (const row of tables) {
-      const table = String(row.table_name || "");
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) continue;
-      const count = await env.DB.prepare(
-        `SELECT COUNT(*) AS total FROM "${table}" WHERE chatbot_id IN (${idPlaceholders})`,
-      )
-        .bind(...chatbotIds)
-        .first();
-      relatedCounts[table] = Number(count?.total || 0);
+    const checks = [
+      ["chatbot_settings", `SELECT COUNT(*) AS total FROM chatbot_settings WHERE chatbot_id IN (${idPlaceholders})`],
+      ["crawl_jobs", `SELECT COUNT(*) AS total FROM crawl_jobs WHERE chatbot_id IN (${idPlaceholders})`],
+      ["knowledge_sources", `SELECT COUNT(*) AS total FROM knowledge_sources WHERE chatbot_id IN (${idPlaceholders})`],
+      ["response_cache", `SELECT COUNT(*) AS total FROM response_cache WHERE chatbot_id IN (${idPlaceholders})`],
+      ["conversations", `SELECT COUNT(*) AS total FROM conversations WHERE chatbot_id IN (${idPlaceholders})`],
+      ["messages", `SELECT COUNT(*) AS total FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE chatbot_id IN (${idPlaceholders}))`],
+      ["usage_events", `SELECT COUNT(*) AS total FROM usage_events WHERE chatbot_id IN (${idPlaceholders})`],
+      ["leads", `SELECT COUNT(*) AS total FROM leads WHERE chatbot_id IN (${idPlaceholders})`],
+    ];
+    for (const [name, sql] of checks) {
+      try {
+        const count = await env.DB.prepare(sql).bind(...chatbotIds).first();
+        relatedCounts[name] = Number(count?.total || 0);
+      } catch (error) {
+        relatedErrors[name] = String(error?.message || error || "Query unavailable");
+      }
     }
   }
 
@@ -6703,7 +6686,8 @@ async function chatbotPurgeMaintenance(request, env) {
     accounts: accounts.results || [],
     chatbot_count: chatbotIds.length,
     related_counts: relatedCounts,
-    foreign_keys: foreignKeys,
+    related_errors: relatedErrors,
+    schema_mode: "source-derived",
   });
   } catch (error) {
     return new Response(
