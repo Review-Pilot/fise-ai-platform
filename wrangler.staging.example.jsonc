@@ -1,0 +1,65 @@
+// TEMPLATE ONLY — do not deploy until every REPLACE_ value is set to a staging-only resource.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "fise-ai-platform-staging",
+  "main": "src/index.js",
+  "workers_dev": true,
+  "preview_urls": false,
+  "compatibility_date": "2026-08-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "staging",
+    "WEBSITE_STUDIO_ADMIN_EMAILS": "sebslabbert1@gmail.com",
+    "WEBSITE_AI_MODEL": "gpt-5.6-terra"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1,
+      "persist": true
+    }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fise-ai-platform-staging-db",
+      "database_id": "REPLACE_WITH_STAGING_D1_DATABASE_ID"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "fise-ai-platform-staging-files"
+    }
+  ],
+  "services": [
+    {
+      "binding": "REVIEW_PILOT_SITE",
+      "service": "review-pilot-website-staging"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "SCAN_QUEUE",
+        "queue": "fise-website-scans-staging"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "fise-website-scans-staging",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "fise-website-scans-staging-dlq"
+      }
+    ]
+  }
+}
