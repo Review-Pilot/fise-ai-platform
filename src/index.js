@@ -4466,6 +4466,8 @@ const html = String.raw;
 const SESSION_COOKIE = "fise_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 14;
 const MAGIC_LINK_SECONDS = 60 * 15;
+const CHATBOT_DELETE_LINK_SECONDS = 60 * 30;
+const CHATBOT_DELETE_REQUEST_LIMIT = 3;
 const DIRECT_EMAIL_LOGIN = false;
 
 const sharedStyles = html`
@@ -4504,7 +4506,12 @@ const sharedStyles = html`
   border-radius:11px; color:#fff; background:var(--blue); font-weight:800;
   cursor:pointer; text-decoration:none; } .btn:hover { background:var(--blue2);
   } .btn.full { width:100%; margin-top:20px; } .btn.ghost { color:var(--dark);
-  background:#eef3f8; } .alert { margin:0 0 18px; padding:13px 15px;
+  background:#eef3f8; } .btn.danger { color:#fff; background:var(--danger); }
+  .btn.danger:hover { background:#7f1d1d; } .delete-tools { margin-top:14px;
+  padding:15px; border:1px solid #edb5b5; border-radius:12px; background:#fff8f8; }
+  .delete-tools strong { color:var(--danger); } .delete-tools p { margin:6px 0 12px;
+  color:var(--muted); font-size:13px; line-height:1.45; } .delete-tools form { margin:0; }
+  .delete-tools .btn { min-height:39px; padding:0 14px; font-size:13px; } .alert { margin:0 0 18px; padding:13px 15px;
   border-radius:11px; font-size:14px; line-height:1.45; } .alert.ok { border:1px
   solid #a9d9bd; color:var(--ok); background:#effaf3; } .alert.error {
   border:1px solid #edb5b5; color:var(--danger); background:#fff3f3; } .fine {
@@ -4860,6 +4867,22 @@ function dashboardPage(
               </div>`
             : ""
         }
+              <div class="delete-tools">
+                <strong>Delete this chatbot permanently</strong>
+                <p>
+                  For security, Fise will email ${escapeHtml(user.email)} a
+                  30-minute confirmation link. Opening the email will not
+                  delete anything until the final button is pressed.
+                </p>
+                <form
+                  method="post"
+                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request"
+                >
+                  <button class="btn danger" type="submit">
+                    Email deletion confirmation
+                  </button>
+                </form>
+              </div>
             </article>`,
         )
         .join("")
@@ -5294,6 +5317,344 @@ async function verifyMagicLink(request, env) {
   });
 }
 
+
+async function ensureChatbotDeletionSchema(env) {
+  await env.DB.batch([
+    env.DB.prepare(
+      "CREATE TABLE IF NOT EXISTS chatbot_deletion_tokens (" +
+        "token_hash TEXT PRIMARY KEY," +
+        "user_id TEXT NOT NULL," +
+        "chatbot_id TEXT NOT NULL," +
+        "expires_at INTEGER NOT NULL," +
+        "used_at TEXT," +
+        "created_at TEXT NOT NULL" +
+      ")",
+    ),
+    env.DB.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_chatbot_deletion_tokens_owner " +
+        "ON chatbot_deletion_tokens(user_id,chatbot_id,created_at)",
+    ),
+  ]);
+}
+
+function chatbotDeletionMessage(title, message, status = 200) {
+  return htmlResponse(
+    documentPage(
+      title,
+      '<main class="wrap"><section class="shell">' +
+        "<h1>" + escapeHtml(title) + "</h1>" +
+        '<p class="lead">' + escapeHtml(message) + "</p>" +
+        '<a class="btn ghost" href="/dashboard">Return to dashboard</a>' +
+      "</section></main>",
+    ),
+    status,
+  );
+}
+
+async function requestChatbotDeletion(request, env, chatbotId) {
+  if (!sameOrigin(request))
+    return json({ error: "Invalid request origin" }, 403);
+  const user = await currentUser(request, env);
+  if (!user) return redirect("/login");
+  if (!env.RESEND_API_KEY)
+    return redirect(
+      "/dashboard?error=" +
+        encodeURIComponent("Email service is not configured."),
+    );
+
+  const bot = await ownedChatbot(env, user.id, chatbotId);
+  if (!bot)
+    return redirect(
+      "/dashboard?error=" + encodeURIComponent("Chatbot not found."),
+    );
+
+  await ensureChatbotDeletionSchema(env);
+  const now = Date.now();
+  const nowSeconds = Math.floor(now / 1000);
+  const recentAt = new Date(now - 10 * 60 * 1000).toISOString();
+  await env.DB.prepare(
+    "DELETE FROM chatbot_deletion_tokens " +
+      "WHERE expires_at <= ? OR used_at IS NOT NULL",
+  )
+    .bind(nowSeconds)
+    .run();
+  const recent = await env.DB.prepare(
+    "SELECT COUNT(*) AS total FROM chatbot_deletion_tokens " +
+      "WHERE user_id=? AND chatbot_id=? AND created_at>=?",
+  )
+    .bind(user.id, chatbotId, recentAt)
+    .first();
+  if (Number(recent?.total || 0) >= CHATBOT_DELETE_REQUEST_LIMIT)
+    return redirect(
+      "/dashboard?error=" +
+        encodeURIComponent(
+          "Too many deletion emails were requested. Please wait 10 minutes.",
+        ),
+    );
+
+  const token = randomToken();
+  const tokenHash = await hashToken(token);
+  const expiresAt = nowSeconds + CHATBOT_DELETE_LINK_SECONDS;
+  const nowIso = new Date(now).toISOString();
+  await env.DB.prepare(
+    "INSERT INTO chatbot_deletion_tokens " +
+      "(token_hash,user_id,chatbot_id,expires_at,created_at) " +
+      "VALUES (?,?,?,?,?)",
+  )
+    .bind(tokenHash, user.id, chatbotId, expiresAt, nowIso)
+    .run();
+
+  const origin = new URL(request.url).origin;
+  const confirmationUrl =
+    origin +
+    "/chatbot-deletion/confirm?token=" +
+    encodeURIComponent(token);
+  const safeName = escapeHtml(bot.name || "Fise chatbot");
+  const emailHtml =
+    '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#102033">' +
+      '<h1 style="font-size:28px;margin:0 0 14px">Confirm chatbot deletion</h1>' +
+      '<p style="line-height:1.6">A permanent deletion was requested for <strong>' +
+        safeName +
+      "</strong>. Opening this email does not delete it. Review the details and press the final confirmation button.</p>" +
+      '<p style="margin:28px 0"><a href="' +
+        escapeHtml(confirmationUrl) +
+        '" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#a52b2b;color:white;text-decoration:none;font-weight:bold">Review deletion request</a></p>' +
+      '<p style="color:#637083;font-size:13px;line-height:1.5">This secure link expires in 30 minutes and can only be used once. If you did not request this, ignore the email and the chatbot will remain unchanged.</p>' +
+    "</div>";
+
+  const resendResponse = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer " + env.RESEND_API_KEY,
+      "content-type": "application/json",
+      "idempotency-key": "fise-chatbot-delete-" + tokenHash,
+    },
+    body: JSON.stringify({
+      from: "Fise AI <login@fise.get-found.co.za>",
+      to: [user.email],
+      subject: "Confirm permanent deletion of " + (bot.name || "your chatbot"),
+      html: emailHtml,
+      text:
+        "A permanent deletion was requested for " +
+        (bot.name || "your Fise chatbot") +
+        ". Review and confirm it here: " +
+        confirmationUrl +
+        "\n\nThis link expires in 30 minutes. If you did not request this, ignore this email.",
+    }),
+  });
+  if (!resendResponse.ok) {
+    console.error(
+      JSON.stringify({
+        event: "chatbot_deletion_email_failed",
+        chatbot_id: chatbotId,
+        status: resendResponse.status,
+      }),
+    );
+    await env.DB.prepare(
+      "DELETE FROM chatbot_deletion_tokens WHERE token_hash=?",
+    )
+      .bind(tokenHash)
+      .run();
+    return redirect(
+      "/dashboard?error=" +
+        encodeURIComponent(
+          "The deletion email could not be sent. Please try again.",
+        ),
+    );
+  }
+  return redirect("/dashboard?delete_email=sent");
+}
+
+async function chatbotDeletionToken(env, token) {
+  if (String(token || "").length < 20) return null;
+  await ensureChatbotDeletionSchema(env);
+  const tokenHash = await hashToken(token);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare(
+    "SELECT d.token_hash,d.user_id,d.chatbot_id,d.expires_at,d.used_at," +
+      "c.name,c.business_name,c.website_url,c.vector_store_id,u.email " +
+      "FROM chatbot_deletion_tokens d " +
+      "JOIN users u ON u.id=d.user_id " +
+      "JOIN chatbots c ON c.id=d.chatbot_id AND c.user_id=d.user_id " +
+      "WHERE d.token_hash=?",
+  )
+    .bind(tokenHash)
+    .first();
+  if (!row || row.used_at || Number(row.expires_at) <= nowSeconds) return null;
+  return row;
+}
+
+async function showChatbotDeletionConfirmation(request, env) {
+  const token = new URL(request.url).searchParams.get("token") || "";
+  const pending = await chatbotDeletionToken(env, token);
+  if (!pending)
+    return chatbotDeletionMessage(
+      "Deletion link unavailable",
+      "This link is invalid, expired or has already been used. Your chatbot was not changed.",
+      400,
+    );
+
+  const content =
+    '<main class="wrap"><section class="shell">' +
+      '<div class="eyebrow">Final security check</div>' +
+      "<h1>Permanently delete " + escapeHtml(pending.name) + "?</h1>" +
+      '<p class="lead">This cannot be undone. The chatbot, knowledge sources, conversations, messages, leads, settings and OpenAI knowledge store will be removed. Your Fise account and subscription will remain.</p>' +
+      '<div class="details"><div><small>Account</small><code>' +
+        escapeHtml(pending.email) +
+      '</code></div><div><small>Website</small><code>' +
+        escapeHtml(pending.website_url || "Not set") +
+      "</code></div></div>" +
+      '<form method="post" action="/chatbot-deletion/confirm">' +
+        '<input type="hidden" name="token" value="' + escapeHtml(token) + '">' +
+        '<button class="btn full danger" type="submit">Permanently delete chatbot</button>' +
+      "</form>" +
+      '<p class="fine"><a href="/dashboard">Cancel and return to dashboard</a></p>' +
+    "</section></main>";
+  return htmlResponse(documentPage("Confirm chatbot deletion", content));
+}
+
+async function removeChatbotVectorStore(env, vectorStoreId) {
+  if (!vectorStoreId || !env.OPENAI_API_KEY) return !vectorStoreId;
+  try {
+    const response = await fetch(
+      "https://api.openai.com/v1/vector_stores/" +
+        encodeURIComponent(vectorStoreId),
+      {
+        method: "DELETE",
+        headers: {
+          authorization: "Bearer " + env.OPENAI_API_KEY,
+          "openai-beta": "assistants=v2",
+        },
+      },
+    );
+    if (response.ok || response.status === 404) return true;
+    console.error(
+      JSON.stringify({
+        event: "chatbot_vector_store_delete_failed",
+        vector_store_id: vectorStoreId,
+        status: response.status,
+      }),
+    );
+    return false;
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "chatbot_vector_store_delete_error",
+        vector_store_id: vectorStoreId,
+        message: String(error?.message || error || "unknown"),
+      }),
+    );
+    return false;
+  }
+}
+
+async function completeChatbotDeletion(request, env) {
+  if (!sameOrigin(request))
+    return json({ error: "Invalid request origin" }, 403);
+  const form = await request.formData();
+  const token = String(form.get("token") || "");
+  const pending = await chatbotDeletionToken(env, token);
+  if (!pending)
+    return chatbotDeletionMessage(
+      "Deletion link unavailable",
+      "This link is invalid, expired or has already been used. Your chatbot was not changed.",
+      400,
+    );
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const claimedAt = new Date().toISOString();
+  const claimed = await env.DB.prepare(
+    "UPDATE chatbot_deletion_tokens SET used_at=? " +
+      "WHERE token_hash=? AND used_at IS NULL AND expires_at>?",
+  )
+    .bind(claimedAt, pending.token_hash, nowSeconds)
+    .run();
+  if (Number(claimed.meta?.changes || 0) !== 1)
+    return chatbotDeletionMessage(
+      "Deletion link unavailable",
+      "This link has already been used. No additional changes were made.",
+      400,
+    );
+
+  const chatbotId = pending.chatbot_id;
+  try {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM leads WHERE chatbot_id=?").bind(chatbotId),
+      env.DB.prepare(
+        "DELETE FROM messages WHERE conversation_id IN " +
+          "(SELECT id FROM conversations WHERE chatbot_id=?)",
+      ).bind(chatbotId),
+      env.DB.prepare("DELETE FROM conversations WHERE chatbot_id=?").bind(
+        chatbotId,
+      ),
+      env.DB.prepare("DELETE FROM usage_events WHERE chatbot_id=?").bind(
+        chatbotId,
+      ),
+      env.DB.prepare("DELETE FROM response_cache WHERE chatbot_id=?").bind(
+        chatbotId,
+      ),
+      env.DB.prepare("DELETE FROM knowledge_sources WHERE chatbot_id=?").bind(
+        chatbotId,
+      ),
+      env.DB.prepare("DELETE FROM crawl_jobs WHERE chatbot_id=?").bind(
+        chatbotId,
+      ),
+      env.DB.prepare("DELETE FROM chatbot_settings WHERE chatbot_id=?").bind(
+        chatbotId,
+      ),
+      env.DB.prepare(
+        "DELETE FROM chatbot_deletion_tokens WHERE chatbot_id=?",
+      ).bind(chatbotId),
+      env.DB.prepare(
+        "DELETE FROM chatbots WHERE id=? AND user_id=?",
+      ).bind(chatbotId, pending.user_id),
+    ]);
+  } catch (error) {
+    await env.DB.prepare(
+      "UPDATE chatbot_deletion_tokens SET used_at=NULL " +
+        "WHERE token_hash=? AND used_at=?",
+    )
+      .bind(pending.token_hash, claimedAt)
+      .run()
+      .catch(() => {});
+    console.error(
+      JSON.stringify({
+        event: "chatbot_deletion_database_failed",
+        chatbot_id: chatbotId,
+        message: String(error?.message || error || "unknown"),
+      }),
+    );
+    return chatbotDeletionMessage(
+      "Deletion could not be completed",
+      "Fise did not delete the chatbot. Please try the secure link again.",
+      500,
+    );
+  }
+
+  const remaining = await env.DB.prepare(
+    "SELECT COUNT(*) AS total FROM chatbots WHERE id=? AND user_id=?",
+  )
+    .bind(chatbotId, pending.user_id)
+    .first();
+  if (Number(remaining?.total || 0) !== 0)
+    return chatbotDeletionMessage(
+      "Deletion verification failed",
+      "Fise could not verify the deletion. Please contact support.",
+      500,
+    );
+
+  const vectorStoreDeleted = await removeChatbotVectorStore(
+    env,
+    pending.vector_store_id,
+  );
+  return chatbotDeletionMessage(
+    "Chatbot permanently deleted",
+    vectorStoreDeleted
+      ? "The chatbot and its related data were deleted. Your Fise account and subscription remain active."
+      : "The chatbot data was deleted. The external knowledge store cleanup needs administrator attention.",
+  );
+}
+
 async function accountProfile(request, env) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: "Sign in again" }, 401);
@@ -5366,6 +5727,11 @@ async function showDashboard(request, env) {
   if (url.searchParams.get("scan") === "started")
     message =
       "Website scan started. Progress will update automatically and can take up to 5 minutes.";
+  if (url.searchParams.get("delete_email") === "sent")
+    message =
+      "Check your email for the secure chatbot deletion link. It expires in 30 minutes.";
+  if (url.searchParams.get("deleted") === "1")
+    message = "The chatbot and its related data were permanently deleted.";
   if (url.searchParams.get("error")) {
     message = url.searchParams.get("error");
     isError = true;
@@ -6787,6 +7153,26 @@ export default {
       }
       if (url.pathname === "/api/scans/status" && request.method === "GET")
         return scanStatus(request, env);
+      const deletionRequestMatch = url.pathname.match(
+        /^\/api\/chatbots\/([^/]+)\/delete-request$/,
+      );
+      if (deletionRequestMatch && request.method === "POST")
+        return requestChatbotDeletion(
+          request,
+          env,
+          decodeURIComponent(deletionRequestMatch[1]),
+        );
+      if (
+        url.pathname === "/chatbot-deletion/confirm" &&
+        request.method === "GET"
+      )
+        return showChatbotDeletionConfirmation(request, env);
+      if (
+        url.pathname === "/chatbot-deletion/confirm" &&
+        request.method === "POST"
+      )
+        return completeChatbotDeletion(request, env);
+
       const settingsPageMatch = url.pathname.match(
         /^\/dashboard\/chatbots\/([^/]+)\/settings$/,
       );
