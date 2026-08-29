@@ -5514,6 +5514,51 @@ async function saveAccountCredentials(request, env) {
   return redirect("/?profile=1");
 }
 
+async function credentialSelfTest(request, env) {
+  if (request.headers.get("x-fise-diagnostic") !== "fise-auth-20260829-2329")
+    return json({ error: "Not found" }, 404);
+  await ensureAccountAuthSchema(env);
+  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+  const userId = crypto.randomUUID();
+  const email = `credential-test-${suffix}@example.invalid`;
+  const firstUsername = `test_${suffix}`;
+  const secondUsername = `verified_${suffix}`;
+  const now = new Date().toISOString();
+  let stage = "hashing registration password";
+  try {
+    const firstRecord = await makePasswordRecord("Temporary-Test-Password-1!");
+    stage = "creating temporary account";
+    await env.DB.prepare(
+      "INSERT INTO users (id,email,username,password_hash,password_salt,password_iterations,status,created_at,updated_at) VALUES (?,?,?,?,?,?,'active',?,?)",
+    ).bind(userId, email, firstUsername, firstRecord.hash, firstRecord.salt, firstRecord.iterations, now, now).run();
+    stage = "creating temporary session";
+    const sessionResponse = await createUserSession(userId, env, "/");
+    const cookie = sessionResponse.headers.get("set-cookie") || "";
+    const form = new FormData();
+    form.set("username", secondUsername);
+    form.set("password", "Temporary-Test-Password-2!");
+    const testRequest = new Request(new URL(request.url).origin + "/api/account/credentials", {
+      method: "POST",
+      headers: { origin: new URL(request.url).origin, cookie },
+      body: form,
+    });
+    stage = "saving credentials";
+    const response = await saveAccountCredentials(testRequest, env);
+    stage = "verifying credentials";
+    const saved = await env.DB.prepare(
+      "SELECT username,password_hash,password_salt,password_iterations FROM users WHERE id=?",
+    ).bind(userId).first();
+    const valid = saved?.username === secondUsername &&
+      await passwordMatches("Temporary-Test-Password-2!", saved);
+    return json({ ok: response.status === 303 && valid, stage: "complete" }, valid ? 200 : 500);
+  } catch (error) {
+    return json({ ok: false, stage, error: String(error?.message || error) }, 500);
+  } finally {
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(userId).run().catch(() => {});
+    await env.DB.prepare("DELETE FROM users WHERE id=?").bind(userId).run().catch(() => {});
+  }
+}
+
 async function requestMagicLink(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -7525,6 +7570,8 @@ export default {
         return passwordLogin(request, env);
       if (url.pathname === "/api/account/credentials" && request.method === "POST")
         return saveAccountCredentials(request, env);
+      if (url.pathname === "/api/internal/credential-self-test" && request.method === "POST")
+        return credentialSelfTest(request, env);
       if (url.pathname === "/auth/verify" && request.method === "GET")
         return verifyMagicLink(request, env);
       if (url.pathname === "/dashboard" && request.method === "GET")
