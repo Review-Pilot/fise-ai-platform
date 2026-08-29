@@ -5269,31 +5269,24 @@ function normalizeUsername(value) {
   return username;
 }
 
-let accountAuthSchemaPromise;
 async function ensureAccountAuthSchema(env) {
-  if (!accountAuthSchemaPromise) {
-    accountAuthSchemaPromise = (async () => {
-      const info = await env.DB.prepare("PRAGMA table_info(users)").all();
-      const columns = new Set((info.results || []).map((row) => row.name));
-      const additions = [
-        ["username", "TEXT"],
-        ["password_hash", "TEXT"],
-        ["password_salt", "TEXT"],
-        ["password_iterations", "INTEGER"],
-      ];
-      for (const [name, type] of additions) {
-        if (!columns.has(name))
-          await env.DB.prepare(`ALTER TABLE users ADD COLUMN ${name} ${type}`).run();
-      }
-      await env.DB.prepare(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_nocase ON users(username COLLATE NOCASE)",
-      ).run();
-    })().catch((error) => {
-      accountAuthSchemaPromise = null;
-      throw error;
-    });
+  // D1 promises are request-scoped in Cloudflare Workers. Never cache this
+  // promise at module level or a later browser request can throw error 1101.
+  const info = await env.DB.prepare("PRAGMA table_info(users)").all();
+  const columns = new Set((info.results || []).map((row) => row.name));
+  const additions = [
+    ["username", "TEXT"],
+    ["password_hash", "TEXT"],
+    ["password_salt", "TEXT"],
+    ["password_iterations", "INTEGER"],
+  ];
+  for (const [name, type] of additions) {
+    if (!columns.has(name))
+      await env.DB.prepare(`ALTER TABLE users ADD COLUMN ${name} ${type}`).run();
   }
-  return accountAuthSchemaPromise;
+  await env.DB.prepare(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_nocase ON users(username COLLATE NOCASE)",
+  ).run();
 }
 
 function bytesToBase64Url(bytes) {
