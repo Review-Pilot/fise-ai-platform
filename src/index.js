@@ -6607,6 +6607,19 @@ const CHATBOT_PURGE_EMAILS = [
   "jkslabbert@gmail.com",
   "finlayslabbert@gmail.com",
 ];
+const CHATBOT_PURGE_APPROVED = [
+  {
+    chatbot_id: "ff56195d-4383-4639-acde-b735b44ce4f9",
+    email: "finlayslabbert@gmail.com",
+    name: "Stew",
+  },
+  {
+    chatbot_id: "8c891a26-f9d0-4482-9b5b-ac1c113a7ade",
+    email: "rianslabbert@gmail.com",
+    name: "Starter",
+  },
+];
+const CHATBOT_PURGE_CONFIRMATION = "DELETE THE 2 CHATBOTS";
 const CHATBOT_PURGE_TOKEN_HASH = "c145cb5229f84fd19bd768d1b1422cfcc6b861e2c87fcf8ef23ccc14a9dc6afa";
 
 async function validChatbotPurgeToken(value) {
@@ -6627,8 +6640,124 @@ async function validChatbotPurgeToken(value) {
 
 function chatbotPurgePreviewPage() {
   return htmlResponse(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Fise maintenance preview</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font-family:Inter,system-ui,sans-serif;color:#102033;background:#f4f7fb}.card{width:min(560px,100%);padding:30px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(27,63,108,.1)}input,button{width:100%;min-height:48px;margin-top:12px;padding:10px 13px;border-radius:10px;font:inherit}input{border:1px solid #cbd5e1}button{border:0;color:#fff;background:#102033;font-weight:800}p{color:#637083;line-height:1.55}</style></head><body><main class="card"><h1>Chatbot deletion preview</h1><p>This read-only check lists chatbots and related database tables. It does not delete anything.</p><form method="post"><input type="hidden" name="action" value="preview"><label for="token">One-time maintenance token</label><input id="token" name="token" type="password" autocomplete="off" required><button type="submit">Run read-only preview</button></form></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Fise maintenance deletion</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font-family:Inter,system-ui,sans-serif;color:#102033;background:#f4f7fb}.card{width:min(620px,100%);padding:30px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(27,63,108,.1)}input,button{box-sizing:border-box;width:100%;min-height:48px;margin-top:12px;padding:10px 13px;border-radius:10px;font:inherit}input{border:1px solid #cbd5e1}button{border:0;color:#fff;background:#b42318;font-weight:800}p,li{color:#637083;line-height:1.55}.warning{padding:14px;border-radius:10px;color:#7a271a;background:#fef3f2;font-weight:700}code{font-weight:800}</style></head><body><main class="card"><h1>Final chatbot deletion</h1><p class="warning">This permanently deletes the two approved chatbots and their related data. User accounts, logins and subscriptions remain.</p><ul><li>Stew — finlayslabbert@gmail.com</li><li>Starter — rianslabbert@gmail.com</li></ul><form method="post"><input type="hidden" name="action" value="delete"><label for="token">One-time maintenance token</label><input id="token" name="token" type="password" autocomplete="off" required><label for="confirmation">Type <code>DELETE THE 2 CHATBOTS</code></label><input id="confirmation" name="confirmation" type="text" autocomplete="off" required><button type="submit">Permanently delete 2 chatbots</button></form></main></body></html>`,
   );
+}
+
+async function deleteApprovedChatbots(form, env) {
+  if (String(form.get("confirmation") || "") !== CHATBOT_PURGE_CONFIRMATION)
+    return json({ error: "Confirmation phrase does not match" }, 400);
+
+  const chatbotIds = CHATBOT_PURGE_APPROVED.map((item) => item.chatbot_id);
+  const chatbotIdPlaceholders = chatbotIds.map(() => "?").join(",");
+  const current = await env.DB.prepare(
+    "SELECT c.id AS chatbot_id,c.name,c.vector_store_id,u.email " +
+      "FROM chatbots c JOIN users u ON u.id=c.user_id " +
+      "WHERE c.id IN (" + chatbotIdPlaceholders + ")",
+  )
+    .bind(...chatbotIds)
+    .all();
+  const currentRows = current.results || [];
+  const exactMatch =
+    currentRows.length === CHATBOT_PURGE_APPROVED.length &&
+    CHATBOT_PURGE_APPROVED.every((approved) =>
+      currentRows.some(
+        (row) =>
+          row.chatbot_id === approved.chatbot_id &&
+          String(row.email || "").toLowerCase() === approved.email &&
+          row.name === approved.name,
+      ),
+    );
+  if (!exactMatch)
+    return json(
+      {
+        error: "The approved chatbot set changed; deletion was stopped.",
+        approved: CHATBOT_PURGE_APPROVED,
+        current: currentRows.map((row) => ({
+          chatbot_id: row.chatbot_id,
+          email: row.email,
+          name: row.name,
+        })),
+      },
+      409,
+    );
+
+  const statements = [
+    ["leads", "DELETE FROM leads WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    [
+      "messages",
+      "DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE chatbot_id IN (" +
+        chatbotIdPlaceholders +
+        "))",
+    ],
+    ["conversations", "DELETE FROM conversations WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    ["usage_events", "DELETE FROM usage_events WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    ["response_cache", "DELETE FROM response_cache WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    ["knowledge_sources", "DELETE FROM knowledge_sources WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    ["crawl_jobs", "DELETE FROM crawl_jobs WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    ["chatbot_settings", "DELETE FROM chatbot_settings WHERE chatbot_id IN (" + chatbotIdPlaceholders + ")"],
+    ["chatbots", "DELETE FROM chatbots WHERE id IN (" + chatbotIdPlaceholders + ")"],
+  ];
+  const deletionResults = await env.DB.batch(
+    statements.map(([, sql]) => env.DB.prepare(sql).bind(...chatbotIds)),
+  );
+  const remaining = await env.DB.prepare(
+    "SELECT COUNT(*) AS total FROM chatbots WHERE id IN (" +
+      chatbotIdPlaceholders +
+      ")",
+  )
+    .bind(...chatbotIds)
+    .first();
+  if (Number(remaining?.total || 0) !== 0)
+    return json({ error: "Database verification failed after deletion" }, 500);
+
+  const vectorStores = [];
+  for (const row of currentRows) {
+    const vectorStoreId = String(row.vector_store_id || "");
+    if (!vectorStoreId) {
+      vectorStores.push({ chatbot_id: row.chatbot_id, status: "not-configured" });
+      continue;
+    }
+    try {
+      const response = await fetch(
+        "https://api.openai.com/v1/vector_stores/" +
+          encodeURIComponent(vectorStoreId),
+        {
+          method: "DELETE",
+          headers: {
+            authorization: `Bearer ${env.OPENAI_API_KEY}`,
+            "openai-beta": "assistants=v2",
+          },
+        },
+      );
+      vectorStores.push({
+        chatbot_id: row.chatbot_id,
+        vector_store_id: vectorStoreId,
+        status:
+          response.ok || response.status === 404
+            ? "deleted"
+            : "cleanup-failed-" + response.status,
+      });
+    } catch {
+      vectorStores.push({
+        chatbot_id: row.chatbot_id,
+        vector_store_id: vectorStoreId,
+        status: "cleanup-failed-network",
+      });
+    }
+  }
+
+  return json({
+    mode: "deleted",
+    deleted_chatbots: CHATBOT_PURGE_APPROVED,
+    accounts_preserved: true,
+    database_changes: statements.map(([table], index) => ({
+      table,
+      changes: Number(deletionResults[index]?.meta?.changes || 0),
+    })),
+    vector_stores: vectorStores,
+    verification: { remaining_approved_chatbots: 0 },
+  });
 }
 
 async function chatbotPurgeMaintenance(request, env) {
@@ -6637,8 +6766,13 @@ async function chatbotPurgeMaintenance(request, env) {
   const form = await request.formData();
   if (!(await validChatbotPurgeToken(form.get("token"))))
     return json({ error: "Not found" }, 404);
-  if (String(form.get("action") || "") !== "preview")
-    return json({ error: "Preview only" }, 400);
+  const action = String(form.get("action") || "");
+  if (action === "delete") {
+    if (!sameOrigin(request))
+      return json({ error: "Invalid request origin" }, 403);
+    return deleteApprovedChatbots(form, env);
+  }
+  if (action !== "preview") return json({ error: "Unsupported action" }, 400);
 
   try {
   const emailPlaceholders = CHATBOT_PURGE_EMAILS.map(() => "?").join(",");
