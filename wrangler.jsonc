@@ -1,13 +1,18 @@
 {
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "fise-ai-platform",
   "main": "src/index.js",
   "workers_dev": true,
   "preview_urls": true,
-  "compatibility_date": "2026-08-21",
+  "compatibility_date": "2026-08-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "WEBSITE_STUDIO_ADMIN_EMAILS": "sebslabbert1@gmail.com"
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
-    "redact_query_string": false,
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1,
@@ -35,8 +40,7 @@
   "services": [
     {
       "binding": "REVIEW_PILOT_SITE",
-      "service": "review-pilot-website",
-      "environment": "production"
+      "service": "review-pilot-website-production"
     }
   ],
   "queues": {
@@ -44,6 +48,15 @@
       {
         "binding": "SCAN_QUEUE",
         "queue": "fise-website-scans"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "fise-website-scans",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "fise-website-scans-dlq"
       }
     ]
   }
