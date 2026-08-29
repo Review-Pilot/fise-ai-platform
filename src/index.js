@@ -2,7 +2,7 @@
  * Fise AI Platform - Website Studio update
  * Generated as one Cloudflare Worker module so it can be pasted in the browser editor.
  * Existing D1, R2, Queue and secrets are used without changing their bindings.
- * Release: trusted cross-origin dashboard frames.
+ * Release: same-origin srcdoc dashboard embedding.
  */
 const ScannerModule = (() => {
 const MAX_PAGES = 100;
@@ -3122,7 +3122,7 @@ function prepareReferenceBody(body, c) {
     /<div class="demo-browser-top">[\s\S]*?<\/div>/,
     "",
   );
-  value = value.replace('iframe src="/login?embed=1"', 'iframe src="/demo-chat"');
+  value = value.replace('iframe src="/login?embed=1"', 'iframe src="about:blank" data-dashboard-frame="demo"');
   value = value.replace(
     '<div class="demo-browser" id="demo-browser">',
     '<div class="demo-browser" id="demo-browser"><div class="demo-lock" id="demo-lock"><div class="demo-lock-card"><h3>Sign in to access the Demo</h3><p>Use your Fise AI account to open and test the working chatbot demo.</p><button class="reference-button dark" id="demo-signin" type="button">Sign in</button></div></div>',
@@ -3189,6 +3189,7 @@ function referenceJavascript() {
     const account=document.getElementById('account-button');
     const demoLink=document.getElementById('demo-link');
     const demoLock=document.getElementById('demo-lock');
+    const demoFrame=document.querySelector('[data-dashboard-frame="demo"]');
     const demoSignin=document.getElementById('demo-signin');
     const modal=document.getElementById('account-modal');
     const email=document.getElementById('account-email');
@@ -3204,15 +3205,78 @@ function referenceJavascript() {
     }
     function profileText(id,value){const node=document.getElementById(id);if(node)node.textContent=value||'—'}
     function titleCase(value){return String(value||'').replace(/[-_]/g,' ').replace(/\b\w/g,(letter)=>letter.toUpperCase())}
+    function dashboardFrameError(frame,message){
+      const safe=String(message||'The dashboard could not be loaded.').replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
+      frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:28px;background:#f3f6fa;color:#102033;font-family:Inter,system-ui,sans-serif}.notice{max-width:520px;padding:28px;border:1px solid #dfe6ef;border-radius:18px;background:#fff;text-align:center}.notice strong{display:block;margin-bottom:9px;font-size:22px}.notice p{margin:0;color:#637083;line-height:1.55}</style></head><body><section class="notice"><strong>Dashboard unavailable</strong><p>'+safe+'</p></section></body></html>';
+    }
+    function bindDashboardFrame(frame){
+      const doc=frame.contentDocument;
+      if(!doc||doc.documentElement.dataset.fiseBound==='true')return;
+      doc.documentElement.dataset.fiseBound='true';
+      doc.addEventListener('submit',(event)=>{
+        const form=event.target.closest('form');
+        if(!form)return;
+        const action=new URL(form.getAttribute('action')||location.href,location.href);
+        if(action.origin!==location.origin)return;
+        event.preventDefault();
+        const method=String(form.method||'GET').toUpperCase();
+        const data=new FormData(form,event.submitter||undefined);
+        const options={method};
+        if(method==='GET'){
+          for(const [key,value] of data.entries())action.searchParams.append(key,String(value));
+        }else{
+          options.body=data;
+        }
+        loadDashboardFrame(frame,action.toString(),options);
+      });
+      doc.addEventListener('click',(event)=>{
+        if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+        const link=event.target.closest('a[href]');
+        if(!link||link.hasAttribute('download')||link.target==='_blank')return;
+        const target=new URL(link.getAttribute('href'),location.href);
+        if(target.origin!==location.origin)return;
+        event.preventDefault();
+        if(target.pathname==='/'||target.pathname==='/demo'){
+          window.location.assign(target.toString());
+          return;
+        }
+        loadDashboardFrame(frame,target.toString());
+      });
+    }
+    async function loadDashboardFrame(frame,requestUrl='/dashboard?embed=1',requestOptions={}){
+      if(!frame)return;
+      frame.setAttribute('aria-busy','true');
+      try{
+        const response=await fetch(requestUrl,{credentials:'same-origin',redirect:'follow',...requestOptions});
+        const finalUrl=new URL(response.url,location.href);
+        if(finalUrl.pathname==='/login'||response.status===401){
+          authenticated=false;
+          if(demoLock)demoLock.hidden=false;
+          closeProfile();
+          openAccount();
+          return;
+        }
+        if(!response.ok)throw new Error('Fise returned error '+response.status+'. Please refresh and try again.');
+        const markup=await response.text();
+        frame.addEventListener('load',()=>bindDashboardFrame(frame),{once:true});
+        frame.srcdoc=markup;
+        frame.dataset.dashboardLoaded='true';
+      }catch(error){
+        dashboardFrameError(frame,error?.message||'Please refresh and try again.');
+      }finally{
+        frame.removeAttribute('aria-busy');
+      }
+    }
     function renderChatbots(){
       const list=document.getElementById('profile-chatbots');
       if(!list)return;
       const frame=document.createElement('iframe');
       frame.className='profile-dashboard-frame';
-      frame.src='/dashboard?embed=1';
+      frame.src='about:blank';
       frame.title='Fise chatbot dashboard';
       frame.loading='eager';
       list.replaceChildren(frame);
+      loadDashboardFrame(frame);
     }
     async function loadProfile(){
       if(profileLoaded)return;
@@ -3264,6 +3328,7 @@ function referenceJavascript() {
             if(account){account.textContent='My profile';account.href='#profile';account.dataset.authenticated='true'}
             demoLink?.classList.remove('requires-signin');
             if(demoLock)demoLock.hidden=true;
+            if(demoFrame&&demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame);
             if(params.get('signed_in')==='1'||params.get('profile')==='1'||(!wasAuthenticated&&params.get('sent')==='1'))openProfile();
           }else{
             demoLink?.classList.add('requires-signin');
