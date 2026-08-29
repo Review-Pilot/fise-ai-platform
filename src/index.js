@@ -6655,25 +6655,36 @@ async function chatbotPurgeMaintenance(request, env) {
   const chatbotIds = (accounts.results || [])
     .map((row) => row.chatbot_id)
     .filter(Boolean);
-  const tables = await env.DB.prepare(
-    `SELECT DISTINCT m.name AS table_name
-       FROM sqlite_schema AS m, pragma_table_info(m.name) AS p
-      WHERE m.type='table' AND p.name='chatbot_id'
-      ORDER BY m.name`,
+  const schemaTables = await env.DB.prepare(
+    `SELECT name AS table_name
+       FROM sqlite_schema
+      WHERE type='table' AND name NOT LIKE 'sqlite_%'
+      ORDER BY name`,
   ).all();
-  const foreignKeys = await env.DB.prepare(
-    `SELECT m.name AS child_table,fk."table" AS parent_table,
-            fk."from" AS child_column,fk."to" AS parent_column,
-            fk.on_delete
-       FROM sqlite_schema AS m, pragma_foreign_key_list(m.name) AS fk
-      WHERE m.type='table'
-      ORDER BY m.name,fk.id`,
-  ).all();
+  const tables = [];
+  const foreignKeys = [];
+  for (const schemaRow of schemaTables.results || []) {
+    const table = String(schemaRow.table_name || "");
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) continue;
+    const columns = await env.DB.prepare(`PRAGMA table_info("${table}")`).all();
+    if ((columns.results || []).some((column) => column.name === "chatbot_id"))
+      tables.push({ table_name: table });
+    const keys = await env.DB.prepare(`PRAGMA foreign_key_list("${table}")`).all();
+    for (const key of keys.results || []) {
+      foreignKeys.push({
+        child_table: table,
+        parent_table: key.table,
+        child_column: key.from,
+        parent_column: key.to,
+        on_delete: key.on_delete,
+      });
+    }
+  }
 
   const relatedCounts = {};
   if (chatbotIds.length) {
     const idPlaceholders = chatbotIds.map(() => "?").join(",");
-    for (const row of tables.results || []) {
+    for (const row of tables) {
       const table = String(row.table_name || "");
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) continue;
       const count = await env.DB.prepare(
@@ -6691,7 +6702,7 @@ async function chatbotPurgeMaintenance(request, env) {
     accounts: accounts.results || [],
     chatbot_count: chatbotIds.length,
     related_counts: relatedCounts,
-    foreign_keys: foreignKeys.results || [],
+    foreign_keys: foreignKeys,
   });
 }
 
