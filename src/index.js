@@ -5350,6 +5350,18 @@ async function passwordMatches(password, user) {
   return difference === 0;
 }
 
+async function cryptoCompatibilityCheck(request) {
+  if (request.headers.get("x-fise-crypto-check") !== "fise-crypto-20260829")
+    return json({ error: "Not found" }, 404);
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const digest = await passwordDigest("Temporary compatibility check", salt, 50000);
+    return json({ ok: digest.length > 20 });
+  } catch (error) {
+    return json({ ok: false, error: String(error?.message || error) }, 500);
+  }
+}
+
 function validPassword(value) {
   const password = String(value || "");
   return password.length >= 8 && password.length <= 128 ? password : "";
@@ -7535,6 +7547,8 @@ export default {
         return passwordLogin(request, env);
       if (url.pathname === "/api/account/credentials" && request.method === "POST")
         return saveAccountCredentials(request, env);
+      if (url.pathname === "/api/internal/crypto-check" && request.method === "POST")
+        return cryptoCompatibilityCheck(request);
       if (url.pathname === "/auth/verify" && request.method === "GET")
         return verifyMagicLink(request, env);
       if (url.pathname === "/dashboard" && request.method === "GET")
