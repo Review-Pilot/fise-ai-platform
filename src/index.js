@@ -2973,6 +2973,23 @@ const requestedStyles = html`
   .profile-detail small { display:block; margin-bottom:6px; color:#748092;
     font-size:12px; font-weight:700; }
   .profile-detail strong { overflow-wrap:anywhere; }
+  .profile-testing-plan { margin-top:18px; padding:20px; border:1px solid #cfe0f5;
+    border-radius:14px; background:#f3f8ff; }
+  .profile-testing-plan > strong { display:block; margin-bottom:5px; font-size:17px; }
+  .profile-testing-plan > span { display:block; margin-bottom:16px; color:#637083;
+    font-size:13px; line-height:1.5; }
+  .profile-plan-form { display:flex; align-items:end; gap:10px; flex-wrap:wrap; }
+  .profile-plan-form label { display:grid; flex:1 1 220px; gap:6px; color:#4e5d70;
+    font-size:12px; font-weight:800; }
+  .profile-plan-form select { width:100%; min-height:44px; padding:0 12px;
+    border:1px solid #bdcbd9; border-radius:10px; color:#172538; background:#fff;
+    font:inherit; }
+  .profile-plan-button { min-height:44px; padding:0 17px; border:0; border-radius:10px;
+    color:#fff; background:#1769e0; cursor:pointer; font-weight:850; }
+  .profile-plan-button:disabled { cursor:wait; opacity:.65; }
+  .profile-plan-message { min-height:20px; margin:10px 0 0; color:#167044;
+    font-size:13px; font-weight:750; }
+  .profile-plan-message.error { color:#b42318; }
   .profile-bots { display:grid; gap:13px; }
   .profile-dashboard-frame { display:block; width:100%;
     height:calc(100vh - 205px); min-height:640px; border:1px solid #dde5eb;
@@ -3123,7 +3140,7 @@ function accountModal() {
 }
 
 function profileDrawer() {
-  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
+  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>Temporary testing control. Switch plans freely without payment while Fise AI is being tested.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Plan to test<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply test plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
 }
 
 function prepareReferenceBody(body, c) {
@@ -3317,6 +3334,11 @@ function referenceJavascript() {
       profileText('profile-plan',titleCase(data.subscription?.plan_code||'Starter'));
       profileText('profile-subscription-status',titleCase(data.subscription?.status||'Active'));
       profileText('profile-provider',titleCase(data.subscription?.provider||'Fise AI'));
+      const planSelect=document.getElementById('profile-plan-select');
+      if(planSelect){
+        const currentPlan=String(data.subscription?.plan_code||'free').toLowerCase();
+        planSelect.value=[...planSelect.options].some((option)=>option.value===currentPlan)?currentPlan:'free';
+      }
       profileText('profile-affiliate-status',data.affiliate?.status||'Not enrolled');
       const affiliateEmail=document.getElementById('profile-affiliate-email');
       if(affiliateEmail&&data.affiliate?.contact_email)affiliateEmail.href='mailto:'+data.affiliate.contact_email;
@@ -3338,6 +3360,36 @@ function referenceJavascript() {
     document.querySelectorAll('[data-close-account]').forEach((button)=>button.addEventListener('click',closeAccount));
     document.querySelectorAll('[data-close-profile]').forEach((button)=>button.addEventListener('click',closeProfile));
     document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.addEventListener('click',()=>selectProfileTab(button.dataset.profileTab)));
+    const planForm=document.getElementById('profile-plan-form');
+    planForm?.addEventListener('submit',async(event)=>{
+      event.preventDefault();
+      const select=document.getElementById('profile-plan-select');
+      const button=document.getElementById('profile-plan-save');
+      const message=document.getElementById('profile-plan-message');
+      if(!select||!button||!message)return;
+      button.disabled=true;
+      message.classList.remove('error');
+      message.textContent='Applying test plan…';
+      try{
+        const response=await fetch('/api/account/testing-plan',{
+          method:'POST',
+          credentials:'same-origin',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({plan:select.value})
+        });
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||'Could not change the testing plan');
+        profileText('profile-plan',titleCase(data.subscription?.plan_code||select.value));
+        profileText('profile-subscription-status',titleCase(data.subscription?.status||'active'));
+        profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
+        message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||select.value)+'. No payment was charged.';
+      }catch(error){
+        message.classList.add('error');
+        message.textContent=error.message||'Could not change the testing plan.';
+      }finally{
+        button.disabled=false;
+      }
+    });
     document.addEventListener('keydown',(event)=>{if(event.key==='Escape'){closeAccount();closeProfile()}});
     const params=new URLSearchParams(location.search);
     let authPoll=0;
@@ -5767,6 +5819,49 @@ async function completeChatbotDeletion(request, env) {
   );
 }
 
+async function changeTestingPlan(request, env) {
+  if (!sameOrigin(request))
+    return json({ error: "Invalid request origin" }, 403);
+  const user = await currentUser(request, env);
+  if (!user) return json({ error: "Sign in again" }, 401);
+
+  const body = await request.json().catch(() => ({}));
+  const plan = String(body.plan || "").trim().toLowerCase();
+  const allowedPlans = new Set(["free", "essential", "grow", "enterprise"]);
+  if (!allowedPlans.has(plan))
+    return json({ error: "Choose a valid testing plan" }, 400);
+
+  const now = new Date().toISOString();
+  const existing = await env.DB.prepare(
+    "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1",
+  )
+    .bind(user.id)
+    .first();
+
+  if (existing?.id) {
+    await env.DB.prepare(
+      "UPDATE subscriptions SET plan_code=?,status='active',provider='testing',updated_at=? WHERE id=?",
+    )
+      .bind(plan, now, existing.id)
+      .run();
+  } else {
+    await env.DB.prepare(
+      "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'testing',?,'active',?,?)",
+    )
+      .bind(crypto.randomUUID(), user.id, plan, now, now)
+      .run();
+  }
+
+  return json({
+    subscription: {
+      plan_code: plan,
+      status: "active",
+      provider: "testing",
+      updated_at: now,
+    },
+  });
+}
+
 async function accountProfile(request, env) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: "Sign in again" }, 401);
@@ -7207,6 +7302,8 @@ export default {
       }
       if (url.pathname === "/api/account/profile" && request.method === "GET")
         return accountProfile(request, env);
+      if (url.pathname === "/api/account/testing-plan" && request.method === "POST")
+        return changeTestingPlan(request, env);
       if (url.pathname === "/api/auth/request" && request.method === "POST")
         return requestMagicLink(request, env);
       if (url.pathname === "/auth/verify" && request.method === "GET")
