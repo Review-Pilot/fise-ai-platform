@@ -6601,11 +6601,108 @@ async function logout(request, env) {
   return redirect("/", { "set-cookie": cookie });
 }
 
+const CHATBOT_PURGE_EMAILS = [
+  "sebslabbert1@gmail.com",
+  "rianslabbert@gmail.com",
+  "jkslabbert@gmail.com",
+  "finlayslabbert@gmail.com",
+];
+const CHATBOT_PURGE_TOKEN_HASH = "c145cb5229f84fd19bd768d1b1422cfcc6b861e2c87fcf8ef23ccc14a9dc6afa";
+
+async function validChatbotPurgeToken(value) {
+  const actual = new Uint8Array(
+    await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(String(value || "")),
+    ),
+  );
+  const expected = new Uint8Array(
+    CHATBOT_PURGE_TOKEN_HASH.match(/.{2}/g).map((part) => parseInt(part, 16)),
+  );
+  let difference = actual.length ^ expected.length;
+  for (let index = 0; index < expected.length; index += 1)
+    difference |= (actual[index] || 0) ^ expected[index];
+  return difference === 0;
+}
+
+function chatbotPurgePreviewPage() {
+  return htmlResponse(
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Fise maintenance preview</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font-family:Inter,system-ui,sans-serif;color:#102033;background:#f4f7fb}.card{width:min(560px,100%);padding:30px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(27,63,108,.1)}input,button{width:100%;min-height:48px;margin-top:12px;padding:10px 13px;border-radius:10px;font:inherit}input{border:1px solid #cbd5e1}button{border:0;color:#fff;background:#102033;font-weight:800}p{color:#637083;line-height:1.55}</style></head><body><main class="card"><h1>Chatbot deletion preview</h1><p>This read-only check lists chatbots and related database tables. It does not delete anything.</p><form method="post"><input type="hidden" name="action" value="preview"><label for="token">One-time maintenance token</label><input id="token" name="token" type="password" autocomplete="off" required><button type="submit">Run read-only preview</button></form></main></body></html>`,
+  );
+}
+
+async function chatbotPurgeMaintenance(request, env) {
+  if (request.method === "GET") return chatbotPurgePreviewPage();
+  if (request.method !== "POST") return json({ error: "Not found" }, 404);
+  const form = await request.formData();
+  if (!(await validChatbotPurgeToken(form.get("token"))))
+    return json({ error: "Not found" }, 404);
+  if (String(form.get("action") || "") !== "preview")
+    return json({ error: "Preview only" }, 400);
+
+  const emailPlaceholders = CHATBOT_PURGE_EMAILS.map(() => "?").join(",");
+  const accounts = await env.DB.prepare(
+    `SELECT u.id AS user_id,u.email,c.id AS chatbot_id,c.name,c.public_key,
+            c.vector_store_id,c.status,c.created_at
+       FROM users u
+       LEFT JOIN chatbots c ON c.user_id=u.id
+      WHERE lower(u.email) IN (${emailPlaceholders})
+      ORDER BY lower(u.email),c.created_at`,
+  )
+    .bind(...CHATBOT_PURGE_EMAILS)
+    .all();
+
+  const chatbotIds = (accounts.results || [])
+    .map((row) => row.chatbot_id)
+    .filter(Boolean);
+  const tables = await env.DB.prepare(
+    `SELECT DISTINCT m.name AS table_name
+       FROM sqlite_schema AS m, pragma_table_info(m.name) AS p
+      WHERE m.type='table' AND p.name='chatbot_id'
+      ORDER BY m.name`,
+  ).all();
+  const foreignKeys = await env.DB.prepare(
+    `SELECT m.name AS child_table,fk."table" AS parent_table,
+            fk."from" AS child_column,fk."to" AS parent_column,
+            fk.on_delete
+       FROM sqlite_schema AS m, pragma_foreign_key_list(m.name) AS fk
+      WHERE m.type='table'
+      ORDER BY m.name,fk.id`,
+  ).all();
+
+  const relatedCounts = {};
+  if (chatbotIds.length) {
+    const idPlaceholders = chatbotIds.map(() => "?").join(",");
+    for (const row of tables.results || []) {
+      const table = String(row.table_name || "");
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) continue;
+      const count = await env.DB.prepare(
+        `SELECT COUNT(*) AS total FROM "${table}" WHERE chatbot_id IN (${idPlaceholders})`,
+      )
+        .bind(...chatbotIds)
+        .first();
+      relatedCounts[table] = Number(count?.total || 0);
+    }
+  }
+
+  return json({
+    mode: "read-only",
+    target_emails: CHATBOT_PURGE_EMAILS,
+    accounts: accounts.results || [],
+    chatbot_count: chatbotIds.length,
+    related_counts: relatedCounts,
+    foreign_keys: foreignKeys.results || [],
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     try {
+      if (url.pathname === "/maintenance/chatbot-purge")
+        return chatbotPurgeMaintenance(request, env);
+
       if (url.pathname === "/api/health" && request.method === "GET") {
         try {
           await env.DB.prepare("SELECT 1 AS ok").first();
