@@ -6895,12 +6895,20 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
     })
     .filter(Boolean)
     .slice(0, 6);
-  const topicText = pageHints.slice(0, 3).join(", ");
-  const fallback =
-    `Hi, I’m ${bot.name}. I can help you with ${topicText || bot.business_name || "our services"}, answer common questions and guide you to the right next step. What would you like help with today?`.slice(
-      0,
-      500,
-    );
+  const firstWords = (value, maximum) =>
+    String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, maximum)
+      .join(" ");
+  const primaryTopic = firstWords(
+    String(pageHints[0] || bot.business_name || "our services")
+      .split(/\s*[|–—]\s*/)[0]
+      .replace(/[,:;]+$/, ""),
+    8,
+  );
+  const fallback = `Hi, I’m ${firstWords(bot.name || "Fise", 3)}. I can help with ${primaryTopic}. What would you like to know?`;
   if (!env.OPENAI_API_KEY || !bot.vector_store_id || bot.status !== "ready") {
     return json({ greeting: fallback, fallback: true });
   }
@@ -6916,7 +6924,7 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
       },
       body: JSON.stringify({
         model: bot.model || "gpt-5-mini",
-        instructions: `Create one welcoming opening message for ${bot.name}, the website chatbot for ${bot.business_name || "this business"}. Use the scanned website to mention two or three specific things the visitor can get help with. Make it warm, polished and useful rather than generic. Use 35 to 60 words. Start naturally, include the chatbot name, and end with a clear question. Return only the message as plain text.`,
+        instructions: `Create one concise, welcoming opening message for ${bot.name}, the website chatbot for ${bot.business_name || "this business"}. Use the scanned website to mention one or two specific things the visitor can get help with. Include the chatbot name and end with a clear question. Use no more than 25 words. Return only the message as plain text.`,
         input: [
           {
             role: "user",
@@ -6961,10 +6969,11 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
     .replace(/^['\"]|['\"]$/g, "")
     .trim()
     .slice(0, 500);
-  if (!greeting) {
+  const greetingWordCount = greeting ? greeting.split(/\s+/).length : 0;
+  if (!greeting || greetingWordCount > 25) {
     console.error(
-      "Greeting suggestion returned no text",
-      JSON.stringify({ status: data.status, incomplete_details: data.incomplete_details }),
+      "Greeting suggestion was empty or exceeded 25 words",
+      JSON.stringify({ status: data.status, incomplete_details: data.incomplete_details, greetingWordCount }),
     );
     return json({ greeting: fallback, fallback: true });
   }
