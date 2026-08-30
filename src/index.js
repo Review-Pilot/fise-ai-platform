@@ -6840,7 +6840,12 @@ function dashboardSettingsJavascript() {
       button.disabled = true;
       status.textContent = 'Reading the scanned website…';
       try {
-        const response = await fetch(button.dataset.url, { method: 'POST', credentials: 'same-origin', headers: { 'accept': 'application/json', 'x-fise-action': 'suggest-greeting' } });
+        const response = await fetch(button.dataset.url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'accept': 'application/json', 'content-type': 'application/json', 'x-fise-action': 'suggest-greeting' },
+          body: JSON.stringify({ previous_greeting: field.value })
+        });
         const raw = await response.text();
         let data = {};
         try { data = JSON.parse(raw); } catch { throw new Error('Your session may have expired. Refresh the page and try again.'); }
@@ -6879,6 +6884,10 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
   if (!user) return json({ error: "Sign in again to continue." }, 401);
   const bot = await ownedChatbot(env, user.id, chatbotId);
   if (!bot) return json({ error: "Chatbot not found." }, 404);
+  const payload = await request.json().catch(() => ({}));
+  const previousGreeting = String(payload.previous_greeting || "")
+    .trim()
+    .slice(0, 500);
   const pages = await env.DB.prepare(
     `SELECT title,source_url FROM knowledge_sources WHERE chatbot_id=? AND status='completed' ORDER BY updated_at DESC LIMIT 8`,
   )
@@ -6908,7 +6917,26 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
       .replace(/[,:;]+$/, ""),
     8,
   );
-  const fallback = `Hi, I’m ${firstWords(bot.name || "Fise", 3)}. I can help with ${primaryTopic}. What would you like to know?`;
+  const shortName = firstWords(bot.name || "Fise", 3);
+  const fallbackOptions = [
+    `Hi, I’m ${shortName}. I can help with ${primaryTopic}. What would you like to know?`,
+    `Hello, I’m ${shortName}. Ask me about ${primaryTopic}, and I’ll help you find the right information.`,
+    `Welcome! I’m ${shortName}. Looking for help with ${primaryTopic}? Ask me anything to get started.`,
+    `Hi! I’m ${shortName}, your guide to ${primaryTopic}. What can I help you find today?`,
+  ];
+  const greetingKey = (value) =>
+    String(value || "")
+      .toLocaleLowerCase("en")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim();
+  const previousKey = greetingKey(previousGreeting);
+  const differentFallbacks = fallbackOptions.filter(
+    (option) => greetingKey(option) !== previousKey,
+  );
+  const randomValues = crypto.getRandomValues(new Uint32Array(1));
+  const fallback = differentFallbacks[
+    randomValues[0] % differentFallbacks.length
+  ];
   if (!env.OPENAI_API_KEY || !bot.vector_store_id || bot.status !== "ready") {
     return json({ greeting: fallback, fallback: true });
   }
@@ -6931,7 +6959,7 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
             content: [
               {
                 type: "input_text",
-                text: `Suggest the best opening message. Useful scanned page topics include: ${pageHints.join(", ") || "the business home page"}.`,
+                text: `Suggest the best opening message. Useful scanned page topics include: ${pageHints.join(", ") || "the business home page"}. The current message is: ${previousGreeting || "none"}. Create a clearly different alternative.`,
               },
             ],
           },
@@ -6970,9 +6998,9 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
     .trim()
     .slice(0, 500);
   const greetingWordCount = greeting ? greeting.split(/\s+/).length : 0;
-  if (!greeting || greetingWordCount > 25) {
+  if (!greeting || greetingWordCount > 25 || greetingKey(greeting) === previousKey) {
     console.error(
-      "Greeting suggestion was empty or exceeded 25 words",
+      "Greeting suggestion was empty, repeated or exceeded 25 words",
       JSON.stringify({ status: data.status, incomplete_details: data.incomplete_details, greetingWordCount }),
     );
     return json({ greeting: fallback, fallback: true });
