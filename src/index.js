@@ -34,35 +34,39 @@ function renderScanControls(bot, embedded = false) {
 
   if (active) {
     const percent = found ? Math.min(100, Math.round((processed / found) * 100)) : 5;
-    return `<div class="scan-box" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
-      <strong>Training in progress</strong>
-      <p class="scan-progress-label">${found ? `${percent}% complete` : "Finding the most important pages…"}</p>
+    return `<div class="scan-box active" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
+      <div class="scan-label">Website knowledge</div>
+      <div class="scan-title-row"><span class="scan-state-dot"></span><strong>Scanning your website</strong><span class="scan-percent">${percent}%</span></div>
+      <p class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</p>
       <div class="progress"><span style="width:${percent}%"></span></div>
-      <p class="scan-time-note">This can take up to 5 minutes. Progress updates automatically.</p>
+      <p class="scan-time-note">You can leave this page. Progress updates automatically.</p>
     </div>`;
   }
 
   if (complete) {
     return `<div class="scan-box success">
-      <strong>Website knowledge added</strong>
-      <p>${processed} page${processed === 1 ? "" : "s"} processed. The chatbot knowledge base is ready for testing.</p>
+      <div class="scan-label">Website knowledge</div>
+      <div class="scan-title-row"><span class="scan-complete-mark">✓</span><strong>Website scan complete</strong></div>
+      <p>${processed} page${processed === 1 ? " is" : "s are"} ready for your chatbot to use.</p>
+      <div class="scan-meta"><span>${processed} pages added</span><span>Knowledge ready</span></div>
       <form method="post" action="${scanAction}">
         <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
-        <button class="btn" type="submit">Scan website again</button>
+        <button class="btn ghost" type="submit">Update website knowledge</button>
       </form>
     </div>`;
   }
 
   const failureDetail = String(bot.scan_error || "").trim();
-  const retryText = status === "failed" ? `<p class="scan-error"><strong>Why it failed:</strong> ${escapeHtml(failureDetail || "Fise could not read any usable website pages.")} You can safely try again.</p>` : "";
+  const retryText = status === "failed" ? `<div class="scan-error"><strong>Scan needs attention</strong><span>${escapeHtml(failureDetail || "Fise could not read usable website pages.")} Check the website address and try again.</span></div>` : "";
   return `<div class="scan-box">
-    <strong>Train from website</strong>
-    <p>Fise will find and securely process up to ${MAX_PAGES} public pages from ${escapeHtml(bot.website_url || "the website")}.</p>
-    <p class="scan-time-note">This can take up to 5 minutes.</p>
+    <div class="scan-label">Website knowledge</div>
+    <strong>Scan your website</strong>
+    <p>Fise will securely find the most useful pages from ${escapeHtml(bot.website_url || "your website")} and prepare them for your chatbot.</p>
+    <div class="scan-meta"><span>Up to ${MAX_PAGES} pages</span><span>Usually 2–5 minutes</span></div>
     ${retryText}
     <form method="post" action="${scanAction}">
       <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
-      <button class="btn" type="submit">Scan website</button>
+      <button class="btn" type="submit">Start website scan</button>
     </form>
   </div>`;
 }
@@ -3031,6 +3035,75 @@ const requestedStyles = html`
     background:#1769e0; text-decoration:none; font-size:12px; font-weight:800; }
   .profile-empty { padding:28px 18px; border:1px dashed #bdcbd9;
     border-radius:13px; color:#6d7989; text-align:center; }
+  .profile-drawer { grid-template-columns:282px minmax(0,1fr); background:#f5f7fa; }
+  .profile-side { padding:26px 20px 22px; background:linear-gradient(180deg,#071a3b 0%,#0a2349 100%); }
+  .profile-brand { display:flex; align-items:center; gap:10px; margin:0 8px 34px;
+    color:#fff; text-decoration:none; font-size:19px; font-weight:900; }
+  .profile-brand .video-logo-mark { width:36px; height:36px; color:#fff;
+    background:linear-gradient(145deg,#29b9e6,#20d6cf); box-shadow:none; }
+  .profile-side-title { display:grid; gap:3px; margin:0 10px 17px; }
+  .profile-side-title small { color:#7f9abd; font-size:10px; font-weight:850;
+    letter-spacing:.1em; text-transform:uppercase; }
+  .profile-side-title strong { color:#fff; font-size:20px; }
+  .profile-tabs { gap:6px; }
+  .profile-tab { display:grid; gap:3px; padding:12px 13px; border:1px solid transparent;
+    border-radius:11px; }
+  .profile-tab span { font-size:13px; font-weight:850; }
+  .profile-tab small { color:#7891b3; font-size:10px; font-weight:650; line-height:1.35; }
+  .profile-tab:hover,.profile-tab.active { border-color:rgba(255,255,255,.08);
+    background:rgba(255,255,255,.09); }
+  .profile-tab:hover small,.profile-tab.active small { color:#b9c9df; }
+  .profile-signout button { border-color:rgba(255,255,255,.16); color:#dce7f7;
+    background:rgba(255,255,255,.04); }
+  .profile-signout button:hover { background:rgba(255,255,255,.09); }
+  .profile-main { padding:42px clamp(28px,4.5vw,72px) 60px; background:#f5f7fa; }
+  .profile-head { margin:0 auto 30px; }
+  .profile-head>div>p { margin:7px 0 0; color:#6a7788; font-size:13px; }
+  .profile-eyebrow { margin-bottom:7px; color:#1769e0; font-size:10px;
+    font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+  .profile-head h2 { font-size:31px; }
+  .profile-close { border-color:#dce4ed; border-radius:12px; background:#fff;
+    box-shadow:0 5px 16px rgba(25,48,78,.06); }
+  .profile-panel { max-width:1040px; margin:0 auto; }
+  .profile-chatbot-panel { max-width:1320px; }
+  .profile-panel-heading { display:flex; align-items:flex-start; justify-content:space-between;
+    gap:18px; margin-bottom:17px; }
+  .profile-panel h3 { font-size:22px; letter-spacing:-.02em; }
+  .profile-intro { margin:0; font-size:13px; }
+  .profile-security-badge { display:inline-flex; min-height:31px; padding:0 11px;
+    align-items:center; border:1px solid #bfe2cd; border-radius:999px; color:#167044;
+    background:#edf9f2; font-size:10px; font-weight:850; }
+  .profile-panel-surface { padding:24px; border:1px solid #dfe6ee; border-radius:18px;
+    background:#fff; box-shadow:0 14px 38px rgba(25,48,78,.06); }
+  .profile-detail-grid { gap:12px; }
+  .profile-detail { min-height:84px; padding:16px 17px; border-color:#e2e8ef;
+    border-radius:12px; background:#f8fafc; }
+  .profile-detail small { margin-bottom:8px; color:#748194; font-size:10px;
+    font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+  .profile-detail strong { color:#172538; font-size:14px; }
+  .profile-detail a { color:#1769e0; text-decoration:none; }
+  .profile-security-note { display:flex; align-items:center; gap:10px; margin-top:17px;
+    padding:13px 15px; border-radius:11px; color:#526174; background:#f2f6fa;
+    font-size:11px; }
+  .profile-security-note strong { color:#24364c; }
+  .profile-frame-shell { overflow:hidden; border:1px solid #dce4ed; border-radius:18px;
+    background:#fff; box-shadow:0 14px 38px rgba(25,48,78,.07); }
+  .profile-dashboard-frame { height:calc(100vh - 205px); min-height:650px; border:0;
+    border-radius:0; background:#f5f7fa; }
+  .profile-subscription-summary { display:flex; align-items:center; justify-content:space-between;
+    gap:18px; margin-bottom:15px; padding:20px; border-radius:14px; color:#fff;
+    background:linear-gradient(135deg,#0b2348,#153d71); }
+  .profile-subscription-summary small { display:block; margin-bottom:5px; color:#9fb5d1;
+    font-size:10px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+  .profile-subscription-summary>div>strong { font-size:24px; }
+  .profile-subscription-summary .subscription-status { padding:7px 10px; border-radius:999px;
+    color:#f5b9b3; background:rgba(255,255,255,.1); font-size:11px; }
+  .profile-subscription-summary .subscription-status.active { color:#9ce2bb; }
+  .profile-detail-grid.compact .profile-detail { min-height:76px; }
+  .profile-testing-plan { margin-top:15px; padding:18px; border-color:#dce6f2;
+    background:#f7faff; }
+  .profile-testing-plan > strong { font-size:15px; }
+  .profile-testing-plan > span { margin-bottom:13px; }
   body:has(.account-modal.open),body:has(.profile-layer.open) { overflow:hidden; }
   @media(max-width:1000px) {
     .reference-footer-grid { grid-template-columns:1fr 1fr; }
@@ -3046,9 +3119,15 @@ const requestedStyles = html`
     .profile-side { padding:18px; }
     .profile-side-title { margin:0 4px 13px; }
     .profile-tabs { grid-template-columns:1fr 1fr; }
+    .profile-tab { min-height:57px; }
+    .profile-tab small { display:none; }
     .profile-signout { margin-top:14px; }
     .profile-main { padding:25px 20px 40px; }
     .profile-detail-grid { grid-template-columns:1fr; }
+    .profile-panel-surface { padding:17px; }
+    .profile-panel-heading { align-items:flex-start; flex-direction:column; }
+    .profile-security-note { align-items:flex-start; flex-direction:column; }
+    .profile-subscription-summary { align-items:flex-start; flex-direction:column; }
     .trusted-group { gap:42px; padding-right:42px; }
     .trusted-logo { width:165px; height:62px; flex-basis:165px; }
     .feature-grid,.video-review-grid { grid-template-columns:1fr; }
@@ -3166,7 +3245,41 @@ function accountModal() {
 }
 
 function profileDrawer() {
-  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbot</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and secure sign-in details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Password</small><strong id="profile-password">Protected and hidden</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Subscription status</small><strong class="subscription-status none" id="profile-subscription-status">None</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbot</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>Temporary testing control. Switch plans freely without payment while Fise AI is being tested.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Plan to test<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply test plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
+  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true">
+    <button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button>
+    <aside class="profile-drawer" aria-labelledby="profile-title">
+      <div class="profile-side">
+        <a class="profile-brand" href="/">${referenceLogo()}</a>
+        <div class="profile-side-title"><small>Customer portal</small><strong>Account centre</strong></div>
+        <nav class="profile-tabs" aria-label="Profile sections">
+          <button class="profile-tab active" type="button" data-profile-tab="account"><span>Profile</span><small>Personal and security details</small></button>
+          <button class="profile-tab" type="button" data-profile-tab="chatbots"><span>Chatbot</span><small>Setup, scan and manage</small></button>
+          <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span><small>Plan and billing status</small></button>
+          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span><small>Programme information</small></button>
+        </nav>
+        <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out securely</button></form>
+      </div>
+      <div class="profile-main">
+        <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div>
+        <section class="profile-panel active" data-profile-panel="account">
+          <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div><span class="profile-security-badge">Secure account</span></div>
+          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Password</small><strong id="profile-password">Protected and hidden</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Passwords are stored securely and cannot be displayed from storage.</span></div></div>
+        </section>
+        <section class="profile-panel profile-chatbot-panel" data-profile-panel="chatbots">
+          <div class="profile-panel-heading"><div><h3>Chatbot workspace</h3><p class="profile-intro">Scan your website, customise your assistant and manage leads.</p></div></div>
+          <div class="profile-frame-shell"><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot workspace…</div></div></div>
+        </section>
+        <section class="profile-panel" data-profile-panel="subscription">
+          <div class="profile-panel-heading"><div><h3>Subscription</h3><p class="profile-intro">Your current plan, billing status and testing controls.</p></div></div>
+          <div class="profile-panel-surface"><div class="profile-subscription-summary"><div><small>Current plan</small><strong id="profile-plan">—</strong></div><strong class="subscription-status none" id="profile-subscription-status">None</strong></div><div class="profile-detail-grid compact"><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Chatbot workspace</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>During testing, switch plans freely without payment.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Choose a plan<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></div>
+        </section>
+        <section class="profile-panel" data-profile-panel="affiliate">
+          <div class="profile-panel-heading"><div><h3>Affiliate programme</h3><p class="profile-intro">View your programme status or contact the Fise AI team.</p></div></div>
+          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></div>
+        </section>
+      </div>
+    </aside>
+  </div>`;
 }
 
 function prepareReferenceBody(body, c) {
@@ -4828,10 +4941,57 @@ const sharedStyles = html`
   15px;color:#fff;font-size:14px}.public-foot a{display:block;margin:9px
   0;color:#b8c8e2;text-decoration:none;font-size:13px}.public-foot
   a:hover{color:#fff}.public-foot-bottom{display:flex;justify-content:space-between;gap:20px;margin-top:45px;padding-top:22px;border-top:1px
-  solid #26395d;font-size:12px} @media (max-width:820px) {
-  .grid,.settings-grid{grid-template-columns:1fr}.setting-section.full{grid-column:auto}.dashboard-head{align-items:flex-start;flex-direction:column}.details{grid-template-columns:1fr}.public-links{display:none}.public-foot-grid{grid-template-columns:1fr
+  solid #26395d;font-size:12px}
+  .dashboard-main{width:min(1180px,calc(100% - 40px));padding-top:42px}
+  .dashboard-hero{align-items:center;margin-bottom:24px;padding:0 2px}
+  .dashboard-hero h1{margin-bottom:8px;font-size:clamp(32px,4vw,46px)}
+  .dashboard-hero p{max-width:680px;margin:0;line-height:1.55}
+  .workspace-user{display:inline-flex;max-width:330px;min-height:38px;padding:0 13px;align-items:center;overflow:hidden;border:1px solid #dfe6ef;border-radius:999px;color:#536174;background:#fff;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;box-shadow:0 6px 18px rgba(22,45,76,.05)}
+  .dashboard-shell{display:grid;gap:20px}
+  .workspace-card{margin:0;padding:0;overflow:hidden;border-color:#dce4ee;border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(28,52,84,.08)}
+  .workspace-card .bot-top{align-items:center;padding:24px 26px;border-bottom:1px solid #e8edf3}
+  .bot-identity{display:flex;min-width:0;align-items:center;gap:14px}
+  .bot-avatar{width:48px;height:48px;display:grid;place-items:center;flex:0 0 auto;border-radius:14px;color:#fff;background:linear-gradient(145deg,#1769e0,#0b4fae);box-shadow:0 9px 22px rgba(23,105,224,.2);font-size:18px;font-weight:900}
+  .bot-name-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .bot-name-row h2{margin:0;font-size:21px;letter-spacing:-.025em}
+  .bot-identity p{margin:3px 0;color:#637083;font-size:13px}
+  .bot-website{display:block;max-width:620px;overflow:hidden;color:#1769e0;text-decoration:none;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700}
+  .workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:22px 26px 26px;background:#f7f9fc}
+  .scan-box,.widget-tools{min-height:250px;margin:0;padding:22px;border:1px solid #dfe6ef;border-radius:16px;background:#fff;box-shadow:0 7px 22px rgba(31,55,86,.04)}
+  .scan-box.success{border-color:#cae8d7;background:#fff}
+  .scan-label{margin-bottom:13px;color:#728094;font-size:11px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+  .scan-box>strong,.scan-title-row strong,.widget-tools h3{margin:0 0 7px;font-size:20px;letter-spacing:-.02em}
+  .scan-title-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .scan-title-row strong{margin:0}
+  .scan-state-dot{width:10px;height:10px;flex:0 0 auto;border:3px solid #b9d2f6;border-radius:50%;background:#1769e0;box-shadow:0 0 0 4px #edf4ff}
+  .scan-complete-mark{width:25px;height:25px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;color:#fff;background:#167044;font-size:13px;font-weight:900}
+  .scan-percent{margin-left:auto;color:#1769e0;font-size:12px;font-weight:850}
+  .scan-box p,.widget-tools p{margin:0 0 15px;color:#637083;font-size:13px;line-height:1.55}
+  .scan-meta{display:flex;flex-wrap:wrap;gap:7px;margin:15px 0 18px}
+  .scan-meta span,.locked-step{padding:7px 9px;border-radius:8px;color:#536174;background:#f0f4f8;font-size:11px;font-weight:750}
+  .scan-box form{margin:0}.scan-box .btn{min-height:42px;padding:0 15px}
+  .progress{height:7px;margin:16px 0 12px;background:#e4ebf3}.progress span{background:linear-gradient(90deg,#1769e0,#35a8e0)}
+  .scan-error{display:grid;gap:4px;margin:14px 0;padding:11px 12px;border:1px solid #f0c4c4;border-radius:10px;color:#8f2525!important;background:#fff7f7;font-size:12px;line-height:1.45}
+  .scan-error strong{margin:0}.scan-error span{color:#8f2525}
+  .widget-tools{display:flex;flex-direction:column}
+  .widget-tools .button-row{margin-top:auto}
+  .widget-tools .btn{min-height:42px;padding:0 15px}
+  .action-count{display:inline-grid;min-width:20px;height:20px;place-items:center;margin-left:5px;border-radius:999px;background:rgba(16,32,51,.08);font-size:10px}
+  .pending-tools{justify-content:flex-start}.pending-tools .locked-step{width:max-content;margin-top:auto}
+  .advanced-details{border-top:1px solid #e5ebf2;background:#fff}
+  .advanced-details summary{display:flex;min-height:58px;padding:0 26px;align-items:center;justify-content:space-between;color:#536174;cursor:pointer;list-style:none;font-size:13px;font-weight:800}
+  .advanced-details summary::-webkit-details-marker{display:none}.advanced-details summary::after{content:"+";font-size:20px;font-weight:500}.advanced-details[open] summary::after{content:"−"}
+  .advanced-body{padding:0 26px 26px}.advanced-body .details{margin:0 0 14px}.advanced-body .details div{padding:13px;border:1px solid #e1e7ee;border-radius:11px;background:#f8fafc}
+  .install-block{margin-top:12px}.install-block>small{display:block;margin-bottom:7px;color:#637083;font-weight:750}.install-block .embed-code{margin:0}
+  .advanced-body .delete-tools{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:18px;padding:16px;border-color:#f0d4d4;background:#fffafa}.advanced-body .delete-tools p{margin:4px 0 0}.advanced-body .delete-tools form{flex:0 0 auto}
+  .onboarding-card{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr);gap:38px;padding:34px;border-radius:20px;box-shadow:0 18px 50px rgba(28,52,84,.08)}
+  .onboarding-copy>p{color:#637083;line-height:1.6}
+  .setup-steps{display:grid;gap:4px;margin-top:26px}.setup-steps>div{display:grid;grid-template-columns:30px 1fr;column-gap:11px;padding:12px;border-radius:11px;color:#738094}.setup-steps>div.active{color:#102033;background:#eef5ff}.setup-steps span{width:30px;height:30px;display:grid;grid-row:1/3;place-items:center;border-radius:9px;color:#fff;background:#9aa8ba;font-size:12px;font-weight:900}.setup-steps .active span{background:#1769e0}.setup-steps strong{font-size:13px}.setup-steps small{margin-top:3px;font-size:11px;line-height:1.4}
+  .create-bot-form{padding:24px;border:1px solid #e0e6ed;border-radius:16px;background:#f9fbfd}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.create-bot-form label{margin:0;color:#3e4c5f;font-size:12px}.create-bot-form label input,.create-bot-form label textarea{margin-top:7px}.full-field{grid-column:1/-1}.colour-field{grid-column:1/-1}.colour-field input[type="color"]{width:62px;height:44px;padding:5px}.create-bot-form .btn.full{margin-top:18px}.form-assurance{margin:11px 0 0;color:#748092;text-align:center;font-size:11px}
+  @media (max-width:820px) {
+  .grid,.settings-grid,.workspace-grid,.onboarding-card{grid-template-columns:1fr}.setting-section.full{grid-column:auto}.dashboard-head{align-items:flex-start;flex-direction:column}.details{grid-template-columns:1fr}.public-links{display:none}.public-foot-grid{grid-template-columns:1fr
   1fr} } @media (max-width:560px) { main{padding:38px 0
-  56px}.shell,.card{padding:21px}.wrap{width:min(100% - 24px,1080px)} }
+  56px}.shell,.card{padding:21px}.wrap,.dashboard-main{width:min(100% - 24px,1080px)}.workspace-card{padding:0}.workspace-card .bot-top,.workspace-grid,.advanced-body{padding-left:18px;padding-right:18px}.workspace-card .bot-top{align-items:flex-start}.bot-identity{align-items:flex-start}.bot-avatar{width:42px;height:42px}.workspace-user{max-width:100%}.advanced-details summary{padding:0 18px}.advanced-body .delete-tools{align-items:stretch;flex-direction:column}.advanced-body .delete-tools .btn{width:100%}.form-grid{grid-template-columns:1fr}.full-field,.colour-field{grid-column:auto} }
 `;
 
 function escapeHtml(value = "") {
@@ -4994,188 +5154,106 @@ function dashboardPage(
     ? chatbots
         .map(
           (bot) =>
-            html` <article class="bot-card">
+            html` <article class="bot-card workspace-card">
               <div class="bot-top">
-                <div>
-                  <strong>${escapeHtml(bot.name)}</strong
-                  ><span class="plan-badge"
-                    >${escapeHtml(bot.plan_code || "starter")}</span
-                  >
-                  <div class="muted">
-                    ${escapeHtml(bot.business_name || "")}
+                <div class="bot-identity">
+                  <span class="bot-avatar" aria-hidden="true">${escapeHtml(String(bot.name || "F").charAt(0).toUpperCase())}</span>
+                  <div>
+                    <div class="bot-name-row"><h2>${escapeHtml(bot.name)}</h2><span class="plan-badge">${escapeHtml(bot.plan_code || "starter")}</span></div>
+                    <p>${escapeHtml(bot.business_name || "Your business")}</p>
+                    <a class="bot-website" href="${escapeHtml(bot.website_url || "#")}" target="_blank" rel="noopener">${escapeHtml(bot.website_url || "Website not set")}</a>
                   </div>
                 </div>
                 <span class="badge">${escapeHtml(bot.status)}</span>
               </div>
-              <div class="details">
-                <div>
-                  <small>Website</small
-                  ><code>${escapeHtml(bot.website_url || "Not set")}</code>
-                </div>
-                <div>
-                  <small>OpenAI vector store</small
-                  ><code
-                    >${escapeHtml(bot.vector_store_id || "Being prepared")}</code
-                  >
-                </div>
-                <div>
-                  <small>Public chatbot key</small
-                  ><code>${escapeHtml(bot.public_key)}</code>
-                </div>
-                <div>
-                  <small>Model</small><code>${escapeHtml(bot.model)}</code>
-                </div>
-              </div>
-              ${renderScanControls(bot, embedded)}
-              ${
+              <div class="workspace-grid">
+                ${renderScanControls(bot, embedded)}
+                ${
           bot.status === "ready"
             ? html` <div class="widget-tools">
-                <h3>Live chatbot</h3>
-                <p>
-                  Customize the experience, test it, then copy the installation
-                  code into the customer website.
-                </p>
+                <div class="scan-label">Chatbot tools</div>
+                <h3>Ready to customise</h3>
+                <p>Update the design and answers, test the experience, or review captured leads.</p>
                 <div class="button-row">
                   <a
                     class="btn"
                     href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"
-                    >Customize</a
+                    >Customise chatbot</a
                   >
                   <a
                     class="btn ghost"
                     href="/widget/test?key=${encodeURIComponent(bot.public_key)}"
-                    >Test chatbot</a
+                    >Preview</a
                   >
                   <a
                     class="btn ghost"
                     href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"
-                    >Leads (${Number(bot.lead_count || 0)})</a
+                    >Leads <span class="action-count">${Number(bot.lead_count || 0)}</span></a
                   >
                 </div>
-                <code class="embed-code"
-                  >&lt;script
-                  src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260829-support-1&quot;
-                  data-chatbot-key=&quot;${escapeHtml(bot.public_key)}&quot;&gt;&lt;/script&gt;</code
-                >
               </div>`
-            : ""
+            : html`<div class="widget-tools pending-tools"><div class="scan-label">Next step</div><h3>Complete the website scan</h3><p>Once your website knowledge is ready, you can customise and preview your chatbot here.</p><div class="locked-step">Chatbot tools unlock after scanning</div></div>`
         }
-              <div class="delete-tools">
-                <strong>Delete this chatbot permanently</strong>
-                <p>
-                  For security, Fise will email ${escapeHtml(user.email)} a
-                  30-minute confirmation link. Opening the email will not
-                  delete anything until the final button is pressed.
-                </p>
-                <form
-                  method="post"
-                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}"
-                >
-                  <button class="btn danger" type="submit">
-                    Email deletion confirmation
-                  </button>
-                </form>
               </div>
+              <details class="advanced-details">
+                <summary>Installation and technical details</summary>
+                <div class="advanced-body">
+                  <div class="details">
+                    <div><small>Model</small><code>${escapeHtml(bot.model)}</code></div>
+                    <div><small>Public chatbot key</small><code>${escapeHtml(bot.public_key)}</code></div>
+                    <div><small>Knowledge store</small><code>${escapeHtml(bot.vector_store_id || "Being prepared")}</code></div>
+                  </div>
+                  ${bot.status === "ready" ? html`<div class="install-block"><small>Website installation code</small><code class="embed-code">&lt;script src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260829-support-1&quot; data-chatbot-key=&quot;${escapeHtml(bot.public_key)}&quot;&gt;&lt;/script&gt;</code></div>` : ""}
+                  <div class="delete-tools">
+                    <div><strong>Delete chatbot</strong><p>Fise will email ${escapeHtml(user.email)} a secure confirmation link before anything is deleted.</p></div>
+                    <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}">
+                      <button class="btn danger" type="submit">Request deletion</button>
+                    </form>
+                  </div>
+                </div>
+              </details>
             </article>`,
         )
         .join("")
-    : html`<div class="empty">No chatbot has been created yet.</div>`;
+    : "";
 
   const createPanel = chatbots.length
-    ? html`<section class="card">
-        <h2>Knowledge training</h2>
-        <p class="muted">
-          Fise checks the main header pages first, then footer links and other
-          pages. It can add up to 100 public pages to the private OpenAI
-          knowledge store. A scan can take up to 5 minutes.
-        </p>
-      </section>`
-    : html`<section class="card">
-        <div class="eyebrow">Step 1 of 3</div>
-        <h2>Create your first chatbot</h2>
-        <p class="muted">
-          Fise will automatically create a separate OpenAI knowledge store for
-          this chatbot.
-        </p>
-        <form method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
-          <label for="business_name">Business name</label>
-          <input
-            id="business_name"
-            name="business_name"
-            maxlength="100"
-            required
-            placeholder="Example Company"
-          />
-          <label for="name">Chatbot name</label>
-          <input
-            id="name"
-            name="name"
-            maxlength="80"
-            required
-            placeholder="Example Support Assistant"
-          />
-          <label for="website_url">Website URL</label>
-          <input
-            id="website_url"
-            name="website_url"
-            type="url"
-            maxlength="500"
-            required
-            placeholder="https://example.com"
-          />
-          <label for="greeting">Opening greeting</label>
-          <input
-            id="greeting"
-            name="greeting"
-            maxlength="240"
-            value="Hi! How can I help you today?"
-            required
-          />
-          <label for="primary_colour">Brand colour</label>
-          <input
-            id="primary_colour"
-            name="primary_colour"
-            type="color"
-            value="#1769e0"
-            required
-          />
-          <label for="instructions"
-            >How should it behave? <span class="muted">(optional)</span></label
-          >
-          <textarea
-            id="instructions"
-            name="instructions"
-            maxlength="2000"
-            placeholder="Be friendly, concise and helpful."
-          ></textarea>
-          <button class="btn full" type="submit">
-            Create chatbot and knowledge store
-          </button>
+    ? ""
+    : html`<section class="card onboarding-card">
+        <div class="onboarding-copy">
+          <div class="eyebrow">Quick setup</div>
+          <h2>Create your chatbot</h2>
+          <p>Start with the essentials. You can customise every detail after your website has been scanned.</p>
+          <div class="setup-steps"><div class="active"><span>1</span><strong>Business details</strong><small>Name your chatbot and add your website.</small></div><div><span>2</span><strong>Scan website</strong><small>Fise securely prepares up to 100 useful pages.</small></div><div><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div></div>
+        </div>
+        <form class="create-bot-form" method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
+          <div class="form-grid">
+            <label>Business name<input id="business_name" name="business_name" maxlength="100" required placeholder="Example Company" /></label>
+            <label>Chatbot name<input id="name" name="name" maxlength="80" required placeholder="Example Assistant" /></label>
+            <label class="full-field">Website URL<input id="website_url" name="website_url" type="url" maxlength="500" required placeholder="https://example.com" /></label>
+            <label class="full-field">Opening greeting<input id="greeting" name="greeting" maxlength="240" value="Hi! How can I help you today?" required /></label>
+            <label class="colour-field">Brand colour<input id="primary_colour" name="primary_colour" type="color" value="#1769e0" required /></label>
+            <label class="full-field">Chatbot guidance <span class="muted">(optional)</span><textarea id="instructions" name="instructions" maxlength="2000" placeholder="Be friendly, concise and helpful."></textarea></label>
+          </div>
+          <button class="btn full" type="submit">Create chatbot</button>
+          <p class="form-assurance">Your website remains unchanged until you install the finished chatbot.</p>
         </form>
       </section>`;
 
   const page = embedded ? embeddedDocumentPage : documentPage;
   return page(
     "Dashboard",
-    html` <main class="wrap">
-      <div class="dashboard-head">
+    html` <main class="wrap dashboard-main">
+      <div class="dashboard-head dashboard-hero">
         <div>
-          <div class="eyebrow">Customer dashboard</div>
-          <h1>Your chatbot</h1>
-          <p class="muted">Signed in as ${escapeHtml(user.email)}</p>
+          <div class="eyebrow">Fise workspace</div>
+          <h1>Chatbot dashboard</h1>
+          <p class="muted">Manage your website knowledge, chatbot experience and leads in one place.</p>
         </div>
+        <span class="workspace-user">${escapeHtml(user.email)}</span>
       </div>
       ${notice}
-      <div class="grid">
-        <section class="card">
-          <h2>Chatbot workspace</h2>
-          <p class="muted">
-            Each chatbot keeps its own settings and OpenAI vector store.
-          </p>
-          ${botList}
-        </section>
-        ${createPanel}
-      </div>
+      <div class="dashboard-shell">${botList}${createPanel}</div>
       <script src="/dashboard-progress.js" defer></script>
     </main>`,
   );
@@ -6221,8 +6299,10 @@ function dashboardProgressJavascript() {
         const percent = Math.max(0, Math.min(100, Number(data.percent || 0)));
         const bar = box.querySelector('.progress span');
         const label = box.querySelector('.scan-progress-label');
+        const percentLabel = box.querySelector('.scan-percent');
         if (bar) bar.style.width = Math.max(5, percent) + '%';
-        if (label) label.textContent = data.pages_found ? percent + '% complete' : 'Finding the most important pages…';
+        if (label) label.textContent = data.pages_found ? data.pages_processed + ' of ' + data.pages_found + ' pages processed' : 'Finding the most useful public pages…';
+        if (percentLabel) percentLabel.textContent = percent + '%';
         if (!active.has(data.status)) location.reload();
       } catch {}
     }
