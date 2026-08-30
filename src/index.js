@@ -3409,6 +3409,11 @@ function referenceJavascript() {
       input.type=showing?'password':'text';
       button.textContent=showing?'Show':'Hide';
     }));
+    document.querySelectorAll('#account-modal form').forEach((form)=>form.addEventListener('submit',()=>{
+      let input=form.querySelector('input[name="return_to"]');
+      if(!input){input=document.createElement('input');input.type='hidden';input.name='return_to';form.appendChild(input)}
+      input.value=location.pathname+location.search+location.hash;
+    }));
     document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.addEventListener('click',()=>selectProfileTab(button.dataset.profileTab)));
     const planForm=document.getElementById('profile-plan-form');
     planForm?.addEventListener('submit',async(event)=>{
@@ -3453,7 +3458,6 @@ function referenceJavascript() {
       return fetch('/api/auth/status',{credentials:'same-origin'})
         .then((response)=>response.ok?response.json():Promise.reject())
         .then((status)=>{
-          const wasAuthenticated=authenticated;
           authenticated=Boolean(status.authenticated);
           if(authenticated){
             stopAuthPoll();
@@ -3464,7 +3468,10 @@ function referenceJavascript() {
             if(status.credentials_required){
               closeProfile();
               showAccountView('setup');
-            }else if(params.get('signed_in')==='1'||params.get('profile')==='1'||(!wasAuthenticated&&params.get('sent')==='1'))openProfile();
+            }else{
+              closeAccount();
+              if(params.get('signed_in')==='1'||params.get('profile')==='1')openProfile();
+            }
           }else{
             demoLink?.classList.add('requires-signin');
             if(demoLock)demoLock.hidden=false;
@@ -3474,7 +3481,12 @@ function referenceJavascript() {
             }
             if(params.get('open_signin')==='1')openAccount();
           }
-          if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key)))history.replaceState({},'',location.pathname+location.hash);
+          if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key))){
+            const cleanParams=new URLSearchParams(location.search);
+            ['sent','signed_in','profile','open_signin'].forEach((key)=>cleanParams.delete(key));
+            const cleanQuery=cleanParams.toString();
+            history.replaceState({},'',location.pathname+(cleanQuery?'?'+cleanQuery:'')+location.hash);
+          }
         })
         .catch(()=>{});
     }
@@ -4962,7 +4974,7 @@ function loginPage(message = "", isError = false, embedded = false) {
 }
 
 function verificationPage(success = true, message = "You can close this window and return to the Fise sign-in page.") {
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}.fine{margin-top:20px;font-size:12px}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p><p class="fine">This is a one-time verification window. It does not contain your Fise profile or dashboard.</p></main></body></html>`;
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p></main></body></html>`;
 }
 
 function dashboardPage(
@@ -5368,6 +5380,25 @@ function dashboardReturnUrl(request, values = {}) {
   return "/dashboard" + (query ? "?" + query : "");
 }
 
+function safeReturnPath(value, fallback = "/") {
+  const path = String(value || "").trim();
+  if (!path.startsWith("/") || path.startsWith("//") || /[\r\n]/.test(path))
+    return fallback;
+  try {
+    const url = new URL(path, "https://fise.local");
+    if (url.origin !== "https://fise.local") return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return fallback;
+  }
+}
+
+function returnPathWithFlag(path, key, value = "1") {
+  const url = new URL(safeReturnPath(path), "https://fise.local");
+  url.searchParams.set(key, value);
+  return url.pathname + url.search + url.hash;
+}
+
 function sameOrigin(request) {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "same-origin") return true;
@@ -5456,6 +5487,7 @@ async function registerAccount(request, env) {
   const username = normalizeUsername(form.get("username"));
   const password = validPassword(form.get("password"));
   const embedded = String(form.get("embed") || "") === "1";
+  const returnTo = safeReturnPath(form.get("return_to"));
   if (!email || !username || !password)
     return htmlResponse(loginPage("Enter a valid email, a 3–40 character username, and a password of at least 8 characters.", true, embedded), 400);
   const existing = await env.DB.prepare(
@@ -5475,7 +5507,7 @@ async function registerAccount(request, env) {
   await env.DB.prepare(
     "INSERT INTO users (id,email,username,password_hash,password_salt,password_iterations,status,created_at,updated_at) VALUES (?,?,?,?,?,?,'active',?,?)",
   ).bind(userId, email, username, record.hash, record.salt, record.iterations, now, now).run();
-  return createUserSession(userId, env, embedded ? "/dashboard?embed=1" : "/?profile=1");
+  return createUserSession(userId, env, embedded ? "/dashboard?embed=1" : returnTo);
 }
 
 async function passwordLogin(request, env) {
@@ -5485,6 +5517,7 @@ async function passwordLogin(request, env) {
   const identifier = String(form.get("identifier") || "").trim();
   const password = String(form.get("password") || "");
   const embedded = String(form.get("embed") || "") === "1";
+  const returnTo = safeReturnPath(form.get("return_to"));
   const user = await env.DB.prepare(
     "SELECT id,email,username,password_hash,password_salt,password_iterations,status FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
   ).bind(normalizeEmail(identifier), identifier).first();
@@ -5500,7 +5533,7 @@ async function passwordLogin(request, env) {
   }
   await env.DB.prepare("UPDATE users SET updated_at=? WHERE id=?")
     .bind(new Date().toISOString(), user.id).run();
-  return createUserSession(user.id, env, embedded ? "/dashboard?embed=1" : "/?profile=1");
+  return createUserSession(user.id, env, embedded ? "/dashboard?embed=1" : returnTo);
 }
 
 async function saveAccountCredentials(request, env) {
@@ -5510,6 +5543,7 @@ async function saveAccountCredentials(request, env) {
   const form = await request.formData();
   const username = normalizeUsername(form.get("username"));
   const password = validPassword(form.get("password"));
+  const returnTo = safeReturnPath(form.get("return_to"));
   if (!username || !password)
     return htmlResponse(loginPage("Choose a valid 3–40 character username and a password of at least 8 characters.", true), 400);
   const duplicate = await env.DB.prepare(
@@ -5521,7 +5555,7 @@ async function saveAccountCredentials(request, env) {
   await env.DB.prepare(
     "UPDATE users SET username=?,password_hash=?,password_salt=?,password_iterations=?,updated_at=? WHERE id=?",
   ).bind(username, record.hash, record.salt, record.iterations, new Date().toISOString(), user.id).run();
-  return redirect("/?profile=1");
+  return redirect(returnTo);
 }
 
 
@@ -5532,6 +5566,7 @@ async function requestMagicLink(request, env) {
   const form = await request.formData();
   const email = normalizeEmail(form.get("email"));
   const embedded = String(form.get("embed") || "") === "1";
+  const returnTo = safeReturnPath(form.get("return_to"));
   if (!email)
     return htmlResponse(
       loginPage("Enter a valid email address.", true, embedded),
@@ -5541,7 +5576,7 @@ async function requestMagicLink(request, env) {
     return createEmailSession(
       email,
       env,
-      embedded ? "/dashboard?embed=1" : "/?signed_in=1",
+      embedded ? "/dashboard?embed=1" : returnTo,
     );
   if (!env.RESEND_API_KEY)
     return htmlResponse(
@@ -5633,7 +5668,7 @@ async function requestMagicLink(request, env) {
     );
   }
 
-  return redirect("/?sent=1");
+  return redirect(returnPathWithFlag(returnTo, "sent"));
 }
 
 async function verifyMagicLink(request, env) {
@@ -6827,10 +6862,11 @@ function responseOutputText(data) {
     return data.output_text.trim();
   const parts = [];
   for (const item of data.output || []) {
-    if (item.type !== "message") continue;
+    if (typeof item.text === "string") parts.push(item.text);
     for (const content of item.content || []) {
-      if (content.type === "output_text" && content.text)
-        parts.push(content.text);
+      if (typeof content.text === "string") parts.push(content.text);
+      else if (typeof content.output_text === "string")
+        parts.push(content.output_text);
     }
   }
   return parts.join("\n").trim();
@@ -6900,7 +6936,7 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
           },
         ],
         reasoning: { effort: "low" },
-        max_output_tokens: 180,
+        max_output_tokens: 500,
         store: false,
       }),
       signal: AbortSignal.timeout(15000),
@@ -6925,11 +6961,13 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
     .replace(/^['\"]|['\"]$/g, "")
     .trim()
     .slice(0, 500);
-  if (!greeting)
-    return json(
-      { error: "Fise could not create a useful suggestion. Please try again." },
-      502,
+  if (!greeting) {
+    console.error(
+      "Greeting suggestion returned no text",
+      JSON.stringify({ status: data.status, incomplete_details: data.incomplete_details }),
     );
+    return json({ greeting: fallback, fallback: true });
+  }
   return json({ greeting });
 }
 
