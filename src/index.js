@@ -2716,6 +2716,48 @@ const referenceStyles = html`
 
 const requestedStyles = html`
   main { display:flex; flex-direction:column; }
+  .blog-reference { display:block; padding:92px 0 130px; background:#f7f9fb; }
+  .blog-hero { max-width:900px; margin-bottom:52px; }
+  .blog-hero h1 { margin:0 0 20px; color:#071126; font-size:clamp(46px,5vw,72px);
+    line-height:1.04; letter-spacing:-.048em; }
+  .blog-hero p { max-width:760px; margin:0; color:#5d6878; font-size:19px;
+    line-height:1.65; }
+  .blog-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px;
+    margin-bottom:68px; }
+  .blog-card { display:flex; min-height:245px; padding:25px; flex-direction:column;
+    border:1px solid #e0e6ec; border-radius:17px; color:#071126; background:#fff;
+    box-shadow:0 12px 30px rgba(20,43,72,.05); text-decoration:none; }
+  .blog-card:hover { border-color:#b9dfe6; transform:translateY(-2px); }
+  .blog-card small { margin-bottom:15px; color:#159dbb; font-size:10px;
+    font-weight:900; letter-spacing:.09em; text-transform:uppercase; }
+  .blog-card h2 { margin:0 0 12px; font-size:21px; line-height:1.25;
+    letter-spacing:-.025em; }
+  .blog-card p { margin:0; color:#657184; font-size:13px; line-height:1.55; }
+  .blog-card span { margin-top:auto; padding-top:20px; color:#1769e0;
+    font-size:12px; font-weight:850; }
+  .blog-list { display:grid; gap:24px; }
+  .blog-article { scroll-margin-top:112px; padding:42px clamp(25px,4vw,58px);
+    border:1px solid #e0e6ec; border-radius:21px; background:#fff;
+    box-shadow:0 14px 38px rgba(20,43,72,.05); }
+  .blog-article header { margin-bottom:25px; padding-bottom:22px;
+    border-bottom:1px solid #e8edf2; }
+  .blog-article header small { color:#159dbb; font-size:10px; font-weight:900;
+    letter-spacing:.09em; text-transform:uppercase; }
+  .blog-article h2 { max-width:800px; margin:8px 0 0; font-size:clamp(29px,3vw,40px);
+    line-height:1.12; letter-spacing:-.035em; }
+  .blog-copy { max-width:850px; }
+  .blog-copy p,.blog-copy li { color:#536174; font-size:16px; line-height:1.75; }
+  .blog-copy p { margin:0 0 17px; }
+  .blog-copy h3 { margin:30px 0 10px; color:#172538; font-size:20px; }
+  .blog-copy ul { margin:10px 0 20px; padding-left:21px; }
+  .blog-copy li { margin:7px 0; }
+  .blog-tip { margin-top:24px; padding:16px 18px; border-left:4px solid #20b6cb;
+    border-radius:0 11px 11px 0; color:#33465b; background:#eff9fb;
+    font-size:14px; line-height:1.6; }
+  @media(max-width:900px) { .blog-grid { grid-template-columns:1fr 1fr; } }
+  @media(max-width:620px) { .blog-reference { padding:62px 0 88px; }
+    .blog-grid { grid-template-columns:1fr; }.blog-card { min-height:0; }
+    .blog-article { padding:29px 21px; } }
   .reference-hero { order:1; }
   .trusted-strip { order:2; }
   .features-section { order:3; }
@@ -3082,6 +3124,18 @@ const requestedStyles = html`
     font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
   .profile-detail strong { color:#172538; font-size:14px; }
   .profile-detail a { color:#1769e0; text-decoration:none; }
+  .profile-password-row { display:flex; align-items:center; justify-content:space-between;
+    gap:10px; }
+  .profile-password-row strong { letter-spacing:.14em; }
+  .profile-password-eye { width:34px; height:34px; display:grid; place-items:center;
+    flex:0 0 auto; border:1px solid #dbe3ec; border-radius:9px; color:#526174;
+    background:#fff; cursor:pointer; }
+  .profile-password-eye:hover,.profile-password-eye.active { color:#1769e0;
+    border-color:#b9d1f2; background:#edf5ff; }
+  .profile-password-eye svg { width:18px; height:18px; }
+  .profile-password-message { display:none; margin-top:8px; color:#69778a;
+    font-size:10px; line-height:1.45; }
+  .profile-password-message.show { display:block; }
   .profile-security-note { display:flex; align-items:center; gap:10px; margin-top:17px;
     padding:13px 15px; border-radius:11px; color:#526174; background:#f2f6fa;
     font-size:11px; }
@@ -3257,13 +3311,13 @@ function profileDrawer() {
           <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span><small>Plan and billing status</small></button>
           <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span><small>Programme information</small></button>
         </nav>
-        <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out securely</button></form>
+        <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
       </div>
       <div class="profile-main">
         <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div>
         <section class="profile-panel active" data-profile-panel="account">
           <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div><span class="profile-security-badge">Secure account</span></div>
-          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Password</small><strong id="profile-password">Protected and hidden</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Passwords are stored securely and cannot be displayed from storage.</span></div></div>
+          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-password-eye" id="profile-password-eye" type="button" aria-label="Show password information" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></button></div><span class="profile-password-message" id="profile-password-message">For security, saved passwords cannot be revealed. Use your password manager, or sign in with an email link if forgotten.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
         </section>
         <section class="profile-panel profile-chatbot-panel" data-profile-panel="chatbots">
           <div class="profile-panel-heading"><div><h3>Chatbot workspace</h3><p class="profile-intro">Scan your website, customise your assistant and manage leads.</p></div></div>
@@ -3480,7 +3534,7 @@ function referenceJavascript() {
       const data=await response.json();
       profileText('profile-email',data.account?.email);
       profileText('profile-name',data.account?.username||'Not added yet');
-      profileText('profile-password',data.account?.password_set?'Set and protected':'Not set');
+      profileText('profile-password',data.account?.password_set?'••••••••••':'Not set');
       profileText('profile-created',data.account?.created_at?new Date(data.account.created_at).toLocaleDateString():'—');
       profileText('profile-plan',data.subscription?.plan_code?titleCase(data.subscription.plan_code):'None');
       const subscriptionStatus=document.getElementById('profile-subscription-status');
@@ -3528,6 +3582,13 @@ function referenceJavascript() {
       input.value=location.pathname+location.search+location.hash;
     }));
     document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.addEventListener('click',()=>selectProfileTab(button.dataset.profileTab)));
+    const profilePasswordEye=document.getElementById('profile-password-eye');
+    const profilePasswordMessage=document.getElementById('profile-password-message');
+    profilePasswordEye?.addEventListener('click',()=>{
+      const showing=profilePasswordMessage?.classList.toggle('show');
+      profilePasswordEye.classList.toggle('active',Boolean(showing));
+      profilePasswordEye.setAttribute('aria-expanded',showing?'true':'false');
+    });
     const planForm=document.getElementById('profile-plan-form');
     planForm?.addEventListener('submit',async(event)=>{
       event.preventDefault();
@@ -3619,6 +3680,35 @@ function referenceHome(c) {
 
 function referenceSimple(title, eyebrow, text, c) {
   return referenceShell(`${title} | Fise AI`,String(text).replaceAll("|"," ").slice(0,155),html`<main class="simple-reference"><div class="video-container"><article><div class="reference-eyebrow">${escapeWebsiteHtml(eyebrow)}</div><h1>${escapeWebsiteHtml(title)}</h1>${paragraphs(text)}</article></div></main>`,c);
+}
+
+function referenceBlog(c) {
+  return referenceShell(
+    "Practical AI Chatbot Guides | Fise AI",
+    "Simple, useful guides for building a helpful AI website chatbot and improving customer conversations.",
+    html`<main class="blog-reference"><div class="video-container">
+      <header class="blog-hero"><div class="reference-eyebrow">${escapeWebsiteHtml(c.blog_eyebrow || "Practical guidance")}</div><h1>Simple ideas for better customer conversations</h1><p>Clear, honest advice to help you set up your website chatbot, keep its answers useful and turn more visits into real enquiries.</p></header>
+      <nav class="blog-grid" aria-label="Blog articles">
+        <a class="blog-card" href="#what-a-chatbot-should-do"><small>Chatbot basics · 4 min</small><h2>What should an AI website chatbot actually do?</h2><p>Focus on the small number of jobs that genuinely help visitors and your team.</p><span>Read article →</span></a>
+        <a class="blog-card" href="#prepare-your-website"><small>Website scan · 5 min</small><h2>How to prepare your website before scanning it</h2><p>A few simple checks can make your chatbot’s answers much more accurate.</p><span>Read article →</span></a>
+        <a class="blog-card" href="#human-handover"><small>Customer support · 4 min</small><h2>When should your chatbot hand over to a person?</h2><p>Good automation knows when to help and when to bring in your team.</p><span>Read article →</span></a>
+        <a class="blog-card" href="#measure-results"><small>Performance · 5 min</small><h2>How to tell if your chatbot is helping your business</h2><p>Track a few useful signs instead of getting lost in complicated reports.</p><span>Read article →</span></a>
+        <a class="blog-card" href="#keep-answers-accurate"><small>Maintenance · 4 min</small><h2>How to keep chatbot answers accurate over time</h2><p>A short monthly routine can prevent most outdated or confusing answers.</p><span>Read article →</span></a>
+      </nav>
+      <div class="blog-list">
+        <article class="blog-article" id="what-a-chatbot-should-do"><header><small>Chatbot basics</small><h2>What should an AI website chatbot actually do?</h2></header><div class="blog-copy"><p>A good website chatbot does not need to sound clever. It needs to be useful. Most visitors arrive with a simple question: What do you offer? How much does it cost? Are you available? How do I book or contact someone?</p><p>Your chatbot should answer these common questions quickly, guide people to the right page and make the next step obvious. If a visitor is ready to speak to your business, the chatbot should collect the right details or show a clear contact option.</p><h3>Keep its main jobs simple</h3><ul><li>Answer questions using approved business information.</li><li>Help visitors find services, pricing, locations or contact details.</li><li>Collect useful enquiries without asking for unnecessary information.</li><li>Send uncertain or sensitive questions to a real person.</li></ul><p>Do not expect the chatbot to handle every situation. A focused assistant normally gives better answers than one with too many instructions and no clear purpose.</p><div class="blog-tip"><strong>Practical tip:</strong> Write down the ten questions your customers ask most often. Test each one before placing the chatbot on your website.</div></div></article>
+
+        <article class="blog-article" id="prepare-your-website"><header><small>Website scan</small><h2>How to prepare your website before scanning it</h2></header><div class="blog-copy"><p>Your chatbot learns from the information it can read. If your website is clear and current, the chatbot has a much better starting point. You do not need a perfect website, but a quick tidy-up can prevent many poor answers.</p><h3>Check the pages that matter most</h3><ul><li>Make sure every service has a short, clear explanation.</li><li>Update prices, opening hours, phone numbers and email addresses.</li><li>Remove offers, team members or services that are no longer available.</li><li>Add a useful FAQ page for questions customers ask repeatedly.</li><li>Use clear page headings instead of vague marketing language.</li></ul><p>Also check that important information is written as normal page text. Details hidden inside an image may be difficult for a website scanner to understand.</p><p>After scanning, test the chatbot with real customer questions. If an answer is weak, improve the source page or add a short approved document, then update the website knowledge.</p><div class="blog-tip"><strong>Practical tip:</strong> Ask someone who does not work in your business to read the website. If they find something confusing, the chatbot may find it confusing too.</div></div></article>
+
+        <article class="blog-article" id="human-handover"><header><small>Customer support</small><h2>When should your chatbot hand over to a person?</h2></header><div class="blog-copy"><p>A helpful chatbot should never pretend to know something it cannot confirm. Trust matters more than forcing an answer.</p><p>A human handover is useful when a question involves a complaint, a special quotation, private information, an unusual request or a decision only your team can make. It is also the right choice when the visitor clearly asks to speak to someone.</p><h3>Make the handover easy</h3><p>Use friendly language such as: “I’m unable to confirm that, but our team can help.” Then offer one clear next step. This could be a contact form, phone number, WhatsApp link or a short lead form inside the chatbot.</p><p>Do not make people repeat their entire question. If you collect a lead, include their original enquiry so your team already understands what they need.</p><div class="blog-tip"><strong>Practical tip:</strong> Decide who receives chatbot enquiries and how quickly they should respond. A good handover only works when a real person follows up.</div></div></article>
+
+        <article class="blog-article" id="measure-results"><header><small>Performance</small><h2>How to tell if your chatbot is helping your business</h2></header><div class="blog-copy"><p>You do not need a complicated report to understand whether your chatbot is useful. Start with a few practical questions.</p><ul><li>Are visitors using it?</li><li>Are common questions being answered correctly?</li><li>Are people clicking helpful links or completing enquiry forms?</li><li>Is your team receiving better information before following up?</li><li>Which questions still cannot be answered?</li></ul><p>Conversation numbers are useful, but they do not tell the full story. Ten well-qualified enquiries may be more valuable than hundreds of short conversations that go nowhere.</p><p>Review a small sample of conversations every month. Look for repeated questions, unclear answers and places where visitors leave. These patterns can improve both the chatbot and the website itself.</p><div class="blog-tip"><strong>Practical tip:</strong> Choose one clear goal for the chatbot, such as more quote requests or fewer repeated support questions. Measure that goal consistently.</div></div></article>
+
+        <article class="blog-article" id="keep-answers-accurate"><header><small>Maintenance</small><h2>How to keep chatbot answers accurate over time</h2></header><div class="blog-copy"><p>Your business changes. Prices move, services are updated and team details change. A chatbot that was accurate six months ago may now give an old answer.</p><p>Set aside a short time each month to review the information your chatbot uses. You do not need to rebuild everything. Focus on the pages and documents most likely to change.</p><h3>A simple monthly check</h3><ul><li>Confirm prices, offers, opening hours and contact details.</li><li>Update the website knowledge after important website changes.</li><li>Test ten common customer questions.</li><li>Read a few recent conversations and note weak answers.</li><li>Remove old files or instructions that are no longer correct.</li></ul><p>When the chatbot cannot answer confidently, it should guide the visitor to support instead of guessing. This keeps the experience honest and protects customer trust.</p><div class="blog-tip"><strong>Practical tip:</strong> Add chatbot maintenance to an existing monthly business task. A regular fifteen-minute check is easier than fixing months of outdated information.</div></div></article>
+      </div>
+    </div></main>`,
+    c,
+  );
 }
 
 function legalDetails(c, origin) {
@@ -3772,7 +3862,7 @@ async function handlePublicWebsite(request, env) {
   if (url.pathname === "/ai-chatbots") return go("/#features");
   if (url.pathname === "/resources") return go("/#how-it-works");
   if (url.pathname === "/about") return response(referenceSimple(c.about_title,c.about_eyebrow,c.about_text,c));
-  if (url.pathname === "/blog") return response(referenceSimple(c.blog_title,c.blog_eyebrow,c.blog_text,c));
+  if (url.pathname === "/blog") return response(referenceBlog(c));
   if (url.pathname === "/privacy") return go("/privacy-policy");
   if (url.pathname === "/terms") return go("/terms-and-conditions");
   if (url.pathname === "/privacy-policy") return response(referenceLegal("privacy", c, url.origin));
