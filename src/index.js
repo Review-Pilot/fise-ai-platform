@@ -994,13 +994,13 @@ async function chatResponse(request, env) {
   }
 
   const monthUsage = await env.DB.prepare(`
-    SELECT COALESCE(SUM(COALESCE(m.input_tokens,0) + COALESCE(m.output_tokens,0)),0) AS total
+    SELECT COUNT(*) AS total
     FROM messages m
     JOIN conversations c ON c.id = m.conversation_id
-    WHERE c.chatbot_id = ? AND m.role = 'assistant' AND m.created_at >= ?
+    WHERE c.chatbot_id = ? AND m.created_at >= ?
   `).bind(bot.id, monthStartIso()).first();
-  const monthlyTokenAllowance = conversationLimitForPlan(bot.plan_code) * 500;
-  if (Number(monthUsage?.total || 0) >= monthlyTokenAllowance) {
+  const monthlyMessageAllowance = conversationLimitForPlan(bot.plan_code) * 5;
+  if (Number(monthUsage?.total || 0) >= monthlyMessageAllowance) {
     await deleteTemporaryOpenAIFile(env, attachmentId);
     return json({ error: "This chatbot has reached its monthly conversation limit" }, 429, corsHeaders(auth.origin));
   }
@@ -5340,7 +5340,7 @@ function dashboardPage(
           (bot) =>
             (() => {
               const conversationLimit = planConversationLimit(bot.plan_code);
-              const conversationsUsed = Math.min(conversationLimit, Math.ceil(Number(bot.tokens_used_month || 0) / 500));
+              const conversationsUsed = Math.min(conversationLimit, Math.floor(Number(bot.messages_used_month || 0) / 5));
               const conversationsRemaining = Math.max(0, conversationLimit - conversationsUsed);
               const usagePercent = conversationLimit ? Math.min(100, Math.round((conversationsUsed / conversationLimit) * 100)) : 0;
               const isFreePlan = ["free", "starter"].includes(String(bot.plan_code || "free").toLowerCase());
@@ -6439,9 +6439,9 @@ async function showDashboard(request, env) {
     SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
       CASE WHEN s.status IN ('active','trialing') THEN COALESCE(NULLIF(s.plan_code,'starter'),'free') ELSE 'free' END AS plan_code,
       (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
-      (SELECT COALESCE(SUM(COALESCE(m.input_tokens,0) + COALESCE(m.output_tokens,0)),0)
+      (SELECT COUNT(*)
        FROM messages m JOIN conversations v ON v.id=m.conversation_id
-       WHERE v.chatbot_id=c.id AND m.role='assistant' AND m.created_at>=?) AS tokens_used_month,
+       WHERE v.chatbot_id=c.id AND m.created_at>=?) AS messages_used_month,
       (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
       (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
       (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
