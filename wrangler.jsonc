@@ -3,6 +3,10 @@
   "main": "src/index.js",
   "workers_dev": true,
   "preview_urls": true,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
   "compatibility_date": "2026-08-21",
   "observability": {
     "enabled": true,
