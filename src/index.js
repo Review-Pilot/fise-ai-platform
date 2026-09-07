@@ -1998,9 +1998,6 @@ function serveWidgetTest(request) {
 async function handleWidgetApi(request, env) {
   const url = new URL(request.url);
   if (request.method === "OPTIONS") {
-Warning: truncated output (original token count: 15190)
-Total output lines: 200
-
     const key = url.searchParams.get("key") || "";
     const bot = await botForKey(env, key);
     if (!bot) return new Response(null, { status: 204 });
