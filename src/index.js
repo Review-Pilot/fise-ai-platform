@@ -34,39 +34,35 @@ function renderScanControls(bot, embedded = false) {
 
   if (active) {
     const percent = found ? Math.min(100, Math.round((processed / found) * 100)) : 5;
-    return `<div class="scan-box active" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
-      <div class="scan-label">Website knowledge</div>
-      <div class="scan-title-row"><span class="scan-state-dot"></span><strong>Scanning your website</strong><span class="scan-percent">${percent}%</span></div>
-      <p class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</p>
+    return `<div class="scan-box" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
+      <strong>Training in progress</strong>
+      <p class="scan-progress-label">${found ? `${percent}% complete` : "Finding the most important pages…"}</p>
       <div class="progress"><span style="width:${percent}%"></span></div>
-      <p class="scan-time-note">You can leave this page. Progress updates automatically.</p>
+      <p class="scan-time-note">This can take up to 5 minutes. Progress updates automatically.</p>
     </div>`;
   }
 
   if (complete) {
     return `<div class="scan-box success">
-      <div class="scan-label">Website knowledge</div>
-      <div class="scan-title-row"><span class="scan-complete-mark">✓</span><strong>Website scan complete</strong></div>
-      <p>${processed} page${processed === 1 ? " is" : "s are"} ready for your chatbot to use.</p>
-      <div class="scan-meta"><span>${processed} pages added</span><span>Knowledge ready</span></div>
+      <strong>Website knowledge added</strong>
+      <p>${processed} page${processed === 1 ? "" : "s"} processed. The chatbot knowledge base is ready for testing.</p>
       <form method="post" action="${scanAction}">
         <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
-        <button class="btn ghost" type="submit">Update website knowledge</button>
+        <button class="btn" type="submit">Scan website again</button>
       </form>
     </div>`;
   }
 
   const failureDetail = String(bot.scan_error || "").trim();
-  const retryText = status === "failed" ? `<div class="scan-error"><strong>Scan needs attention</strong><span>${escapeHtml(failureDetail || "Fise could not read usable website pages.")} Check the website address and try again.</span></div>` : "";
+  const retryText = status === "failed" ? `<p class="scan-error"><strong>Why it failed:</strong> ${escapeHtml(failureDetail || "Fise could not read any usable website pages.")} You can safely try again.</p>` : "";
   return `<div class="scan-box">
-    <div class="scan-label">Website knowledge</div>
-    <strong>Scan your website</strong>
-    <p>Fise will securely find the most useful pages from ${escapeHtml(bot.website_url || "your website")} and prepare them for your chatbot.</p>
-    <div class="scan-meta"><span>Up to ${MAX_PAGES} pages</span><span>Usually 2–5 minutes</span></div>
+    <strong>Train from website</strong>
+    <p>Fise will find and securely process up to ${MAX_PAGES} public pages from ${escapeHtml(bot.website_url || "the website")}.</p>
+    <p class="scan-time-note">This can take up to 5 minutes.</p>
     ${retryText}
     <form method="post" action="${scanAction}">
       <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
-      <button class="btn" type="submit">Start website scan</button>
+      <button class="btn" type="submit">Scan website</button>
     </form>
   </div>`;
 }
@@ -541,29 +537,6 @@ async function queueHandler(batch, env) {
 
 return { queueHandler, renderScanControls, startWebsiteScan };
 })();
-
-const PLAN_CONVERSATION_LIMITS = Object.freeze({
-  free: 50,
-  starter: 50,
-  essential: 250,
-  grow: 1000,
-  growth: 1000,
-  enterprise: 5000,
-});
-
-// A conversation allowance is intentionally measured as a short exchange,
-// rather than charging a customer for every single message they send.
-const CONVERSATION_MESSAGE_GROUP_SIZE = 5;
-
-function normalizedPlanCode(value) {
-  const plan = String(value || "free").trim().toLowerCase();
-  return plan === "starter" || plan === "none" ? "free" : plan;
-}
-
-function planConversationLimit(value) {
-  return PLAN_CONVERSATION_LIMITS[normalizedPlanCode(value)] || 50;
-}
-
 const ChatModule = (() => {
 const CHAT_INPUT_LIMIT = 2000;
 const CHAT_HISTORY_LIMIT = 6;
@@ -660,10 +633,6 @@ async function botForKey(env, key) {
 function authorizeBrowser(request, bot) {
   const origin = requestOrigin(request);
   if (!origin) return { ok: false, origin: "" };
-  const ownOrigin = new URL(request.url).origin;
-  const active = ["active", "trialing"].includes(String(bot.subscription_status || "").toLowerCase());
-  const freePlan = !active || normalizedPlanCode(bot.plan_code) === "free";
-  if (freePlan && origin !== ownOrigin) return { ok: false, origin };
   return { ok: allowedOrigins(bot, request).has(origin), origin };
 }
 
@@ -843,29 +812,18 @@ function ndjson(data) {
 async function saveAssistantReply(env, context) {
   const { bot, conversationId, pageUrl, reply, usage = {}, cacheHash = "", sources = [] } = context;
   const finishedAt = new Date().toISOString();
-  // The visitor's message has already been saved by this point. Record one
-  // hidden 500-token allowance only when this reply completes five messages.
-  const monthMessages = await env.DB.prepare(`
-    SELECT COUNT(*) AS total
-    FROM messages m
-    JOIN conversations c ON c.id=m.conversation_id
-    WHERE c.chatbot_id=? AND m.created_at>=?
-  `).bind(bot.id, monthStartIso()).first();
-  const completesConversation = (Number(monthMessages?.total || 0) + 1) % CONVERSATION_MESSAGE_GROUP_SIZE === 0;
   const statements = [
     env.DB.prepare(`
       INSERT INTO messages (id,conversation_id,role,content,input_tokens,output_tokens,created_at)
       VALUES (?,?,'assistant',?,?,?,?)
     `).bind(crypto.randomUUID(), conversationId, reply, Number(usage.input_tokens || 0), Number(usage.output_tokens || 0), finishedAt),
     env.DB.prepare("UPDATE conversations SET updated_at=?,page_url=? WHERE id=?")
-      .bind(finishedAt, pageUrl, conversationId)
-  ];
-  if (completesConversation) {
-    statements.push(env.DB.prepare(`
+      .bind(finishedAt, pageUrl, conversationId),
+    env.DB.prepare(`
       INSERT INTO usage_events (id,user_id,chatbot_id,event_type,quantity,created_at)
-      VALUES (?,?,?,'token_usage',500,?)
-    `).bind(crypto.randomUUID(), bot.user_id, bot.id, finishedAt));
-  }
+      VALUES (?,?,?,'chat_message',1,?)
+    `).bind(crypto.randomUUID(), bot.user_id, bot.id, finishedAt)
+  ];
   if (cacheHash) {
     const expiresAt = new Date(Date.now() + POPULAR_CACHE_HOURS * 60 * 60 * 1000).toISOString();
     statements.push(env.DB.prepare(`
@@ -1020,18 +978,13 @@ async function chatResponse(request, env) {
     return json({ error: "File attachments are disabled for this chatbot" }, 403, corsHeaders(auth.origin));
   }
 
-  const monthMessages = await env.DB.prepare(`
-    SELECT COUNT(*) AS total
-    FROM messages m
-    JOIN conversations c ON c.id=m.conversation_id
-    WHERE c.chatbot_id=? AND m.created_at>=?
+  const monthUsage = await env.DB.prepare(`
+    SELECT COALESCE(SUM(quantity),0) AS total FROM usage_events
+    WHERE chatbot_id = ? AND event_type = 'chat_message' AND created_at >= ?
   `).bind(bot.id, monthStartIso()).first();
-  const conversationMessageLimit = planConversationLimit(bot.plan_code) * CONVERSATION_MESSAGE_GROUP_SIZE;
-  // A reply will add one more message, so do not start an exchange that would
-  // take the account past its monthly conversation allowance.
-  if (Number(monthMessages?.total || 0) >= conversationMessageLimit - 1) {
+  if (Number(monthUsage?.total || 0) >= Number(bot.monthly_message_limit || 500)) {
     await deleteTemporaryOpenAIFile(env, attachmentId);
-    return json({ error: "This chatbot has reached its monthly conversation limit" }, 429, corsHeaders(auth.origin));
+    return json({ error: "This chatbot has reached its monthly message limit" }, 429, corsHeaders(auth.origin));
   }
 
   const visitorHash = await sha256(`${bot.id}|${visitorId}`);
@@ -1073,12 +1026,6 @@ async function chatResponse(request, env) {
   await env.DB.prepare(`
     INSERT INTO messages (id,conversation_id,role,content,created_at) VALUES (?,?,'user',?,?)
   `).bind(crypto.randomUUID(), conversationId, recordedMessage, now).run();
-  if ((Number(monthMessages?.total || 0) + 1) % CONVERSATION_MESSAGE_GROUP_SIZE === 0) {
-    await env.DB.prepare(`
-      INSERT INTO usage_events (id,user_id,chatbot_id,event_type,quantity,created_at)
-      VALUES (?,?,?,'token_usage',500,?)
-    `).bind(crypto.randomUUID(), bot.user_id, bot.id, now).run();
-  }
 
   const lastAssistant = [...history].reverse().find((item) => item.role === "assistant")?.content || "";
   if (growthAccess(bot) && Number(bot.lead_capture_enabled) && affirmative(message) && /(?:speak with (?:someone|a member) from (?:our|the) team|connect you with (?:our|the) support team|contact (?:our|the) support team)/i.test(lastAssistant)) {
@@ -1990,9 +1937,8 @@ function serveWidgetTest(request) {
     : "";
   const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:80px 0}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}</style></head><body>${intro}<script src="${escapeHtml(origin)}/widget.js?v=20260829-support-1" data-chatbot-key="${escapeHtml(key)}"></script>${autoOpen}</body></html>`;
   const scriptPolicy = embed ? "'self' 'unsafe-inline'" : "'self'";
-  // A preview URL is for testing inside Fise, never for re-use as an iframe on
-  // another website. Website installation is authorised separately by plan.
-  return new Response(content, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": `default-src 'self'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'`, "permissions-policy": "microphone=(self)", "x-content-type-options": "nosniff", "x-frame-options": "DENY" } });
+  const framePolicy = embed ? "'self'" : "'none'";
+  return new Response(content, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": `default-src 'self'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors ${framePolicy}; base-uri 'none'`, "permissions-policy": "microphone=(self)", "x-content-type-options": "nosniff", "x-frame-options": embed ? "SAMEORIGIN" : "DENY" } });
 }
 
 async function handleWidgetApi(request, env) {
@@ -2019,7 +1965,8 @@ return { handleWidgetApi, serveWidgetScript, serveWidgetTest };
 const WebsiteModule = (() => {
 const LEGAL_DOCUMENTS = {
   "terms": "# Fise AI Terms and Conditions\n\n**Last updated: 27 August 2026**\n\nPlease replace every item shown in square brackets before publishing this document.\n\n## 1. About these Terms\n\nThese Terms and Conditions (the “Terms”) govern access to and use of the Fise AI website, customer dashboard, Website Studio, artificial intelligence website assistants, chatbot widgets, lead-management tools and related services (together, the “Service”).\n\nThe Service is operated by **[INSERT LEGAL BUSINESS NAME]**, trading as **Fise AI** (“Fise”, “we”, “us” or “our”). Our legal status is **[INSERT COMPANY, CLOSE CORPORATION OR SOLE PROPRIETOR STATUS]**, our registration number is **[INSERT REGISTRATION NUMBER, IF APPLICABLE]**, and our principal business address is **[INSERT PHYSICAL ADDRESS]**.\n\nBy creating an account, purchasing a subscription, accessing the dashboard, installing a Fise chatbot or otherwise using the Service, you agree to these Terms. If you use Fise for an organisation, you confirm that you have authority to accept these Terms for that organisation.\n\n## 2. Contact details\n\nQuestions about the Service or these Terms may be sent to:\n\n- Business name: [INSERT LEGAL BUSINESS NAME]\n- Trading name: Fise AI\n- Email: [INSERT SUPPORT EMAIL]\n- Telephone: [INSERT TELEPHONE NUMBER]\n- Physical address: [INSERT PHYSICAL ADDRESS]\n- Website: [INSERT FINAL FISE WEBSITE ADDRESS]\n\n## 3. Who may use Fise\n\nYou must be at least 18 years old and legally able to enter into a binding agreement. If you create an account for a company or another organisation, you confirm that the information you provide is correct and that you are authorised to act for it.\n\nFise may request reasonable information needed to verify an account, prevent fraud, comply with the law or provide payment services. We may refuse an application where the information is incomplete, inaccurate or presents an unacceptable legal, security or financial risk.\n\n## 4. Description of the Service\n\nFise helps businesses add an artificial intelligence assistant to a website. Depending on the selected plan, the Service may include website scanning, uploaded knowledge files, chatbot customisation, brand colours, opening messages, popular questions, guided links, lead capture, conversation history, lead exports, Website Studio, AI website workers, usage reporting and customer support.\n\nFeatures may differ between plans. The features, conversation limits, prices and support included in a plan will be shown on the Fise website, during checkout or in a written quotation. A feature is only included if it appears in the plan purchased by the customer.\n\n## 5. Account registration and security\n\nYou must provide a valid email address and accurate account information. You are responsible for protecting access to your email account, Fise sign-in links, devices and dashboard sessions. You must not knowingly allow an unauthorised person to use your account.\n\nTell us promptly at [INSERT SECURITY OR SUPPORT EMAIL] if you believe that an account, sign-in link or chatbot key has been compromised. We may end active sessions, temporarily restrict access or require additional verification to protect the account and other users.\n\nYou are responsible for activities performed through your account unless they resulted from a security failure that Fise was legally responsible for preventing.\n\n## 6. Customer setup and responsibilities\n\nYou are responsible for the website addresses, files, instructions, branding, questions, links and other information supplied to Fise. You must ensure that this information is accurate, lawful and suitable for use by your chatbot.\n\nYou must have the necessary rights and permissions to scan a website, upload files, use logos or images, process visitor information and instruct Fise to publish website changes. You must regularly test important chatbot answers and correct outdated or inaccurate source material.\n\nFise does not independently verify every statement contained in a customer’s website or uploaded files. The quality of chatbot answers depends partly on the quality, accuracy and completeness of the information supplied by the customer.\n\n## 7. Artificial intelligence limitations\n\nFise uses artificial intelligence to generate responses and assist with website changes. Artificial intelligence can produce incomplete, outdated, unexpected or incorrect results. A confident-sounding answer is not necessarily correct.\n\nYou must apply reasonable human review, especially where an answer could affect a customer’s rights, safety, money or important decisions. Fise must not be presented as a substitute for professional legal, medical, financial, tax, insurance or other regulated advice.\n\nWe do not guarantee that every chatbot response, website edit, summary, translation or recommendation will be accurate or suitable for a particular purpose. Where practical, Fise may use safeguards, source material and verification checks, but these measures cannot remove every risk associated with artificial intelligence.\n\n## 8. Acceptable use\n\nYou may not use Fise to:\n\n1. break any law or assist another person to break the law;\n2. commit fraud, impersonate another person or mislead website visitors;\n3. distribute malware, harmful code or security attacks;\n4. gain unauthorised access to accounts, systems, data or websites;\n5. infringe copyright, trademarks, privacy or other legal rights;\n6. generate unlawful discrimination, harassment, threats or abusive content;\n7. collect personal information without a lawful purpose or required notice;\n8. provide prohibited professional advice or make unlawful automated decisions;\n9. interfere with Fise, overload the Service or bypass usage limits; or\n10. copy, resell or reverse engineer the Service except where expressly authorised in writing or permitted by law.\n\nWe may investigate suspected misuse and suspend affected features while doing so.\n\n## 9. Chatbot visitors and leads\n\nThe customer decides where its chatbot is installed, which information it uses and how captured leads are handled. In most customer-chatbot situations, the customer is the responsible party for visitor personal information and Fise processes that information as an operator on the customer’s instructions.\n\nThe customer must provide appropriate privacy information to website visitors and must use leads only for lawful, stated business purposes. The customer may not send unlawful marketing communications or sell lead information without a lawful basis.\n\n## 10. Customer content\n\nYou retain ownership of the content you submit to Fise. You give Fise a limited, non-exclusive licence to host, copy, scan, process, transform and display that content only as reasonably necessary to provide, secure and improve the Service, comply with your instructions and meet legal obligations.\n\nThis licence ends when the content is deleted from active systems, except where limited retention is required for security, backup, dispute, tax or legal reasons.\n\n## 11. Fise intellectual property\n\nFise and its licensors retain ownership of the platform, software, source code, designs, dashboard, templates, documentation, brand elements and other intellectual property forming part of the Service.\n\nSubject to payment and compliance with these Terms, we give you a limited, non-exclusive, non-transferable right to use the Service for your own lawful business activities during your subscription. This right does not transfer ownership of Fise technology to you.\n\n## 12. Plans, prices and taxes\n\nCurrent plan prices are displayed in South African rand unless another currency is clearly stated. Prices may be shown as including or excluding VAT depending on Fise’s VAT status. The checkout page or invoice must state the amount payable before the customer confirms payment.\n\nFise may change plan prices or features by giving reasonable advance notice. A price change will ordinarily apply from a future renewal date and not retrospectively to an already-paid subscription period.\n\n## 13. Payments\n\nPayments may be processed by **[INSERT PAYMENT PROVIDER]**. The payment provider may require its own account information and will apply its own payment, security and privacy terms. Fise does not receive or store a customer’s complete bank-card details unless expressly stated.\n\nYou authorise the payment provider to charge the selected subscription amount at the agreed billing interval. You must keep payment information current and pay all valid amounts when due.\n\n## 14. Recurring subscriptions\n\nUnless checkout clearly states otherwise, paid Fise plans renew monthly until cancelled. The renewal date will normally follow the original subscription date. By selecting a recurring plan, you authorise repeated charges for each billing period until cancellation takes effect.\n\nFise will present the price, billing frequency and important plan limits before payment. Nothing in these Terms removes rights that a consumer may have under the Consumer Protection Act, the Electronic Communications and Transactions Act or other applicable South African law.\n\n## 15. Upgrades, downgrades and usage limits\n\nAn upgrade may take effect immediately or from the next billing period, as explained at the time of the change. A downgrade ordinarily takes effect at the next renewal date. Downgrading may reduce conversation limits, storage, chatbot numbers, integrations or other features.\n\nIf usage reaches a plan limit, Fise may pause the affected feature, request an upgrade or charge an agreed additional amount. We will not impose an undisclosed charge. Unused monthly allowances do not roll over unless the plan expressly says they do.\n\n## 16. Cancellation\n\nYou may cancel through the available account or billing controls, or by contacting [INSERT BILLING EMAIL]. Unless applicable law or the checkout terms require otherwise, cancellation stops the next renewal and access continues until the end of the already-paid billing period.\n\nWhere South African consumer law provides a cooling-off, cancellation or renewal right, that legal right will apply. Fise may request enough information to verify that a cancellation request comes from the account owner.\n\n## 17. Refunds\n\nRefund requests will be considered for duplicate payments, incorrect charges, a material failure to provide the purchased Service, or where a refund is required by law. A change of mind after substantial use of the Service will not automatically create a refund right unless applicable law says otherwise.\n\nApproved refunds will normally be returned through the original payment method. Payment-provider processing times may affect when the money appears in the customer’s account.\n\n## 18. Failed payments\n\nIf a recurring payment fails, Fise or the payment provider may retry the payment and notify the customer. Fise may restrict paid features after reasonable notice if payment remains outstanding. The customer remains responsible for valid amounts incurred before cancellation or suspension.\n\n## 19. Service availability and maintenance\n\nWe aim to provide a reliable Service, but cannot promise uninterrupted or error-free operation. Maintenance, security incidents, internet problems, third-party outages, force majeure events and software faults may temporarily affect availability.\n\nWhere reasonably possible, we will address material faults and communicate planned maintenance or significant disruptions. Service credits apply only if specifically included in a written service-level agreement.\n\n## 20. Third-party services\n\nFise may rely on service providers such as Cloudflare for infrastructure, OpenAI for artificial intelligence processing, Resend or another provider for email, a payment gateway for billing, and optional customer integrations such as Google Sheets.\n\nThird-party services are subject to their own technical limits and terms. Fise remains responsible for its legal obligations but is not able to control every independent interruption or change made by a third-party provider.\n\n## 21. Privacy and security\n\nOur Privacy Policy explains how personal information is collected and used. We apply reasonable technical and organisational safeguards appropriate to the nature of the information and the Service.\n\nNo internet service can guarantee absolute security. Customers must use reasonable security practices and must not upload information that is unnecessary, unlawful or unsuitable for processing through an AI service.\n\n## 22. Suspension and termination\n\nFise may suspend or terminate access where there is serious or repeated breach of these Terms, non-payment, fraud, illegal activity, a security threat, harm to other users or a legal requirement. Where appropriate, we will give notice and a reasonable opportunity to correct the problem.\n\nImmediate action may be taken where delay could cause harm, create legal exposure or compromise security. A customer may terminate the agreement by cancelling the subscription and discontinuing use of the Service.\n\n## 23. Effect of termination\n\nAfter termination, the right to use paid features ends. The customer should export required leads or records before access expires. Fise may delete or anonymise account content after a reasonable period, subject to applicable law, legitimate dispute needs and backup cycles.\n\nTerms relating to payment obligations, intellectual property, confidentiality, privacy, liability and disputes continue where their nature requires them to continue.\n\n## 24. Disclaimers and liability\n\nThe Service is provided with reasonable care and skill. To the fullest extent permitted by law, Fise is not responsible for indirect or consequential loss, lost profits, lost opportunities, decisions made solely from AI output, incorrect customer source material or events outside Fise’s reasonable control.\n\nNothing in these Terms excludes liability that cannot lawfully be excluded, including applicable consumer rights or liability arising from fraud, wilful misconduct or gross negligence where the law does not permit exclusion.\n\nWhere limitation is legally permitted, Fise’s total liability relating to the Service will be limited to the fees paid by the affected customer for the Service during the six months before the event giving rise to the claim. This limitation must be interpreted subject to applicable South African law.\n\n## 25. Customer indemnity\n\nTo the extent permitted by law, the customer is responsible for claims arising from unlawful customer content, infringement of third-party rights, illegal marketing, misuse of captured leads, unauthorised website scanning or a material breach of these Terms. This does not require the customer to indemnify Fise for loss caused by Fise’s own unlawful conduct.\n\n## 26. Complaints and support\n\nPlease send complaints to [INSERT COMPLAINTS EMAIL] with the account email, a clear description and relevant dates. We will acknowledge and investigate complaints within a reasonable period.\n\nIf a consumer dispute cannot be resolved directly, the customer may use any complaint or dispute process available under applicable South African law.\n\n## 27. Governing law and disputes\n\nThese Terms are governed by the laws of the Republic of South Africa. The parties will first try in good faith to resolve a dispute through written discussion. If that fails, either party may use a competent South African court or another legally available dispute-resolution process.\n\nNothing in this section prevents urgent court relief or restricts a consumer’s right to approach a regulator, tribunal or court that has legal authority.\n\n## 28. Notices\n\nFise may send operational, billing, security or legal notices to the email address associated with the account. Customers must keep that address current. Notices to Fise must be sent to [INSERT LEGAL NOTICE EMAIL] unless these Terms specify another method.\n\n## 29. Changes to these Terms\n\nWe may update these Terms to reflect changes in the Service, law, security practices or business operations. Material changes will be communicated through the website, dashboard or account email. The updated version will show a new effective date.\n\nIf a material change significantly reduces a customer’s rights during a paid period, the customer may contact us before the change takes effect to discuss cancellation or another appropriate remedy.\n\n## 30. General provisions\n\nIf part of these Terms is found invalid or unenforceable, the remaining provisions continue to apply. A failure to enforce a term immediately is not a waiver of that term. The customer may not transfer the agreement without written consent, but Fise may transfer it as part of a lawful business restructuring or sale, subject to applicable privacy and consumer laws.\n\nThese Terms, the Privacy Policy, Cookie Policy, selected plan details and any signed order or service agreement form the agreement between Fise and the customer concerning the Service.\n",
-  "privacy": "# Fise AI Privacy Policy\n\n**Last updated: 27 August 2026**\n\nPlease replace every item shown in square brackets before publishing this document.\n\n## 1. Purpose of this Privacy Policy\n\nThis Privacy Policy explains how Fise AI collects, uses, stores, shares and protects personal information when people visit our website, create an account, use the customer dashboard, configure a chatbot, use Website Studio, communicate with us or interact with a Fise-powered chatbot.\n\nWe aim to process personal information lawfully, reasonably, transparently and only for clear business purposes. This Policy should be read with the Fise AI Terms and Conditions and Cookie Policy.\n\n## 2. Who is responsible for personal information\n\nFise AI is operated by **[INSERT LEGAL BUSINESS NAME]**, trading as **Fise AI** (“Fise”, “we”, “us” or “our”). Our legal status is **[INSERT LEGAL STATUS]**, our registration number is **[INSERT REGISTRATION NUMBER, IF APPLICABLE]**, and our principal address is **[INSERT PHYSICAL ADDRESS]**.\n\nFor information about Fise customers, website visitors and our own business operations, Fise will generally act as the responsible party. For personal information submitted through a customer’s installed chatbot, the customer will generally be the responsible party and Fise will act as an operator processing information on that customer’s instructions.\n\nThe exact role depends on why the information is processed and who decides its purpose and method.\n\n## 3. Privacy contact and Information Officer\n\nPrivacy questions and requests may be sent to:\n\n- Information Officer: [INSERT NAME]\n- Privacy email: [INSERT PRIVACY EMAIL]\n- Telephone: [INSERT TELEPHONE NUMBER]\n- Physical address: [INSERT PHYSICAL ADDRESS]\n- Website: [INSERT FINAL FISE WEBSITE ADDRESS]\n\nWhere required, the Information Officer should be registered with the South African Information Regulator.\n\n## 4. Personal information we collect\n\nDepending on how Fise is used, we may collect the following categories of information:\n\n1. **Account information:** email address, name, organisation, account status, sign-in records, subscription plan and account creation date.\n2. **Billing information:** plan, transaction reference, payment status, billing dates and limited payment-provider information. Complete card details are normally handled by the payment provider rather than Fise.\n3. **Chatbot setup information:** business name, website address, chatbot name, model selection, appearance, tone, opening line, popular questions, lead settings and integration details.\n4. **Knowledge information:** public website pages scanned at the customer’s request, uploaded documents, images, videos, frequently asked questions and other approved business material.\n5. **Conversation information:** chatbot questions, AI responses, conversation timestamps, page URL and a protected or hashed visitor identifier used to associate messages with a conversation.\n6. **Lead information:** name, email address, telephone number, business name, enquiry and related conversation reference where a visitor chooses to submit these details.\n7. **Website Studio information:** editing prompts, selected files, website settings, published changes, task status, revision history and uploaded media.\n8. **Technical information:** browser and device information, security events, request information, service logs, approximate location inferred from network information where available, and information required to operate or protect the platform.\n9. **Support communications:** emails, questions, fault reports, feedback and other information submitted when contacting Fise.\n\nWe ask customers and visitors not to submit unnecessary sensitive or special personal information through chatbots, prompts or uploaded files.\n\n## 5. How information is collected\n\nWe collect information:\n\n- directly from customers when they register, configure the Service, upload files, make payment or contact us;\n- from chatbot visitors when they send messages or voluntarily submit lead information;\n- from public website pages that a customer instructs Fise to scan;\n- automatically through necessary cookies, server requests, security logs and platform activity;\n- from service providers that assist with payments, email delivery, hosting, security or AI processing; and\n- from integrations enabled by a customer, such as a Google Sheets destination or email lead notification.\n\nCustomers must only instruct Fise to scan websites and process information they are authorised to use.\n\n## 6. Why we process personal information\n\nWe process personal information for purposes including:\n\n1. creating and managing customer accounts;\n2. sending secure sign-in links and maintaining authenticated sessions;\n3. providing, personalising and supporting chatbots and Website Studio;\n4. scanning approved websites and preparing chatbot knowledge;\n5. generating AI responses and applying requested website changes;\n6. storing conversations and leads for customer access;\n7. sending lead notifications and customer-requested integrations;\n8. processing subscriptions, invoices, renewals and payment status;\n9. preventing fraud, misuse, unauthorised access and technical attacks;\n10. diagnosing faults and improving reliability and usability;\n11. responding to questions, privacy requests and complaints;\n12. keeping legal, tax, security and business records; and\n13. complying with lawful requests and applicable legislation.\n\nWe…3190 tokens truncated…s last only while the browser is open. These are usually called session cookies. Other cookies remain for a set period or until the user deletes them. These are usually called persistent cookies.\n\nCookies may be set directly by the website being visited. These are called first-party cookies. They may also be set by another service that supplies a feature to the website. These are called third-party cookies.\n\n## 3. Similar browser technologies\n\nFise also uses browser storage, including local storage. Local storage allows the browser to keep a small amount of information on the device. It works differently from a cookie, but it can serve a similar purpose.\n\nFor example, a Fise chatbot may use local storage to recognise the same browser and reconnect the visitor with an earlier conversation. Unless the user clears browser data, local-storage information may remain for longer than a normal session.\n\nIn this Policy, the word “cookies” sometimes includes cookies, local storage and other similar technologies unless a distinction is important.\n\n## 4. Why Fise uses cookies\n\nFise uses cookies and similar technologies for limited and practical purposes. These purposes include:\n\n1. keeping a user securely signed in;\n2. protecting accounts and reducing unauthorised access;\n3. maintaining a chatbot conversation while a visitor moves between pages or returns later;\n4. remembering a technical conversation reference in the browser;\n5. allowing the customer dashboard, Website Studio and demo features to work correctly; and\n6. supporting reliable operation, error prevention and security.\n\nFise does not currently use its own advertising cookies to build advertising profiles or sell browser activity to advertisers. If this changes, we will update this Policy and introduce an appropriate consent choice before activating non-essential cookies where the law requires it.\n\n## 5. Strictly necessary cookies\n\nStrictly necessary cookies are required for the website or service to perform a function requested by the user. Without them, a secure sign-in, protected dashboard or similar core feature may not work.\n\nThe Fise application currently sets the following first-party account cookie:\n\n### 5.1 `fise_session`\n\n1. **Purpose:** This cookie maintains the signed-in session and allows an authorised user to access protected account and dashboard pages.\n2. **Type:** First-party, strictly necessary authentication cookie.\n3. **Duration:** Up to 14 days from the time it is issued, unless the user signs out earlier, the session is revoked or the browser removes it.\n4. **Security:** It is configured as a secure, HTTP-only cookie with a SameSite setting. This helps prevent normal webpage scripts from reading it and reduces certain cross-site risks.\n5. **Information:** It contains a signed session value used to validate the account session. It is not intended to contain the user’s password.\n\nBecause this cookie is necessary to provide the secure account service requested by the user, it is not normally switched off through an optional-cookie banner. The user can remove it through the browser, but doing so will sign the user out or stop protected pages from working.\n\n## 6. Local storage used by Fise chatbots\n\nFise chatbot widgets may store the following information in the visitor’s browser:\n\n### 6.1 `fise-visitor`\n\n1. **Purpose:** Stores a randomly generated visitor reference so the chatbot can recognise the same browser as the same technical visitor.\n2. **Use:** It assists with conversation continuity and helps keep one browser’s messages separate from another browser’s messages.\n3. **Duration:** It may remain until the visitor clears browser data or the website or browser removes it.\n4. **Information:** It is a technical identifier. Customers should not deliberately place a person’s name, email address or other direct contact details inside this browser-storage value.\n\n### 6.2 `fise-chat-[identifier]`\n\n1. **Purpose:** Stores a conversation reference associated with a particular Fise chatbot.\n2. **Use:** It allows the chatbot to continue or display the relevant conversation instead of creating a completely unrelated conversation after every page load.\n3. **Duration:** It may remain until the visitor clears browser data, begins a new conversation or the website removes it.\n4. **Information:** It normally contains a technical conversation identifier, not the full text of every message. Conversation messages may be held securely by Fise on behalf of the relevant customer as explained in the Privacy Policy.\n\nThe exact storage key may include part of a chatbot’s public identifier so that conversations belonging to different chatbots do not become mixed.\n\n## 7. Fise chatbots installed on customer websites\n\nA business may install a Fise chatbot on its own website. In that case, the chatbot can use the browser technologies described above while the visitor is on that business’s website.\n\nThe business operating that website is responsible for giving its visitors suitable privacy and cookie information about the chatbot. The business must also obtain any consent required for its wider use of analytics, marketing or other non-essential technologies.\n\nFise provides the chatbot technology and processes chatbot information for the business, subject to the applicable service agreement and Privacy Policy. Fise does not control every cookie, tracker or tool independently added by a customer to its own website.\n\n## 8. Signing in and signing out\n\nWhen a user signs in through the normal Fise sign-in process, Fise creates the secure session cookie described in section 5. The cookie allows the user to move between authorised pages without entering an email address on every page.\n\nWhen the user selects **Sign out**, Fise should clear or invalidate the session so the protected account is no longer available from that browser without another sign-in. The user should sign out after using a shared or public device.\n\nThe sign-in cookie does not replace reasonable account security. Users must protect access to their email accounts and must not allow another person to use a sign-in link intended for them.\n\n## 9. Infrastructure and service providers\n\nFise uses service providers to operate parts of the Service. Depending on how the website and account are configured, these providers may use strictly necessary technical controls or receive limited technical data.\n\n1. **Cloudflare:** Fise uses Cloudflare infrastructure for website delivery, application processing, database functions, media storage and security. Cloudflare may apply technical security measures needed to protect and deliver the service.\n2. **Payment provider:** When a person chooses a paid plan, the checkout page may be supplied by **[INSERT PAYMENT PROVIDER]**. That provider has its own cookie and privacy notices. Fise does not control all cookies used on the provider’s separate checkout page.\n3. **OpenAI:** Fise may use OpenAI services on the server to generate chatbot answers or process approved content. This server-side processing does not, by itself, mean OpenAI places a cookie in the visitor’s browser through the Fise page.\n4. **Email provider:** Fise may use an email service such as Resend to send sign-in links, account notices or service communications. Server-side email delivery does not normally require that provider to place a cookie in the visitor’s browser.\n5. **Customer-selected integrations:** A customer may connect Google Sheets, a webhook or another approved destination. Those services may have their own rules when a user later visits their websites.\n\nThe names of providers may change where Fise replaces a supplier with a provider offering a comparable lawful service. Material changes will be reflected in this Policy or the Privacy Policy.\n\n## 10. External websites and links\n\nThe Fise website may contain links to customer websites, social platforms, payment pages or other external websites. A link does not mean that Fise controls the external website’s cookies.\n\nWhen a user opens an external website, that website’s own cookie and privacy policies apply. Users should read those notices before accepting optional cookies or submitting personal information.\n\n## 11. Analytics, preference and marketing cookies\n\nFise does not currently describe any optional analytics, personalisation or advertising cookie as part of the core Fise application. We will not label an advertising or analytics cookie as “strictly necessary” merely to avoid giving users a choice.\n\nIf Fise later introduces optional analytics, embedded advertising, remarketing pixels, heat maps or personalisation tools, we will:\n\n1. identify the tool and provider;\n2. explain the information it collects and why it is used;\n3. state the expected storage period;\n4. update this Policy before or when the tool is introduced; and\n5. request consent before activating it where consent is legally required.\n\nThe user will be able to refuse optional cookies without losing access to basic public website information, although a particular optional feature may then be unavailable.\n\n## 12. Consent and lawful use\n\nFise uses strictly necessary technologies to provide requested services, protect accounts and maintain essential chatbot functions. Where a technology is not essential and the law requires consent, Fise will ask for a clear choice before using it.\n\nConsent must be a genuine choice. A person who refuses optional cookies should not be treated as having accepted them merely because the person continued browsing. A person may also withdraw consent later. Withdrawal does not make earlier lawful processing unlawful, but it stops the relevant optional use going forward.\n\nThe lawful treatment of information collected through cookies is explained further in the Privacy Policy, including access, correction, deletion and objection rights that may apply under the Protection of Personal Information Act, 2013.\n\n## 13. How to manage cookies and local storage\n\nMost browsers allow users to view, block and delete cookies. Browsers also normally allow users to clear local storage and other site data. The exact steps differ between Chrome, Edge, Firefox, Safari and mobile browsers.\n\nA user can usually find these controls under the browser’s **Privacy**, **Security**, **Cookies**, **Site data** or **Website data** settings. The user may choose to:\n\n1. block all cookies;\n2. block third-party cookies;\n3. delete cookies for one website;\n4. clear all browsing and site data;\n5. ask the browser to delete data when it closes; or\n6. review which websites currently store information.\n\nClearing cookies and local storage may remove the sign-in session, visitor reference and chatbot conversation reference. It may also make the chatbot start a new conversation.\n\n## 14. What happens when cookies are disabled\n\nThe public website may still display when cookies are disabled, but certain functions may not work correctly. In particular:\n\n1. a user may be unable to stay signed in;\n2. protected profile and dashboard pages may not open;\n3. the chatbot may not remember an earlier conversation;\n4. Website Studio functions may fail to save or verify an authorised request; and\n5. account-security checks may not operate as intended.\n\nFise is not responsible for a feature failing solely because the user or browser blocked a technology that was reasonably necessary to provide that feature.\n\n## 15. “Do Not Track” and browser privacy signals\n\nSome browsers send a “Do Not Track” or similar privacy signal. There is not one universally accepted technical standard that applies to every website and service.\n\nFise does not currently use its own cross-site advertising cookies, so a Do Not Track signal does not change an advertising profile created by Fise. We will review recognised privacy signals as legal and technical standards develop.\n\n## 16. Retention and deletion\n\nCookie and local-storage retention depends on the purpose of the information:\n\n1. the Fise session cookie is intended to last for no more than 14 days unless it is cleared or invalidated earlier;\n2. local visitor and conversation references may remain until browser data is cleared or the relevant code removes them;\n3. server-side account, chatbot and conversation records follow the retention rules in the Fise Privacy Policy and applicable customer agreement; and\n4. security logs may be retained for a reasonable period needed to investigate misuse, maintain reliability or meet legal duties.\n\nRemoving a browser identifier does not automatically delete information already lawfully stored on Fise systems. A person who wants to request access or deletion should use the contact details in section 20.\n\n## 17. Security\n\nFise uses reasonable technical and organisational measures to protect session and chatbot information. Measures may include encrypted connections, secure cookie settings, signed sessions, access controls and separation between customer accounts.\n\nNo browser or online service can be guaranteed to be completely secure. Users should keep browsers and devices updated, use device access controls, avoid suspicious links and sign out on shared devices.\n\nIf a user believes an account or session has been accessed without permission, the user should contact Fise promptly at **[INSERT SECURITY EMAIL]**.\n\n## 18. Children\n\nFise is designed for business users and is not intended to create accounts for children under 18. Customers should not configure a chatbot to collect children’s personal information unless they have a lawful reason, suitable safeguards and any consent required from a parent or guardian.\n\nIf we learn that browser-linked information has been collected from a child in a way that is not permitted, we will take reasonable steps to investigate and remove or restrict it.\n\n## 19. Changes to this Policy\n\nWe may update this Cookie Policy when the Service, law, providers or cookie practices change. The updated version will show a new “Last updated” date.\n\nIf a change materially affects how optional browser data is used, Fise may provide an additional notice or request fresh consent where required. Users should review this Policy periodically.\n\n## 20. Contact and complaints\n\nQuestions, objections or requests about Fise cookies and similar technologies may be sent to:\n\n- Business name: [INSERT LEGAL BUSINESS NAME]\n- Trading name: Fise AI\n- Privacy email: [INSERT PRIVACY EMAIL]\n- Information Officer: [INSERT NAME]\n- Telephone: [INSERT TELEPHONE NUMBER]\n- Physical address: [INSERT PHYSICAL ADDRESS]\n- Website: [INSERT FINAL FISE WEBSITE ADDRESS]\n\nIf a person believes Fise has not handled personal information properly, the person may also contact South Africa’s Information Regulator using the current contact details published at **https://inforegulator.org.za/**.\n\n## 21. Acceptance and related documents\n\nBy using a feature that requires a strictly necessary cookie or browser-storage value, the user acknowledges that the technology is required to provide that feature. This does not remove any right the user may have under applicable law.\n\nThis Policy must be published with working links to the Fise AI Privacy Policy and Terms and Conditions. If there is an inconsistency, the document that gives the user greater protection under applicable law will apply to the extent required by law.\n\n---\n\n**Publishing checklist:** Before publishing, complete all bracketed items, confirm the final domain, identify the payment provider, confirm whether any analytics or marketing tools have been added, test sign-out and cookie removal, and have a South African attorney or privacy professional review the final text.\n"
+  "privacy": "# Fise AI Privacy Policy\n\n**Last updated: 27 August 2026**\n\nPlease replace every item shown in square brackets before publishing this document.\n\n## 1. Purpose of this Privacy Policy\n\nThis Privacy Policy explains how Fise AI collects, uses, stores, shares and protects personal information when people visit our website, create an account, use the customer dashboard, configure a chatbot, use Website Studio, communicate with us or interact with a Fise-powered chatbot.\n\nWe aim to process personal information lawfully, reasonably, transparently and only for clear business purposes. This Policy should be read with the Fise AI Terms and Conditions and Cookie Policy.\n\n## 2. Who is responsible for personal information\n\nFise AI is operated by **[INSERT LEGAL BUSINESS NAME]**, trading as **Fise AI** (“Fise”, “we”, “us” or “our”). Our legal status is **[INSERT LEGAL STATUS]**, our registration number is **[INSERT REGISTRATION NUMBER, IF APPLICABLE]**, and our principal address is **[INSERT PHYSICAL ADDRESS]**.\n\nFor information about Fise customers, website visitors and our own business operations, Fise will generally act as the responsible party. For personal information submitted through a customer’s installed chatbot, the customer will generally be the responsible party and Fise will act as an operator processing information on that customer’s instructions.\n\nThe exact role depends on why the information is processed and who decides its purpose and method.\n\n## 3. Privacy contact and Information Officer\n\nPrivacy questions and requests may be sent to:\n\n- Information Officer: [INSERT NAME]\n- Privacy email: [INSERT PRIVACY EMAIL]\n- Telephone: [INSERT TELEPHONE NUMBER]\n- Physical address: [INSERT PHYSICAL ADDRESS]\n- Website: [INSERT FINAL FISE WEBSITE ADDRESS]\n\nWhere required, the Information Officer should be registered with the South African Information Regulator.\n\n## 4. Personal information we collect\n\nDepending on how Fise is used, we may collect the following categories of information:\n\n1. **Account information:** email address, name, organisation, account status, sign-in records, subscription plan and account creation date.\n2. **Billing information:** plan, transaction reference, payment status, billing dates and limited payment-provider information. Complete card details are normally handled by the payment provider rather than Fise.\n3. **Chatbot setup information:** business name, website address, chatbot name, model selection, appearance, tone, opening line, popular questions, lead settings and integration details.\n4. **Knowledge information:** public website pages scanned at the customer’s request, uploaded documents, images, videos, frequently asked questions and other approved business material.\n5. **Conversation information:** chatbot questions, AI responses, conversation timestamps, page URL and a protected or hashed visitor identifier used to associate messages with a conversation.\n6. **Lead information:** name, email address, telephone number, business name, enquiry and related conversation reference where a visitor chooses to submit these details.\n7. **Website Studio information:** editing prompts, selected files, website settings, published changes, task status, revision history and uploaded media.\n8. **Technical information:** browser and device information, security events, request information, service logs, approximate location inferred from network information where available, and information required to operate or protect the platform.\n9. **Support communications:** emails, questions, fault reports, feedback and other information submitted when contacting Fise.\n\nWe ask customers and visitors not to submit unnecessary sensitive or special personal information through chatbots, prompts or uploaded files.\n\n## 5. How information is collected\n\nWe collect information:\n\n- directly from customers when they register, configure the Service, upload files, make payment or contact us;\n- from chatbot visitors when they send messages or voluntarily submit lead information;\n- from public website pages that a customer instructs Fise to scan;\n- automatically through necessary cookies, server requests, security logs and platform activity;\n- from service providers that assist with payments, email delivery, hosting, security or AI processing; and\n- from integrations enabled by a customer, such as a Google Sheets destination or email lead notification.\n\nCustomers must only instruct Fise to scan websites and process information they are authorised to use.\n\n## 6. Why we process personal information\n\nWe process personal information for purposes including:\n\n1. creating and managing customer accounts;\n2. sending secure sign-in links and maintaining authenticated sessions;\n3. providing, personalising and supporting chatbots and Website Studio;\n4. scanning approved websites and preparing chatbot knowledge;\n5. generating AI responses and applying requested website changes;\n6. storing conversations and leads for customer access;\n7. sending lead notifications and customer-requested integrations;\n8. processing subscriptions, invoices, renewals and payment status;\n9. preventing fraud, misuse, unauthorised access and technical attacks;\n10. diagnosing faults and improving reliability and usability;\n11. responding to questions, privacy requests and complaints;\n12. keeping legal, tax, security and business records; and\n13. complying with lawful requests and applicable legislation.\n\nWe will not use personal information for a purpose that is materially incompatible with the purpose for which it was collected unless we have a lawful reason and provide any notice or choice required by law.\n\n## 7. Lawful grounds for processing\n\nDepending on the circumstances, Fise may process information because:\n\n- processing is necessary to enter into or perform a contract;\n- the person has given consent;\n- processing is required or permitted by law;\n- processing protects a legitimate interest of the person concerned;\n- processing is necessary for Fise’s legitimate business interests or those of a customer, provided those interests do not unfairly override privacy rights; or\n- the customer has provided lawful instructions to Fise as its operator.\n\nWhere consent is the basis for processing, it may be withdrawn, but withdrawal does not make earlier lawful processing invalid.\n\n## 8. Customer and visitor roles\n\nWhen a business installs a Fise chatbot on its website, that business normally decides why it wants to collect visitor messages and leads. The business is therefore normally responsible for giving visitors appropriate privacy information, choosing lawful purposes and responding to visitor requests.\n\nFise processes this information to provide the chatbot, conversation storage, lead delivery and related services. Fise will process operator information only with the customer’s authorisation, as required to provide and secure the Service, or as legally required.\n\nCustomers must not instruct Fise to process information unlawfully. Fise may refuse an instruction that appears illegal, unsafe or inconsistent with the Service.\n\n## 9. Artificial intelligence processing\n\nChatbot questions, selected source material and Website Studio prompts may be sent to an AI service provider to generate a response or requested edit. The information sent should be limited to what is reasonably necessary for that task.\n\nAI-generated outputs may be stored as part of conversation history, task history or website versions. Customers should avoid placing confidential personal information in a prompt unless it is necessary, lawful and appropriate for processing through the Service.\n\nFise does not use chatbot decisions as a substitute for legally required human judgement in regulated or high-impact matters.\n\n## 10. Uploaded websites, files and media\n\nA customer may ask Fise to scan public pages and upload documents, images or videos. These materials may contain business or personal information. Customers are responsible for checking the content and removing information that is not necessary for the chatbot’s purpose.\n\nFiles may be stored in Fise’s media storage and, where compatible and requested, prepared for AI reading. Some video files may be stored as media while a visual summary is created for AI-assisted website work.\n\nFise does not claim ownership of customer files. We process them under the limited permission described in our Terms and Conditions.\n\n## 11. Lead collection\n\nWhere enabled, a Fise chatbot may ask a visitor for a name, email address, telephone number, business name and enquiry. Submission should be voluntary and accompanied by an appropriate notice from the customer operating the website.\n\nLead details are stored in Fise for the customer and may also be sent to the customer by email or through an enabled integration. The customer is responsible for later sales, service or marketing use of the lead and must honour applicable opt-out and privacy rights.\n\n## 12. Payment information\n\nPayments are processed by **[INSERT PAYMENT PROVIDER]**. The provider may collect card details, bank information, verification information and billing details under its own privacy policy.\n\nFise may receive a transaction identifier, customer reference, subscription status, plan, amount, dates and limited payment information required for account management and reconciliation. Fise should not receive or store complete card numbers or security codes unless expressly disclosed and handled through a compliant payment process.\n\n## 13. Service providers and recipients\n\nWe may share limited personal information with trusted providers that help operate Fise, including:\n\n- Cloudflare or a similar provider for website delivery, computing, database, file storage and security;\n- OpenAI or another approved AI provider for generating chatbot and Website Studio outputs;\n- Resend or another email provider for sign-in, operational and lead-notification emails;\n- [INSERT PAYMENT PROVIDER] for billing and subscriptions;\n- customer-enabled integrations such as Google Sheets or webhook destinations;\n- professional advisers, auditors or insurers where reasonably necessary; and\n- regulators, courts, law-enforcement bodies or other authorities where lawfully required.\n\nProviders should only receive the information needed for their function and should be bound by appropriate privacy, confidentiality and security obligations.\n\n## 14. International processing\n\nSome service providers may process or store information outside South Africa. Where personal information is transferred internationally, Fise will take reasonable steps to ensure that the recipient is subject to appropriate legal protection, contractual safeguards, binding rules, consent or another lawful transfer basis recognised by applicable law.\n\nCustomers should tell Fise if their industry or contract requires information to remain in a specific country.\n\n## 15. Information security\n\nFise applies reasonable technical and organisational safeguards appropriate to the Service and risks involved. These may include encrypted HTTPS connections, secure and HttpOnly session cookies, restricted administrative access, token hashing, access controls, separated customer records, protected storage, software updates, monitoring and backups.\n\nNo online system can be guaranteed completely secure. Customers must also protect their email accounts, devices, chatbot keys and authorised users. Security concerns should be reported immediately to [INSERT SECURITY EMAIL].\n\n## 16. Security compromises\n\nIf Fise becomes aware of unauthorised access to personal information, we will investigate and take reasonable containment and recovery steps. We will notify the responsible party, the Information Regulator and affected people where required by POPIA or another applicable law.\n\nCustomers must promptly tell Fise about a suspected compromise involving their account, website integration or exported Fise information and must cooperate with reasonable investigation steps.\n\n## 17. Retention\n\nWe keep personal information only for as long as reasonably necessary for the purpose for which it was collected, to provide the Service, maintain security, resolve disputes and meet legal, tax or accounting duties.\n\nRetention may differ by record type. Account and subscription records may be retained while an account is active and for a reasonable legal or accounting period afterwards. Conversations, leads, scanned content, files and Website Studio versions may remain available while the relevant account or chatbot is active unless deleted earlier.\n\nAfter a valid deletion request or account closure, information will be deleted, anonymised or placed beyond ordinary use within a reasonable period, subject to backups, fraud prevention, outstanding disputes and legal retention duties. Fise should publish a more detailed retention schedule as the platform grows.\n\n## 18. Children\n\nFise is intended for businesses and adults. It is not designed for children to create customer accounts. Customers whose websites are directed at children must obtain appropriate legal advice and must not enable collection of children’s personal information through Fise without a lawful basis and required safeguards.\n\nIf we learn that a child’s information was collected improperly, we may restrict processing and work with the responsible customer to delete or correct it.\n\n## 19. Direct marketing\n\nFise may send existing customers operational messages needed to manage accounts, security, billing or the Service. Marketing messages will be sent only where permitted by law and will include an appropriate way to opt out.\n\nOpting out of marketing does not stop essential service, payment or security communications. Customers are independently responsible for ensuring that marketing sent using exported leads complies with POPIA, the Consumer Protection Act and other applicable rules.\n\n## 20. Your privacy rights\n\nSubject to applicable law and reasonable identity verification, a person may ask to:\n\n1. confirm whether Fise holds personal information about them;\n2. access that information;\n3. correct or update inaccurate information;\n4. delete information that Fise is no longer authorised to retain;\n5. object to certain processing;\n6. withdraw consent where consent is the processing basis;\n7. request restriction of unlawful processing;\n8. opt out of direct marketing; or\n9. receive information about the source, use or recipients of their information where legally available.\n\nWhere Fise processes information only for a customer, we may refer the request to that customer and assist it as required.\n\n## 21. How to make a request\n\nSend requests to [INSERT PRIVACY EMAIL]. Describe the information or account involved and the right being exercised. We may request reasonable proof of identity to prevent disclosure to the wrong person.\n\nWe will respond within the period required by applicable law. A request may be refused or limited where the law permits, for example where disclosure would affect another person’s rights, reveal protected information or conflict with a legal retention duty. We will explain a lawful refusal where required.\n\n## 22. Complaints\n\nPlease contact Fise first at [INSERT PRIVACY EMAIL] so that we can investigate and try to resolve the concern.\n\nA person may also complain to the South African Information Regulator using the current contact information published at **https://inforegulator.org.za/**. Nothing in this Policy prevents the use of another lawful complaint or court process.\n\n## 23. Cookies\n\nFise uses a secure session cookie to keep signed-in customers authenticated and to protect dashboard access. Our Cookie Policy provides the cookie name, purpose, typical duration and browser-management information.\n\nWe will not introduce non-essential advertising or analytics cookies without updating the Cookie Policy and providing any consent choices required by law.\n\n## 24. External websites\n\nFise websites and chatbots may contain links to customer websites, payment pages or other third-party services. Fise does not control those third parties’ privacy practices. People should read the privacy information on the relevant external website before submitting information.\n\n## 25. Changes to this Policy\n\nWe may update this Privacy Policy when the Service, providers, legal requirements or processing activities change. The latest version will be published with a revised date. Material changes may also be communicated through the dashboard or account email.\n\nWe will not use an updated Policy to justify a materially different use of previously collected information without a lawful basis and any notice or consent required by law.\n\n## 26. Contact summary\n\nFor privacy requests, complaints or questions, contact:\n\n**[INSERT LEGAL BUSINESS NAME], trading as Fise AI**  \n[INSERT PHYSICAL ADDRESS]  \n[INSERT PRIVACY EMAIL]  \n[INSERT TELEPHONE NUMBER]\n",
+  "cookies": "# Fise AI Cookie Policy\n\n**Last updated: 27 August 2026**\n\nPlease replace every item shown in square brackets before publishing this document.\n\n## 1. Purpose of this Cookie Policy\n\nThis Cookie Policy explains how Fise AI uses cookies and similar browser technologies on the Fise website, customer dashboard, Website Studio, chatbot demonstrations and Fise chatbot widgets installed on customer websites.\n\nThe policy explains what these technologies are, why we use them, how long they may remain on a device and how a visitor can control them. It should be read together with the Fise AI Privacy Policy and Terms and Conditions.\n\nFise AI is operated by **[INSERT LEGAL BUSINESS NAME]**, trading as **Fise AI** (“Fise”, “we”, “us” or “our”). Our website address is **[INSERT FINAL FISE WEBSITE ADDRESS]**.\n\n## 2. What a cookie is\n\nA cookie is a small text file that a website asks a browser to store on a computer, mobile phone or tablet. Cookies can help a website remember a signed-in session, keep a service secure or remember a user’s choices.\n\nSome cookies last only while the browser is open. These are usually called session cookies. Other cookies remain for a set period or until the user deletes them. These are usually called persistent cookies.\n\nCookies may be set directly by the website being visited. These are called first-party cookies. They may also be set by another service that supplies a feature to the website. These are called third-party cookies.\n\n## 3. Similar browser technologies\n\nFise also uses browser storage, including local storage. Local storage allows the browser to keep a small amount of information on the device. It works differently from a cookie, but it can serve a similar purpose.\n\nFor example, a Fise chatbot may use local storage to recognise the same browser and reconnect the visitor with an earlier conversation. Unless the user clears browser data, local-storage information may remain for longer than a normal session.\n\nIn this Policy, the word “cookies” sometimes includes cookies, local storage and other similar technologies unless a distinction is important.\n\n## 4. Why Fise uses cookies\n\nFise uses cookies and similar technologies for limited and practical purposes. These purposes include:\n\n1. keeping a user securely signed in;\n2. protecting accounts and reducing unauthorised access;\n3. maintaining a chatbot conversation while a visitor moves between pages or returns later;\n4. remembering a technical conversation reference in the browser;\n5. allowing the customer dashboard, Website Studio and demo features to work correctly; and\n6. supporting reliable operation, error prevention and security.\n\nFise does not currently use its own advertising cookies to build advertising profiles or sell browser activity to advertisers. If this changes, we will update this Policy and introduce an appropriate consent choice before activating non-essential cookies where the law requires it.\n\n## 5. Strictly necessary cookies\n\nStrictly necessary cookies are required for the website or service to perform a function requested by the user. Without them, a secure sign-in, protected dashboard or similar core feature may not work.\n\nThe Fise application currently sets the following first-party account cookie:\n\n### 5.1 `fise_session`\n\n1. **Purpose:** This cookie maintains the signed-in session and allows an authorised user to access protected account and dashboard pages.\n2. **Type:** First-party, strictly necessary authentication cookie.\n3. **Duration:** Up to 14 days from the time it is issued, unless the user signs out earlier, the session is revoked or the browser removes it.\n4. **Security:** It is configured as a secure, HTTP-only cookie with a SameSite setting. This helps prevent normal webpage scripts from reading it and reduces certain cross-site risks.\n5. **Information:** It contains a signed session value used to validate the account session. It is not intended to contain the user’s password.\n\nBecause this cookie is necessary to provide the secure account service requested by the user, it is not normally switched off through an optional-cookie banner. The user can remove it through the browser, but doing so will sign the user out or stop protected pages from working.\n\n## 6. Local storage used by Fise chatbots\n\nFise chatbot widgets may store the following information in the visitor’s browser:\n\n### 6.1 `fise-visitor`\n\n1. **Purpose:** Stores a randomly generated visitor reference so the chatbot can recognise the same browser as the same technical visitor.\n2. **Use:** It assists with conversation continuity and helps keep one browser’s messages separate from another browser’s messages.\n3. **Duration:** It may remain until the visitor clears browser data or the website or browser removes it.\n4. **Information:** It is a technical identifier. Customers should not deliberately place a person’s name, email address or other direct contact details inside this browser-storage value.\n\n### 6.2 `fise-chat-[identifier]`\n\n1. **Purpose:** Stores a conversation reference associated with a particular Fise chatbot.\n2. **Use:** It allows the chatbot to continue or display the relevant conversation instead of creating a completely unrelated conversation after every page load.\n3. **Duration:** It may remain until the visitor clears browser data, begins a new conversation or the website removes it.\n4. **Information:** It normally contains a technical conversation identifier, not the full text of every message. Conversation messages may be held securely by Fise on behalf of the relevant customer as explained in the Privacy Policy.\n\nThe exact storage key may include part of a chatbot’s public identifier so that conversations belonging to different chatbots do not become mixed.\n\n## 7. Fise chatbots installed on customer websites\n\nA business may install a Fise chatbot on its own website. In that case, the chatbot can use the browser technologies described above while the visitor is on that business’s website.\n\nThe business operating that website is responsible for giving its visitors suitable privacy and cookie information about the chatbot. The business must also obtain any consent required for its wider use of analytics, marketing or other non-essential technologies.\n\nFise provides the chatbot technology and processes chatbot information for the business, subject to the applicable service agreement and Privacy Policy. Fise does not control every cookie, tracker or tool independently added by a customer to its own website.\n\n## 8. Signing in and signing out\n\nWhen a user signs in through the normal Fise sign-in process, Fise creates the secure session cookie described in section 5. The cookie allows the user to move between authorised pages without entering an email address on every page.\n\nWhen the user selects **Sign out**, Fise should clear or invalidate the session so the protected account is no longer available from that browser without another sign-in. The user should sign out after using a shared or public device.\n\nThe sign-in cookie does not replace reasonable account security. Users must protect access to their email accounts and must not allow another person to use a sign-in link intended for them.\n\n## 9. Infrastructure and service providers\n\nFise uses service providers to operate parts of the Service. Depending on how the website and account are configured, these providers may use strictly necessary technical controls or receive limited technical data.\n\n1. **Cloudflare:** Fise uses Cloudflare infrastructure for website delivery, application processing, database functions, media storage and security. Cloudflare may apply technical security measures needed to protect and deliver the service.\n2. **Payment provider:** When a person chooses a paid plan, the checkout page may be supplied by **[INSERT PAYMENT PROVIDER]**. That provider has its own cookie and privacy notices. Fise does not control all cookies used on the provider’s separate checkout page.\n3. **OpenAI:** Fise may use OpenAI services on the server to generate chatbot answers or process approved content. This server-side processing does not, by itself, mean OpenAI places a cookie in the visitor’s browser through the Fise page.\n4. **Email provider:** Fise may use an email service such as Resend to send sign-in links, account notices or service communications. Server-side email delivery does not normally require that provider to place a cookie in the visitor’s browser.\n5. **Customer-selected integrations:** A customer may connect Google Sheets, a webhook or another approved destination. Those services may have their own rules when a user later visits their websites.\n\nThe names of providers may change where Fise replaces a supplier with a provider offering a comparable lawful service. Material changes will be reflected in this Policy or the Privacy Policy.\n\n## 10. External websites and links\n\nThe Fise website may contain links to customer websites, social platforms, payment pages or other external websites. A link does not mean that Fise controls the external website’s cookies.\n\nWhen a user opens an external website, that website’s own cookie and privacy policies apply. Users should read those notices before accepting optional cookies or submitting personal information.\n\n## 11. Analytics, preference and marketing cookies\n\nFise does not currently describe any optional analytics, personalisation or advertising cookie as part of the core Fise application. We will not label an advertising or analytics cookie as “strictly necessary” merely to avoid giving users a choice.\n\nIf Fise later introduces optional analytics, embedded advertising, remarketing pixels, heat maps or personalisation tools, we will:\n\n1. identify the tool and provider;\n2. explain the information it collects and why it is used;\n3. state the expected storage period;\n4. update this Policy before or when the tool is introduced; and\n5. request consent before activating it where consent is legally required.\n\nThe user will be able to refuse optional cookies without losing access to basic public website information, although a particular optional feature may then be unavailable.\n\n## 12. Consent and lawful use\n\nFise uses strictly necessary technologies to provide requested services, protect accounts and maintain essential chatbot functions. Where a technology is not essential and the law requires consent, Fise will ask for a clear choice before using it.\n\nConsent must be a genuine choice. A person who refuses optional cookies should not be treated as having accepted them merely because the person continued browsing. A person may also withdraw consent later. Withdrawal does not make earlier lawful processing unlawful, but it stops the relevant optional use going forward.\n\nThe lawful treatment of information collected through cookies is explained further in the Privacy Policy, including access, correction, deletion and objection rights that may apply under the Protection of Personal Information Act, 2013.\n\n## 13. How to manage cookies and local storage\n\nMost browsers allow users to view, block and delete cookies. Browsers also normally allow users to clear local storage and other site data. The exact steps differ between Chrome, Edge, Firefox, Safari and mobile browsers.\n\nA user can usually find these controls under the browser’s **Privacy**, **Security**, **Cookies**, **Site data** or **Website data** settings. The user may choose to:\n\n1. block all cookies;\n2. block third-party cookies;\n3. delete cookies for one website;\n4. clear all browsing and site data;\n5. ask the browser to delete data when it closes; or\n6. review which websites currently store information.\n\nClearing cookies and local storage may remove the sign-in session, visitor reference and chatbot conversation reference. It may also make the chatbot start a new conversation.\n\n## 14. What happens when cookies are disabled\n\nThe public website may still display when cookies are disabled, but certain functions may not work correctly. In particular:\n\n1. a user may be unable to stay signed in;\n2. protected profile and dashboard pages may not open;\n3. the chatbot may not remember an earlier conversation;\n4. Website Studio functions may fail to save or verify an authorised request; and\n5. account-security checks may not operate as intended.\n\nFise is not responsible for a feature failing solely because the user or browser blocked a technology that was reasonably necessary to provide that feature.\n\n## 15. “Do Not Track” and browser privacy signals\n\nSome browsers send a “Do Not Track” or similar privacy signal. There is not one universally accepted technical standard that applies to every website and service.\n\nFise does not currently use its own cross-site advertising cookies, so a Do Not Track signal does not change an advertising profile created by Fise. We will review recognised privacy signals as legal and technical standards develop.\n\n## 16. Retention and deletion\n\nCookie and local-storage retention depends on the purpose of the information:\n\n1. the Fise session cookie is intended to last for no more than 14 days unless it is cleared or invalidated earlier;\n2. local visitor and conversation references may remain until browser data is cleared or the relevant code removes them;\n3. server-side account, chatbot and conversation records follow the retention rules in the Fise Privacy Policy and applicable customer agreement; and\n4. security logs may be retained for a reasonable period needed to investigate misuse, maintain reliability or meet legal duties.\n\nRemoving a browser identifier does not automatically delete information already lawfully stored on Fise systems. A person who wants to request access or deletion should use the contact details in section 20.\n\n## 17. Security\n\nFise uses reasonable technical and organisational measures to protect session and chatbot information. Measures may include encrypted connections, secure cookie settings, signed sessions, access controls and separation between customer accounts.\n\nNo browser or online service can be guaranteed to be completely secure. Users should keep browsers and devices updated, use device access controls, avoid suspicious links and sign out on shared devices.\n\nIf a user believes an account or session has been accessed without permission, the user should contact Fise promptly at **[INSERT SECURITY EMAIL]**.\n\n## 18. Children\n\nFise is designed for business users and is not intended to create accounts for children under 18. Customers should not configure a chatbot to collect children’s personal information unless they have a lawful reason, suitable safeguards and any consent required from a parent or guardian.\n\nIf we learn that browser-linked information has been collected from a child in a way that is not permitted, we will take reasonable steps to investigate and remove or restrict it.\n\n## 19. Changes to this Policy\n\nWe may update this Cookie Policy when the Service, law, providers or cookie practices change. The updated version will show a new “Last updated” date.\n\nIf a change materially affects how optional browser data is used, Fise may provide an additional notice or request fresh consent where required. Users should review this Policy periodically.\n\n## 20. Contact and complaints\n\nQuestions, objections or requests about Fise cookies and similar technologies may be sent to:\n\n- Business name: [INSERT LEGAL BUSINESS NAME]\n- Trading name: Fise AI\n- Privacy email: [INSERT PRIVACY EMAIL]\n- Information Officer: [INSERT NAME]\n- Telephone: [INSERT TELEPHONE NUMBER]\n- Physical address: [INSERT PHYSICAL ADDRESS]\n- Website: [INSERT FINAL FISE WEBSITE ADDRESS]\n\nIf a person believes Fise has not handled personal information properly, the person may also contact South Africa’s Information Regulator using the current contact details published at **https://inforegulator.org.za/**.\n\n## 21. Acceptance and related documents\n\nBy using a feature that requires a strictly necessary cookie or browser-storage value, the user acknowledges that the technology is required to provide that feature. This does not remove any right the user may have under applicable law.\n\nThis Policy must be published with working links to the Fise AI Privacy Policy and Terms and Conditions. If there is an inconsistency, the document that gives the user greater protection under applicable law will apply to the extent required by law.\n\n---\n\n**Publishing checklist:** Before publishing, complete all bracketed items, confirm the final domain, identify the payment provider, confirm whether any analytics or marketing tools have been added, test sign-out and cookie removal, and have a South African attorney or privacy professional review the final text.\n"
 };
 
 const html = String.raw;
@@ -2760,53 +2707,11 @@ async function handlePublicWebsiteLegacy(request, env) {
 }
 
 const referenceStyles = html`
-  :root{--ink:#071126;--muted:#647083;--cyan:#20c6d8;--cyan-dark:#139cc3;--soft:#f7f9fb;--line:#e4e8ed;color-scheme:light;scroll-behavior:smooth}*{box-sizing:border-box}html{scroll-padding-top:94px}body{margin:0;color:var(--ink);background:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit}.video-container{width:min(1640px,calc(100% - 96px));margin:auto}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #e7eaee;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:var(--ink);font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#29b9e6,#20d6cf);box-shadow:0 11px 25px rgba(24,190,211,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#131b2d;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#159fba}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#071126;font-weight:800!important;box-shadow:0 8px 20px rgba(7,17,38,.1)}.video-menu{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:24px}.reference-hero{padding:74px 0 87px}.reference-hero-grid{display:grid;grid-template-columns:1fr .96fr;align-items:center;gap:76px}.hero-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;padding:9px 17px;border:1px solid #cceef2;border-radius:999px;color:#177b92;background:#f5fdfe;font-size:15px;font-weight:750}.hero-pill svg{width:17px;height:17px}.reference-hero h1{max-width:780px;margin:0 0 28px;font-size:clamp(58px,4.7vw,82px);line-height:1.02;letter-spacing:-.052em}.reference-hero h1 span{color:#1db8d4}.reference-hero-copy{max-width:770px;margin:0 0 42px;color:#4d5868;font-size:21px;line-height:1.55}.reference-actions{display:flex;flex-wrap:wrap;gap:16px}.reference-button{display:inline-flex;min-height:64px;padding:0 28px;align-items:center;justify-content:center;gap:13px;border:1px solid #e1e5e9;border-radius:12px;color:var(--ink);background:#fff;font-size:17px;font-weight:750;text-decoration:none;box-shadow:0 7px 17px rgba(11,19,35,.04)}.reference-button.dark{border-color:#071126;color:#fff;background:#071126;box-shadow:0 12px 24px rgba(7,17,38,.14)}.reference-button svg{width:19px;height:19px}.hero-trust{display:flex;gap:30px;margin-top:43px;color:#687486;font-size:16px}.hero-trust span{display:flex;align-items:center;gap:10px}.hero-trust svg{width:21px;height:21px;color:#1aa6c2}.hero-media-wrap{position:relative}.hero-media{height:430px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(circle at 76% 28%,#14243e 0,#071126 68%);box-shadow:0 30px 55px rgba(7,17,38,.13)}.hero-play{width:96px;height:96px;display:grid;place-items:center;border:1px solid #354059;border-radius:50%;color:#d8deeb;background:#1b2942}.hero-play svg{width:42px;height:42px;margin-left:7px}.hero-media-label{position:absolute;left:0;right:0;top:63%;color:#b6bfce;text-align:center;font-size:16px}.assistant-badge{position:absolute;left:-38px;bottom:-40px;display:flex;align-items:center;gap:15px;padding:18px 26px;border:1px solid #e5e9ed;border-radius:16px;background:#fff;box-shadow:0 19px 35px rgba(12,24,45,.15)}.assistant-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(145deg,#2cb5e5,#22d5cc)}.assistant-badge strong{display:block;margin-bottom:3px;font-size:16px}.assistant-badge small{color:#8993a2;font-size:14px}.customer-stories{padding:105px 0 112px;background:var(--soft)}.center-heading{text-align:center}.reference-eyebrow{margin-bottom:17px;color:#159dbb;font-size:14px;font-weight:850;letter-spacing:.03em;text-transform:uppercase}.center-heading h2,.left-heading h2{margin:0;color:var(--ink);font-size:clamp(42px,3.2vw,58px);line-height:1.1;letter-spacing:-.04em}.center-heading p,.left-heading p{margin:18px 0 0;color:#5f6a7a;font-size:18px;line-height:1.55}.testimonial-shell{max-width:1130px;margin:70px auto 0}.testimonial-card{position:relative;min-height:320px;padding:58px 62px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 7px 22px rgba(15,24,42,.025)}.review-stars{margin-bottom:31px;color:#f7bb18;font-size:27px;letter-spacing:3px}.testimonial-card blockquote{max-width:920px;margin:0;color:#3c4656;font-size:23px;line-height:1.55}.quote-mark{position:absolute;right:38px;top:24px;color:#eff2f5;font:900 80px/1 Georgia,serif}.review-person{display:flex;align-items:center;gap:17px;margin-top:34px}.review-avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;color:#fff;background:#25d6a8;font-weight:800}.review-person strong{display:block;font-size:16px}.review-person span{display:block;margin-top:3px;color:#778293;font-size:15px}.carousel-controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px}.carousel-arrow{width:53px;height:53px;border:1px solid var(--line);border-radius:50%;color:#2d3748;background:#fff;font-size:28px;cursor:pointer}.carousel-dots{display:flex;align-items:center;gap:8px}.carousel-dot{width:10px;height:10px;border:0;border-radius:999px;background:#d3d9df;padding:0;cursor:pointer}.carousel-dot.active{width:31px;background:#139cc3}.features-section{padding:118px 0 148px}.left-heading{max-width:890px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:73px}.feature-card{min-height:350px;padding:43px 42px;border:1px solid var(--line);border-radius:21px;background:#fff}.feature-card:first-child{border-color:#b9e9ef;box-shadow:0 10px 25px rgba(29,190,210,.05)}.feature-icon{width:69px;height:69px;display:grid;place-items:center;margin-bottom:34px;border-radius:16px;color:#149fc1;background:#effbfd}.feature-card:nth-child(2) .feature-icon{background:#d8f2f7}.feature-icon svg{width:34px;height:34px}.feature-card h3{margin:0 0 18px;font-size:24px;letter-spacing:-.02em}.feature-card p{margin:0;color:#596577;font-size:19px;line-height:1.6}.steps-section{padding:112px 0 148px;color:#fff;background:radial-gradient(circle at 50% 45%,#10304b 0,#071126 70%)}.steps-section .center-heading h2{color:#fff}.steps-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:90px;margin-top:78px}.steps-grid:before{content:"";position:absolute;left:9%;right:9%;top:43px;border-top:1px dashed #31425a}.step-card{position:relative;z-index:1}.step-icon{width:75px;height:75px;display:grid;place-items:center;margin-bottom:35px;border-radius:18px;color:#fff;background:linear-gradient(145deg,#27afe2,#20d9cf);box-shadow:0 12px 28px rgba(22,195,211,.18)}.step-icon svg{width:34px;height:34px}.step-number{position:absolute;right:0;top:-10px;padding:7px 13px;border:1px solid #31425a;border-radius:999px;color:#69788d;background:#16233a;font-size:13px}.step-card h3{margin:0 0 16px;font-size:23px}.step-card p{margin:0;color:#9ba7ba;font-size:18px;line-height:1.55}.demo-section{padding:174px 0 122px;background:#f8fafc}.demo-toolbar{display:flex;align-items:center;justify-content:space-between;margin:68px 0 30px}.device-switch{display:flex;padding:5px;border:1px solid #dfe4ea;border-radius:12px;background:#fff}.device-button{display:inline-flex;min-height:43px;padding:0 18px;align-items:center;gap:9px;border:0;border-radius:9px;color:#384354;background:transparent;font-weight:650;cursor:pointer}.device-button.active{color:#fff;background:#071126}.device-button svg{width:17px;height:17px}.open-tab{display:inline-flex;min-height:52px;padding:0 22px;align-items:center;gap:10px;border:1px solid #dfe4ea;border-radius:10px;color:#263142;background:#fff;font-weight:650;text-decoration:none}.demo-browser{position:relative;max-width:100%;margin:auto;overflow:hidden;border:1px solid #e0e5eb;border-radius:21px;background:#fff;box-shadow:0 22px 43px rgba(26,39,57,.11);transition:max-width .25s ease}.demo-browser.tablet{max-width:940px}.demo-browser.mobile{max-width:520px}.demo-browser-top{height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #e6e9ed;background:#fbfcfd}.demo-dot{width:17px;height:17px;border-radius:50%}.demo-dot.red{background:#ef568a}.demo-dot.yellow{background:#f6c72d}.demo-dot.green{background:#2ed7a1}.demo-address{margin-left:18px;color:#697486;font-size:14px}.demo-browser iframe{display:block;width:100%;height:650px;border:0;background:#eef2f7}.pricing-section{padding:127px 0 136px;background:#f8fafc}.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:69px}.pricing-card{position:relative;display:flex;min-height:720px;padding:47px 43px 32px;flex-direction:column;border:1px solid #e0e5ea;border-radius:20px;background:#fff;box-shadow:0 12px 25px rgba(17,29,47,.025)}.pricing-card.popular{border:2px solid #20afd0;box-shadow:0 16px 34px rgba(17,159,190,.08)}.popular-label{position:absolute;left:50%;top:-18px;padding:7px 21px;border-radius:999px;color:#fff;background:#149fc2;font-size:14px;font-weight:750;transform:translateX(-50%);white-space:nowrap}.pricing-card h3{margin:0 0 20px;font-size:29px}.price-intro{min-height:58px;margin:0 0 48px;color:#697486;font-size:17px;line-height:1.55}.video-price{margin:0 0 33px;font-size:42px;font-weight:850;letter-spacing:-.04em}.video-price small{margin-left:6px;color:#7c8796;font-size:17px;font-weight:500;letter-spacing:0}.video-feature-list{display:grid;gap:24px;margin:0 0 42px;padding:0;list-style:none;color:#4c5868;font-size:16px}.video-feature-list li{display:flex;gap:14px}.video-feature-list li:before{content:"✓";color:#139fbc;font-size:19px;font-weight:900}.video-feature-list li.unavailable{color:#8b4550}.video-feature-list li.unavailable:before{content:"×";color:#d14343}.pricing-card .reference-button{width:100%;margin-top:auto;min-height:59px}.closing-section{padding:115px 0 170px}.closing-card{padding:98px 42px 90px;border-radius:33px;color:#fff;background:linear-gradient(120deg,#159bc8,#1fd0d3);box-shadow:0 28px 55px rgba(25,181,205,.16);text-align:center}.closing-card h2{margin:0 0 25px;color:#fff;font-size:clamp(42px,3.5vw,61px);letter-spacing:-.04em}.closing-card p{max-width:870px;margin:0 auto 43px;color:#e8ffff;font-size:22px;line-height:1.5}.closing-actions{display:flex;justify-content:center;gap:16px}.closing-actions .reference-button:last-child{border-color:rgba(255,255,255,.25);color:#fff;background:transparent}.reference-footer{padding:92px 0 35px;background:#f7f9fb}.reference-footer-grid{display:grid;grid-template-columns:1.15fr repeat(3,.75fr);gap:100px}.reference-footer .video-logo{font-size:21px}.reference-footer .video-logo-mark{width:51px;height:51px}.reference-footer-summary{max-width:370px;margin:29px 0 0;color:#737e8d;font-size:17px;line-height:1.65}.reference-footer h3{margin:8px 0 29px;font-size:17px}.reference-footer a{display:block;margin:0 0 23px;color:#7d8795;font-size:16px;text-decoration:none}.reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:82px;padding-top:33px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:14px}.simple-reference{min-height:62vh;padding:110px 0}.simple-reference article{max-width:860px}.simple-reference h1{margin:0 0 26px;font-size:58px;letter-spacing:-.04em}.simple-reference p{color:#5f6a7a;font-size:19px;line-height:1.7}.powered-by-bolt,.made-in-bolt,[data-bolt],#bolt-badge{display:none!important}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}.reference-hero-grid{grid-template-columns:1fr}.hero-media-wrap{margin-top:30px}.assistant-badge{left:20px}.feature-grid,.pricing-grid,.steps-grid{grid-template-columns:1fr}.steps-grid:before{display:none}.feature-card{min-height:0}.pricing-card{min-height:0}.reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}.demo-browser iframe{height:560px}}@media(max-width:720px){html{scroll-padding-top:78px}.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid var(--line)}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.reference-hero{padding:48px 0 65px}.reference-hero h1{font-size:49px}.reference-hero-copy{font-size:18px}.hero-pill{margin-bottom:25px}.hero-media{height:310px}.assistant-badge{bottom:-42px;padding:12px 16px}.customer-stories{padding:90px 0}.testimonial-card{padding:36px 27px}.testimonial-card blockquote{font-size:19px}.features-section,.steps-section,.demo-section,.pricing-section,.closing-section{padding:85px 0}.feature-grid{gap:18px}.feature-card{padding:30px}.demo-toolbar{align-items:flex-start;gap:17px;flex-direction:column}.device-switch{width:100%;overflow:auto}.device-button{padding:0 12px}.demo-browser iframe{height:620px}.closing-card{padding:70px 22px}.closing-actions{align-items:stretch;flex-direction:column}.reference-footer-grid{grid-template-columns:1fr;gap:28px}.reference-footer-bottom{flex-direction:column}.hero-trust{align-items:flex-start;flex-direction:column;gap:15px}.video-container{width:min(100% - 28px,1640px)}}
+  :root{--ink:#071126;--muted:#647083;--cyan:#20c6d8;--cyan-dark:#139cc3;--soft:#f7f9fb;--line:#e4e8ed;color-scheme:light;scroll-behavior:smooth}*{box-sizing:border-box}html{scroll-padding-top:94px}body{margin:0;color:var(--ink);background:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit}.video-container{width:min(1640px,calc(100% - 96px));margin:auto}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #e7eaee;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:var(--ink);font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#29b9e6,#20d6cf);box-shadow:0 11px 25px rgba(24,190,211,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#131b2d;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#159fba}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#071126;font-weight:800!important;box-shadow:0 8px 20px rgba(7,17,38,.1)}.video-menu{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:24px}.reference-hero{padding:74px 0 87px}.reference-hero-grid{display:grid;grid-template-columns:1fr .96fr;align-items:center;gap:76px}.hero-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;padding:9px 17px;border:1px solid #cceef2;border-radius:999px;color:#177b92;background:#f5fdfe;font-size:15px;font-weight:750}.hero-pill svg{width:17px;height:17px}.reference-hero h1{max-width:780px;margin:0 0 28px;font-size:clamp(58px,4.7vw,82px);line-height:1.02;letter-spacing:-.052em}.reference-hero h1 span{color:#1db8d4}.reference-hero-copy{max-width:770px;margin:0 0 42px;color:#4d5868;font-size:21px;line-height:1.55}.reference-actions{display:flex;flex-wrap:wrap;gap:16px}.reference-button{display:inline-flex;min-height:64px;padding:0 28px;align-items:center;justify-content:center;gap:13px;border:1px solid #e1e5e9;border-radius:12px;color:var(--ink);background:#fff;font-size:17px;font-weight:750;text-decoration:none;box-shadow:0 7px 17px rgba(11,19,35,.04)}.reference-button.dark{border-color:#071126;color:#fff;background:#071126;box-shadow:0 12px 24px rgba(7,17,38,.14)}.reference-button svg{width:19px;height:19px}.hero-trust{display:flex;gap:30px;margin-top:43px;color:#687486;font-size:16px}.hero-trust span{display:flex;align-items:center;gap:10px}.hero-trust svg{width:21px;height:21px;color:#1aa6c2}.hero-media-wrap{position:relative}.hero-media{height:430px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(circle at 76% 28%,#14243e 0,#071126 68%);box-shadow:0 30px 55px rgba(7,17,38,.13)}.hero-play{width:96px;height:96px;display:grid;place-items:center;border:1px solid #354059;border-radius:50%;color:#d8deeb;background:#1b2942}.hero-play svg{width:42px;height:42px;margin-left:7px}.hero-media-label{position:absolute;left:0;right:0;top:63%;color:#b6bfce;text-align:center;font-size:16px}.assistant-badge{position:absolute;left:-38px;bottom:-40px;display:flex;align-items:center;gap:15px;padding:18px 26px;border:1px solid #e5e9ed;border-radius:16px;background:#fff;box-shadow:0 19px 35px rgba(12,24,45,.15)}.assistant-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(145deg,#2cb5e5,#22d5cc)}.assistant-badge strong{display:block;margin-bottom:3px;font-size:16px}.assistant-badge small{color:#8993a2;font-size:14px}.customer-stories{padding:105px 0 112px;background:var(--soft)}.center-heading{text-align:center}.reference-eyebrow{margin-bottom:17px;color:#159dbb;font-size:14px;font-weight:850;letter-spacing:.03em;text-transform:uppercase}.center-heading h2,.left-heading h2{margin:0;color:var(--ink);font-size:clamp(42px,3.2vw,58px);line-height:1.1;letter-spacing:-.04em}.center-heading p,.left-heading p{margin:18px 0 0;color:#5f6a7a;font-size:18px;line-height:1.55}.testimonial-shell{max-width:1130px;margin:70px auto 0}.testimonial-card{position:relative;min-height:320px;padding:58px 62px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 7px 22px rgba(15,24,42,.025)}.review-stars{margin-bottom:31px;color:#f7bb18;font-size:27px;letter-spacing:3px}.testimonial-card blockquote{max-width:920px;margin:0;color:#3c4656;font-size:23px;line-height:1.55}.quote-mark{position:absolute;right:38px;top:24px;color:#eff2f5;font:900 80px/1 Georgia,serif}.review-person{display:flex;align-items:center;gap:17px;margin-top:34px}.review-avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;color:#fff;background:#25d6a8;font-weight:800}.review-person strong{display:block;font-size:16px}.review-person span{display:block;margin-top:3px;color:#778293;font-size:15px}.carousel-controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px}.carousel-arrow{width:53px;height:53px;border:1px solid var(--line);border-radius:50%;color:#2d3748;background:#fff;font-size:28px;cursor:pointer}.carousel-dots{display:flex;align-items:center;gap:8px}.carousel-dot{width:10px;height:10px;border:0;border-radius:999px;background:#d3d9df;padding:0;cursor:pointer}.carousel-dot.active{width:31px;background:#139cc3}.features-section{padding:118px 0 148px}.left-heading{max-width:890px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:73px}.feature-card{min-height:350px;padding:43px 42px;border:1px solid var(--line);border-radius:21px;background:#fff}.feature-card:first-child{border-color:#b9e9ef;box-shadow:0 10px 25px rgba(29,190,210,.05)}.feature-icon{width:69px;height:69px;display:grid;place-items:center;margin-bottom:34px;border-radius:16px;color:#149fc1;background:#effbfd}.feature-card:nth-child(2) .feature-icon{background:#d8f2f7}.feature-icon svg{width:34px;height:34px}.feature-card h3{margin:0 0 18px;font-size:24px;letter-spacing:-.02em}.feature-card p{margin:0;color:#596577;font-size:19px;line-height:1.6}.steps-section{padding:112px 0 148px;color:#fff;background:radial-gradient(circle at 50% 45%,#10304b 0,#071126 70%)}.steps-section .center-heading h2{color:#fff}.steps-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:90px;margin-top:78px}.steps-grid:before{content:"";position:absolute;left:9%;right:9%;top:43px;border-top:1px dashed #31425a}.step-card{position:relative;z-index:1}.step-icon{width:75px;height:75px;display:grid;place-items:center;margin-bottom:35px;border-radius:18px;color:#fff;background:linear-gradient(145deg,#27afe2,#20d9cf);box-shadow:0 12px 28px rgba(22,195,211,.18)}.step-icon svg{width:34px;height:34px}.step-number{position:absolute;right:0;top:-10px;padding:7px 13px;border:1px solid #31425a;border-radius:999px;color:#69788d;background:#16233a;font-size:13px}.step-card h3{margin:0 0 16px;font-size:23px}.step-card p{margin:0;color:#9ba7ba;font-size:18px;line-height:1.55}.demo-section{padding:174px 0 122px;background:#f8fafc}.demo-toolbar{display:flex;align-items:center;justify-content:space-between;margin:68px 0 30px}.device-switch{display:flex;padding:5px;border:1px solid #dfe4ea;border-radius:12px;background:#fff}.device-button{display:inline-flex;min-height:43px;padding:0 18px;align-items:center;gap:9px;border:0;border-radius:9px;color:#384354;background:transparent;font-weight:650;cursor:pointer}.device-button.active{color:#fff;background:#071126}.device-button svg{width:17px;height:17px}.open-tab{display:inline-flex;min-height:52px;padding:0 22px;align-items:center;gap:10px;border:1px solid #dfe4ea;border-radius:10px;color:#263142;background:#fff;font-weight:650;text-decoration:none}.demo-browser{position:relative;max-width:100%;margin:auto;overflow:hidden;border:1px solid #e0e5eb;border-radius:21px;background:#fff;box-shadow:0 22px 43px rgba(26,39,57,.11);transition:max-width .25s ease}.demo-browser.tablet{max-width:940px}.demo-browser.mobile{max-width:520px}.demo-browser-top{height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #e6e9ed;background:#fbfcfd}.demo-dot{width:17px;height:17px;border-radius:50%}.demo-dot.red{background:#ef568a}.demo-dot.yellow{background:#f6c72d}.demo-dot.green{background:#2ed7a1}.demo-address{margin-left:18px;color:#697486;font-size:14px}.demo-browser iframe{display:block;width:100%;height:650px;border:0;background:#eef2f7}.pricing-section{padding:127px 0 136px;background:#f8fafc}.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:29px;margin-top:69px}.pricing-card{position:relative;display:flex;min-height:720px;padding:47px 43px 32px;flex-direction:column;border:1px solid #e0e5ea;border-radius:20px;background:#fff;box-shadow:0 12px 25px rgba(17,29,47,.025)}.pricing-card.popular{border:2px solid #20afd0;box-shadow:0 16px 34px rgba(17,159,190,.08)}.popular-label{position:absolute;left:50%;top:-18px;padding:7px 21px;border-radius:999px;color:#fff;background:#149fc2;font-size:14px;font-weight:750;transform:translateX(-50%);white-space:nowrap}.pricing-card h3{margin:0 0 20px;font-size:29px}.price-intro{min-height:58px;margin:0 0 48px;color:#697486;font-size:17px;line-height:1.55}.video-price{margin:0 0 33px;font-size:42px;font-weight:850;letter-spacing:-.04em}.video-price small{margin-left:6px;color:#7c8796;font-size:17px;font-weight:500;letter-spacing:0}.video-feature-list{display:grid;gap:24px;margin:0 0 42px;padding:0;list-style:none;color:#4c5868;font-size:16px}.video-feature-list li{display:flex;gap:14px}.video-feature-list li:before{content:"✓";color:#139fbc;font-size:19px;font-weight:900}.pricing-card .reference-button{width:100%;margin-top:auto;min-height:59px}.closing-section{padding:115px 0 170px}.closing-card{padding:98px 42px 90px;border-radius:33px;color:#fff;background:linear-gradient(120deg,#159bc8,#1fd0d3);box-shadow:0 28px 55px rgba(25,181,205,.16);text-align:center}.closing-card h2{margin:0 0 25px;color:#fff;font-size:clamp(42px,3.5vw,61px);letter-spacing:-.04em}.closing-card p{max-width:870px;margin:0 auto 43px;color:#e8ffff;font-size:22px;line-height:1.5}.closing-actions{display:flex;justify-content:center;gap:16px}.closing-actions .reference-button:last-child{border-color:rgba(255,255,255,.25);color:#fff;background:transparent}.reference-footer{padding:92px 0 35px;background:#f7f9fb}.reference-footer-grid{display:grid;grid-template-columns:1.15fr repeat(3,.75fr);gap:100px}.reference-footer .video-logo{font-size:21px}.reference-footer .video-logo-mark{width:51px;height:51px}.reference-footer-summary{max-width:370px;margin:29px 0 0;color:#737e8d;font-size:17px;line-height:1.65}.reference-footer h3{margin:8px 0 29px;font-size:17px}.reference-footer a{display:block;margin:0 0 23px;color:#7d8795;font-size:16px;text-decoration:none}.reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:82px;padding-top:33px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:14px}.simple-reference{min-height:62vh;padding:110px 0}.simple-reference article{max-width:860px}.simple-reference h1{margin:0 0 26px;font-size:58px;letter-spacing:-.04em}.simple-reference p{color:#5f6a7a;font-size:19px;line-height:1.7}.powered-by-bolt,.made-in-bolt,[data-bolt],#bolt-badge{display:none!important}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}.reference-hero-grid{grid-template-columns:1fr}.hero-media-wrap{margin-top:30px}.assistant-badge{left:20px}.feature-grid,.pricing-grid,.steps-grid{grid-template-columns:1fr}.steps-grid:before{display:none}.feature-card{min-height:0}.pricing-card{min-height:0}.reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}.demo-browser iframe{height:560px}}@media(max-width:720px){html{scroll-padding-top:78px}.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid var(--line)}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.reference-hero{padding:48px 0 65px}.reference-hero h1{font-size:49px}.reference-hero-copy{font-size:18px}.hero-pill{margin-bottom:25px}.hero-media{height:310px}.assistant-badge{bottom:-42px;padding:12px 16px}.customer-stories{padding:90px 0}.testimonial-card{padding:36px 27px}.testimonial-card blockquote{font-size:19px}.features-section,.steps-section,.demo-section,.pricing-section,.closing-section{padding:85px 0}.feature-grid{gap:18px}.feature-card{padding:30px}.demo-toolbar{align-items:flex-start;gap:17px;flex-direction:column}.device-switch{width:100%;overflow:auto}.device-button{padding:0 12px}.demo-browser iframe{height:620px}.closing-card{padding:70px 22px}.closing-actions{align-items:stretch;flex-direction:column}.reference-footer-grid{grid-template-columns:1fr;gap:28px}.reference-footer-bottom{flex-direction:column}.hero-trust{align-items:flex-start;flex-direction:column;gap:15px}.video-container{width:min(100% - 28px,1640px)}}
 `;
 
 const requestedStyles = html`
   main { display:flex; flex-direction:column; }
-  .blog-reference { display:block; padding:92px 0 130px; background:#f7f9fb; }
-  .blog-hero { max-width:900px; margin-bottom:52px; }
-  .blog-hero h1 { margin:0 0 20px; color:#071126; font-size:clamp(46px,5vw,72px);
-    line-height:1.04; letter-spacing:-.048em; }
-  .blog-hero p { max-width:760px; margin:0; color:#5d6878; font-size:19px;
-    line-height:1.65; }
-  .blog-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px;
-    margin-bottom:68px; }
-  .blog-card { display:flex; min-height:245px; padding:25px; flex-direction:column;
-    border:1px solid #e0e6ec; border-radius:17px; color:#071126; background:#fff;
-    box-shadow:0 12px 30px rgba(20,43,72,.05); text-decoration:none; }
-  .blog-card:hover { border-color:#b9dfe6; transform:translateY(-2px); }
-  .blog-card small { margin-bottom:15px; color:#159dbb; font-size:10px;
-    font-weight:900; letter-spacing:.09em; text-transform:uppercase; }
-  .blog-card h2 { margin:0 0 12px; font-size:21px; line-height:1.25;
-    letter-spacing:-.025em; }
-  .blog-card p { margin:0; color:#657184; font-size:13px; line-height:1.55; }
-  .blog-card span { margin-top:auto; padding-top:20px; color:#1769e0;
-    font-size:12px; font-weight:850; }
-  .blog-list { display:grid; gap:24px; }
-  .blog-article { scroll-margin-top:112px; padding:42px clamp(25px,4vw,58px);
-    border:1px solid #e0e6ec; border-radius:21px; background:#fff;
-    box-shadow:0 14px 38px rgba(20,43,72,.05); }
-  .blog-article header { margin-bottom:25px; padding-bottom:22px;
-    border-bottom:1px solid #e8edf2; }
-  .blog-article header small { color:#159dbb; font-size:10px; font-weight:900;
-    letter-spacing:.09em; text-transform:uppercase; }
-  .blog-article h2 { max-width:800px; margin:8px 0 0; font-size:clamp(29px,3vw,40px);
-    line-height:1.12; letter-spacing:-.035em; }
-  .blog-copy { max-width:850px; }
-  .blog-copy p,.blog-copy li { color:#536174; font-size:16px; line-height:1.75; }
-  .blog-copy p { margin:0 0 17px; }
-  .blog-copy h3 { margin:30px 0 10px; color:#172538; font-size:20px; }
-  .blog-copy ul { margin:10px 0 20px; padding-left:21px; }
-  .blog-copy li { margin:7px 0; }
-  .blog-tip { margin-top:24px; padding:16px 18px; border-left:4px solid #20b6cb;
-    border-radius:0 11px 11px 0; color:#33465b; background:#eff9fb;
-    font-size:14px; line-height:1.6; }
-  @media(max-width:900px) { .blog-grid { grid-template-columns:1fr 1fr; } }
-  @media(max-width:620px) { .blog-reference { padding:62px 0 88px; }
-    .blog-grid { grid-template-columns:1fr; }.blog-card { min-height:0; }
-    .blog-article { padding:29px 21px; } }
   .reference-hero { order:1; }
   .trusted-strip { order:2; }
   .features-section { order:3; }
@@ -3005,26 +2910,6 @@ const requestedStyles = html`
     cursor:pointer; }
   .account-dialog small { display:block; margin-top:16px; color:#788493;
     line-height:1.45; }
-  .account-access-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
-    margin:0 0 20px; padding:5px; border-radius:12px; background:#f0f4f8; }
-  .account-access-tab { min-height:40px; padding:0 8px; border:0; border-radius:9px;
-    color:#536174; background:transparent; cursor:pointer; font-size:12px;
-    font-weight:850; }
-  .account-access-tab.active { color:#071126; background:#fff;
-    box-shadow:0 2px 8px rgba(7,17,38,.09); }
-  .account-access-panel { display:none; }
-  .account-access-panel.active { display:block; }
-  .account-field { margin-top:13px; }
-  .password-field { position:relative; }
-  .password-field input { padding-right:72px; }
-  .password-toggle { position:absolute; right:8px; bottom:8px; min-height:38px;
-    padding:0 10px; border:0; border-radius:8px; color:#1769e0;
-    background:#eef5ff; cursor:pointer; font-size:12px; font-weight:850; }
-  .account-setup { display:none; }
-  .account-setup.show { display:block; }
-  .account-standard.hide { display:none; }
-  .account-note { margin:14px 0 0; padding:12px 13px; border-radius:10px;
-    color:#536174; background:#f5f7fa; font-size:12px; line-height:1.5; }
   .account-sent { display:none; margin:0 0 18px; padding:13px 14px;
     border:1px solid #a9d9bd; border-radius:11px; color:#167044;
     background:#effaf3; font-size:14px; line-height:1.45; }
@@ -3088,12 +2973,6 @@ const requestedStyles = html`
   .profile-detail small { display:block; margin-bottom:6px; color:#748092;
     font-size:12px; font-weight:700; }
   .profile-detail strong { overflow-wrap:anywhere; }
-  .subscription-status { display:inline-flex; align-items:center; gap:7px; }
-  .subscription-status::before { content:""; width:9px; height:9px;
-    border-radius:50%; background:#b42318; }
-  .subscription-status.active { color:#167044; }
-  .subscription-status.active::before { background:#22a45d; }
-  .subscription-status.none,.subscription-status.inactive { color:#b42318; }
   .profile-testing-plan { margin-top:18px; padding:20px; border:1px solid #cfe0f5;
     border-radius:14px; background:#f3f8ff; }
   .profile-testing-plan > strong { display:block; margin-bottom:5px; font-size:17px; }
@@ -3126,87 +3005,6 @@ const requestedStyles = html`
     background:#1769e0; text-decoration:none; font-size:12px; font-weight:800; }
   .profile-empty { padding:28px 18px; border:1px dashed #bdcbd9;
     border-radius:13px; color:#6d7989; text-align:center; }
-  .profile-drawer { grid-template-columns:282px minmax(0,1fr); background:#f5f7fa; }
-  .profile-side { padding:26px 20px 22px; background:linear-gradient(180deg,#071a3b 0%,#0a2349 100%); }
-  .profile-brand { display:flex; align-items:center; gap:10px; margin:0 8px 34px;
-    color:#fff; text-decoration:none; font-size:19px; font-weight:900; }
-  .profile-brand .video-logo-mark { width:36px; height:36px; color:#fff;
-    background:linear-gradient(145deg,#29b9e6,#20d6cf); box-shadow:none; }
-  .profile-side-title { display:grid; gap:3px; margin:0 10px 17px; }
-  .profile-side-title small { color:#7f9abd; font-size:10px; font-weight:850;
-    letter-spacing:.1em; text-transform:uppercase; }
-  .profile-side-title strong { color:#fff; font-size:20px; }
-  .profile-tabs { gap:6px; }
-  .profile-tab { display:grid; gap:3px; padding:12px 13px; border:1px solid transparent;
-    border-radius:11px; }
-  .profile-tab span { font-size:13px; font-weight:850; }
-  .profile-tab small { color:#7891b3; font-size:10px; font-weight:650; line-height:1.35; }
-  .profile-tab:hover,.profile-tab.active { border-color:rgba(255,255,255,.08);
-    background:rgba(255,255,255,.09); }
-  .profile-tab:hover small,.profile-tab.active small { color:#b9c9df; }
-  .profile-signout button { border-color:rgba(255,255,255,.16); color:#dce7f7;
-    background:rgba(255,255,255,.04); }
-  .profile-signout button:hover { background:rgba(255,255,255,.09); }
-  .profile-main { padding:42px clamp(28px,4.5vw,72px) 60px; background:#f5f7fa; }
-  .profile-head { margin:0 auto 30px; }
-  .profile-head>div>p { margin:7px 0 0; color:#6a7788; font-size:13px; }
-  .profile-eyebrow { margin-bottom:7px; color:#1769e0; font-size:10px;
-    font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
-  .profile-head h2 { font-size:31px; }
-  .profile-close { border-color:#dce4ed; border-radius:12px; background:#fff;
-    box-shadow:0 5px 16px rgba(25,48,78,.06); }
-  .profile-panel { max-width:1040px; margin:0 auto; }
-  .profile-chatbot-panel { max-width:1320px; }
-  .profile-panel-heading { display:flex; align-items:flex-start; justify-content:space-between;
-    gap:18px; margin-bottom:17px; }
-  .profile-panel h3 { font-size:22px; letter-spacing:-.02em; }
-  .profile-intro { margin:0; font-size:13px; }
-  .profile-security-badge { display:inline-flex; min-height:31px; padding:0 11px;
-    align-items:center; border:1px solid #bfe2cd; border-radius:999px; color:#167044;
-    background:#edf9f2; font-size:10px; font-weight:850; }
-  .profile-panel-surface { padding:24px; border:1px solid #dfe6ee; border-radius:18px;
-    background:#fff; box-shadow:0 14px 38px rgba(25,48,78,.06); }
-  .profile-detail-grid { gap:12px; }
-  .profile-detail { min-height:84px; padding:16px 17px; border-color:#e2e8ef;
-    border-radius:12px; background:#f8fafc; }
-  .profile-detail small { margin-bottom:8px; color:#748194; font-size:10px;
-    font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
-  .profile-detail strong { color:#172538; font-size:14px; }
-  .profile-detail a { color:#1769e0; text-decoration:none; }
-  .profile-password-row { display:flex; align-items:center; justify-content:space-between;
-    gap:10px; }
-  .profile-password-row strong { letter-spacing:.14em; }
-  .profile-password-eye { width:34px; height:34px; display:grid; place-items:center;
-    flex:0 0 auto; border:1px solid #dbe3ec; border-radius:9px; color:#526174;
-    background:#fff; cursor:pointer; }
-  .profile-password-eye:hover,.profile-password-eye.active { color:#1769e0;
-    border-color:#b9d1f2; background:#edf5ff; }
-  .profile-password-eye svg { width:18px; height:18px; }
-  .profile-password-message { display:none; margin-top:8px; color:#69778a;
-    font-size:10px; line-height:1.45; }
-  .profile-password-message.show { display:block; }
-  .profile-security-note { display:flex; align-items:center; gap:10px; margin-top:17px;
-    padding:13px 15px; border-radius:11px; color:#526174; background:#f2f6fa;
-    font-size:11px; }
-  .profile-security-note strong { color:#24364c; }
-  .profile-frame-shell { overflow:hidden; border:1px solid #dce4ed; border-radius:18px;
-    background:#fff; box-shadow:0 14px 38px rgba(25,48,78,.07); }
-  .profile-dashboard-frame { height:calc(100vh - 205px); min-height:650px; border:0;
-    border-radius:0; background:#f5f7fa; }
-  .profile-subscription-summary { display:flex; align-items:center; justify-content:space-between;
-    gap:18px; margin-bottom:15px; padding:20px; border-radius:14px; color:#fff;
-    background:linear-gradient(135deg,#0b2348,#153d71); }
-  .profile-subscription-summary small { display:block; margin-bottom:5px; color:#9fb5d1;
-    font-size:10px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
-  .profile-subscription-summary>div>strong { font-size:24px; }
-  .profile-subscription-summary .subscription-status { padding:7px 10px; border-radius:999px;
-    color:#f5b9b3; background:rgba(255,255,255,.1); font-size:11px; }
-  .profile-subscription-summary .subscription-status.active { color:#9ce2bb; }
-  .profile-detail-grid.compact .profile-detail { min-height:76px; }
-  .profile-testing-plan { margin-top:15px; padding:18px; border-color:#dce6f2;
-    background:#f7faff; }
-  .profile-testing-plan > strong { font-size:15px; }
-  .profile-testing-plan > span { margin-bottom:13px; }
   body:has(.account-modal.open),body:has(.profile-layer.open) { overflow:hidden; }
   @media(max-width:1000px) {
     .reference-footer-grid { grid-template-columns:1fr 1fr; }
@@ -3222,15 +3020,9 @@ const requestedStyles = html`
     .profile-side { padding:18px; }
     .profile-side-title { margin:0 4px 13px; }
     .profile-tabs { grid-template-columns:1fr 1fr; }
-    .profile-tab { min-height:57px; }
-    .profile-tab small { display:none; }
     .profile-signout { margin-top:14px; }
     .profile-main { padding:25px 20px 40px; }
     .profile-detail-grid { grid-template-columns:1fr; }
-    .profile-panel-surface { padding:17px; }
-    .profile-panel-heading { align-items:flex-start; flex-direction:column; }
-    .profile-security-note { align-items:flex-start; flex-direction:column; }
-    .profile-subscription-summary { align-items:flex-start; flex-direction:column; }
     .trusted-group { gap:42px; padding-right:42px; }
     .trusted-logo { width:165px; height:62px; flex-basis:165px; }
     .feature-grid,.video-review-grid { grid-template-columns:1fr; }
@@ -3241,109 +3033,6 @@ const requestedStyles = html`
     .legal-document-header { margin-bottom:32px; }
     .legal-copy h2 { margin-top:37px; font-size:24px; }
   }
-`;
-
-const tidioInspiredStyles = html`
-  :root { --fise-blue:#0566ff; --fise-blue-deep:#004ac5; --fise-ink:#080f1a;
-    --fise-green:#64ed80; --fise-pale:#f5f7f9; }
-  .video-container { width:min(1240px,calc(100% - 64px)); }
-  .video-header { position:sticky; top:0; z-index:100; border:0; background:rgba(255,255,255,.97);
-    box-shadow:0 1px 0 rgba(8,15,26,.08); backdrop-filter:blur(14px); }
-  .fise-announcement { min-height:42px; display:flex; align-items:center; justify-content:center; gap:14px;
-    padding:8px 20px; color:#fff; background:var(--fise-blue); font-size:13px; text-decoration:none; }
-  .fise-announcement strong { display:inline-flex; padding:4px 10px; border-radius:999px; color:#063020;
-    background:var(--fise-green); font-size:12px; }
-  .fise-announcement span { color:#e9f0ff; }
-  .video-nav { height:76px; gap:24px; }
-  .video-logo { gap:11px; color:var(--fise-ink); font-size:21px; }
-  .video-logo-mark { width:45px; height:45px; border-radius:13px; background:var(--fise-blue);
-    box-shadow:0 10px 22px rgba(5,102,255,.2); }
-  .video-logo span[style] { color:var(--fise-blue)!important; }
-  .video-links { gap:26px; margin-left:auto; }
-  .video-links a { color:#202837; font-size:14px; font-weight:700; }
-  .video-links a:hover { color:var(--fise-blue); }
-  .video-login { padding:9px 2px; white-space:nowrap; }
-  .video-get-started { min-height:43px; padding:0 18px; border-radius:8px; color:#082018!important;
-    background:var(--fise-green); box-shadow:none; white-space:nowrap; }
-  .video-get-started:hover { color:#082018!important; background:#51df70; }
-  .reference-hero { padding:94px 0 82px; background:#fff; }
-  .reference-hero-grid { grid-template-columns:1fr; gap:64px; text-align:center; }
-  .reference-hero-grid > div:first-child { max-width:890px; margin:auto; }
-  .hero-pill { margin-bottom:24px; border-color:#dbe5ff; color:var(--fise-blue-deep); background:#f2f6ff; }
-  .reference-hero h1 { max-width:860px; margin:0 auto 23px; color:var(--fise-ink); font-size:clamp(50px,6.3vw,80px); }
-  .reference-hero h1 span { color:var(--fise-blue); }
-  .reference-hero-copy { max-width:720px; margin:0 auto 34px; color:#394454; font-size:19px; }
-  .reference-actions,.hero-trust { justify-content:center; }
-  .reference-button { min-height:54px; padding:0 22px; border-radius:8px; font-size:15px; box-shadow:none; }
-  .reference-button.dark { border-color:var(--fise-green); color:#082018; background:var(--fise-green); box-shadow:none; }
-  .reference-button.dark:hover { background:#51df70; }
-  .hero-trust { margin-top:22px; font-size:14px; }
-  .hero-trust svg { color:var(--fise-blue); }
-  .hero-media-wrap { width:min(100%,1050px); margin:auto; text-align:left; }
-  .hero-media { height:385px; border:1px solid #14223a; border-radius:16px;
-    background:radial-gradient(circle at 72% 16%,#243655 0,#080f1a 72%); box-shadow:0 24px 50px rgba(8,15,26,.14); }
-  .hero-product-video { display:block; width:100%; height:100%; object-fit:cover; }
-  .assistant-badge { left:28px; bottom:-28px; border-radius:12px; }
-  .assistant-icon { background:var(--fise-blue); }
-  .reference-eyebrow,.feature-kicker { color:var(--fise-blue); }
-  .trusted-strip { padding:30px 0; background:#fff; }
-  .features-section { padding:108px 0; background:var(--fise-pale); }
-  .feature-card { border-color:#e0e6ef; border-radius:14px; box-shadow:none; }
-  .feature-card:first-child { border-color:#d7e2fa; }
-  .feature-icon { color:var(--fise-blue); background:#eaf0ff; }
-  .steps-section { background:#080f1a; }
-  .step-icon { background:var(--fise-blue); box-shadow:none; }
-  .demo-section,.pricing-section { background:#fff; }
-  .pricing-card { min-height:650px; padding:37px 29px 28px; border-radius:14px; box-shadow:none; }
-  .pricing-card.popular { border-color:var(--fise-blue); box-shadow:0 12px 30px rgba(5,102,255,.1); }
-  .popular-label { background:var(--fise-blue); }
-  .free-plan-card { border-color:#b9c9e8; background:#fbfcff; }
-  .free-plan-label { display:inline-flex; width:max-content; margin-bottom:17px; padding:5px 9px; border-radius:999px;
-    color:#004ac5; background:#e8efff; font-size:11px; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
-  .video-feature-list li:before { color:var(--fise-blue); }
-  .video-feature-list li.unavailable { color:#9a3341; }
-  .video-feature-list li.unavailable:before { color:#e1475d; }
-  .closing-card { border-radius:20px; background:linear-gradient(118deg,#0566ff,#1749e4); box-shadow:0 22px 45px rgba(5,102,255,.2); }
-  .closing-actions .reference-button:first-child { color:#082018; background:var(--fise-green); border-color:var(--fise-green); }
-  .reference-footer { padding:74px 0 30px; background:var(--fise-blue); }
-  .reference-footer-grid { grid-template-columns:1.25fr repeat(3,.72fr); gap:56px; }
-  .reference-footer .video-logo { color:#fff; }
-  .reference-footer .video-logo-mark { color:var(--fise-blue); background:#fff; box-shadow:none; }
-  .reference-footer .video-logo span[style] { color:#c9d9ff!important; }
-  .reference-footer-summary { color:#dce7ff; }
-  .reference-footer h3 { color:#fff; font-size:14px; }
-  .reference-footer a { color:#dce7ff; font-size:14px; }
-  .reference-footer a:hover { color:#fff; }
-  .footer-start-link { display:inline-flex!important; margin-top:22px!important; padding:10px 13px; border:1px solid rgba(255,255,255,.36);
-    border-radius:8px; color:#fff!important; font-weight:800; }
-  .reference-footer-bottom { margin-top:54px; border-color:rgba(255,255,255,.25); color:#c7d7ff; }
-  .contact-reference { min-height:calc(100vh - 300px); padding:92px 0 120px; background:var(--fise-pale); }
-  .contact-layout { display:grid; grid-template-columns:.86fr 1.14fr; gap:60px; align-items:start; }
-  .contact-intro h1 { max-width:560px; margin:0 0 18px; color:var(--fise-ink); font-size:clamp(44px,5vw,68px); line-height:1.03; letter-spacing:-.05em; }
-  .contact-intro p { max-width:510px; margin:0; color:#576274; font-size:18px; line-height:1.65; }
-  .contact-points { display:grid; gap:14px; margin:30px 0 0; padding:0; list-style:none; color:#354152; line-height:1.5; }
-  .contact-points li { display:flex; gap:11px; align-items:flex-start; }
-  .contact-points li:before { content:'✓'; color:var(--fise-blue); font-weight:900; }
-  .contact-card { padding:34px; border:1px solid #e0e6ef; border-radius:16px; background:#fff; box-shadow:0 15px 38px rgba(18,37,66,.06); }
-  .contact-card label { display:grid; gap:8px; margin:0 0 17px; color:#2b3646; font-size:13px; font-weight:800; }
-  .contact-card input,.contact-card textarea { width:100%; padding:13px 14px; border:1px solid #ccd6e5; border-radius:8px; color:#182235; background:#fff; outline:0; }
-  .contact-card input:focus,.contact-card textarea:focus { border-color:var(--fise-blue); box-shadow:0 0 0 3px rgba(5,102,255,.12); }
-  .contact-card textarea { min-height:145px; resize:vertical; }
-  .contact-card button { width:100%; border:0; cursor:pointer; }
-  .contact-card .contact-note { margin:14px 0 0; color:#748094; font-size:12px; line-height:1.55; }
-  .contact-message { margin:0 0 18px; padding:13px 14px; border-radius:8px; color:#17553a; background:#e8f9ee; font-size:14px; line-height:1.45; }
-  .contact-message.error { color:#8d2633; background:#fff0f1; }
-  @media(max-width:1000px) { .pricing-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .reference-footer-grid { grid-template-columns:1.2fr 1fr; }.contact-layout { grid-template-columns:1fr; gap:36px; } }
-  @media(max-width:800px) { .video-container { width:min(100% - 38px,1240px); }.video-nav { height:68px; }
-    .video-menu { display:block; }.video-links { position:absolute; left:0; right:0; top:110px; display:none; gap:0; padding:12px 19px 18px;
-      border-bottom:1px solid #e1e6ed; background:#fff; box-shadow:0 12px 22px rgba(8,15,26,.08); }.video-links.open { display:grid; }
-    .video-links a { padding:13px 0; }.video-login { border-top:1px solid #edf0f3; }.video-get-started { justify-content:center; margin-top:8px; }
-    .reference-hero { padding:68px 0 64px; }.reference-hero h1 { font-size:clamp(43px,12vw,62px); }.hero-media { height:300px; }
-    .assistant-badge { left:15px; }.reference-footer-grid { grid-template-columns:1fr 1fr; }.contact-reference { padding:60px 0 75px; } }
-  @media(max-width:600px) { .fise-announcement { gap:7px; font-size:11px; }.fise-announcement strong { padding:3px 7px; font-size:10px; }
-    .fise-announcement span { display:none; }.video-container { width:min(100% - 28px,1240px); }.reference-actions,.hero-trust { align-items:stretch; flex-direction:column; }
-    .pricing-grid,.reference-footer-grid { grid-template-columns:1fr; }.pricing-card { min-height:0; }.contact-card { padding:25px 20px; } }
 `;
 
 function referenceLogo() {
@@ -3439,69 +3128,19 @@ function videoCustomerStories(c) {
 }
 
 function referenceHeader() {
-  return html`<header class="video-header"><a class="fise-announcement" href="/#demo"><strong>See Fise AI in action</strong><span>Explore a helpful AI website assistant&nbsp;→</span></a><div class="video-container video-nav"><a class="video-logo" href="/">${referenceLogo()}</a><nav class="video-links" id="video-nav"><a href="/#features">Product</a><a href="/#how-it-works">How it works</a><a href="/#pricing">Pricing</a><a href="/blog">Resources</a><a class="video-login" id="account-button" href="/login">Log in</a><a class="video-get-started" href="/login">Start for free <span>→</span></a></nav><button class="video-menu" id="video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
+  return html`<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/">${referenceLogo()}</a><nav class="video-links" id="video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a class="video-demo-link requires-signin" id="demo-link" href="/#demo">Demo<span class="demo-access-tip">Sign in to access the Demo</span></a><a href="/#pricing">Pricing</a><a class="video-get-started" id="account-button" href="/login">Sign in</a></nav><button class="video-menu" id="video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
 }
 
 function referenceFooter() {
-  return html`<footer class="reference-footer"><div class="video-container"><div class="reference-footer-grid"><div><a class="video-logo" href="/">${referenceLogo()}</a><p class="reference-footer-summary">Helpful AI website assistants built around your business, your customers and your brand.</p><a class="footer-start-link" href="/login">Start for free&nbsp;→</a></div><div><h3>Product</h3><a href="/#features">Features</a><a href="/#how-it-works">How it works</a><a href="/#demo">Live demo</a><a href="/#pricing">Pricing</a></div><div><h3>Resources</h3><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/privacy-policy">Privacy</a></div><div><h3>Company</h3><a href="/about">About Fise</a><a href="/terms-and-conditions">Terms</a><a href="/cookies">Cookies</a></div></div><div class="reference-footer-bottom"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
+  return html`<footer class="reference-footer"><div class="video-container"><div class="reference-footer-grid"><div><a class="video-logo" href="/">${referenceLogo()}</a><p class="reference-footer-summary">Helpful AI website assistants built around your business, your customers and your brand.</p></div><div><h3>Product</h3><a href="/#features">Features</a><a href="/#clients">Our Clients</a><a href="/#demo">Demo</a><a href="/#pricing">Pricing</a><a href="/#how-it-works">How it works</a></div><div><h3>Company</h3><a href="/about">About</a><a href="/blog">Blog</a><a href="/contact">Contact</a></div></div><div class="reference-footer-bottom"><span>© 2026 Fise AI. All rights reserved.</span><span class="footer-legal-links"><a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a><span>·</span><a href="/terms-and-conditions" target="_blank" rel="noopener">T&amp;C's</a><span>·</span><a href="/cookies" target="_blank" rel="noopener">Cookies</a></span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
 }
 
 function accountModal() {
-  return html`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field"><label for="register-username">Username</label><input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"></div><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email or username</label><input id="signin-identifier" name="identifier" autocomplete="username" maxlength="254" required placeholder="Email or username"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a one-time link</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a username and password before continuing.</p><form method="post" action="/api/account/credentials"><label for="setup-username">Username</label><input id="setup-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div></div></section></div>`;
+  return html`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><h2 id="account-title">Sign in to Fise AI</h2><p>Enter your email address and we will send you a secure sign-in link for your profile, chatbot settings and customer dashboard.</p><div class="account-sent" id="account-sent">Check your email and open the secure Fise AI sign-in link. After verification, close that window and return here.</div><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a sign-in link</button></form><small>Use the same email address whenever you return to Fise AI.</small></section></div>`;
 }
 
 function profileDrawer() {
-  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true">
-    <button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button>
-    <aside class="profile-drawer" aria-labelledby="profile-title">
-      <div class="profile-side">
-        <a class="profile-brand" href="/">${referenceLogo()}</a>
-        <div class="profile-side-title"><small>Customer portal</small><strong>Account centre</strong></div>
-        <nav class="profile-tabs" aria-label="Profile sections">
-          <button class="profile-tab active" type="button" data-profile-tab="account"><span>Profile</span><small>Personal and security details</small></button>
-          <button class="profile-tab" type="button" data-profile-tab="chatbots"><span>Chatbot</span><small>Setup, scan and manage</small></button>
-          <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span><small>Plan and billing status</small></button>
-          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span><small>Programme information</small></button>
-        </nav>
-        <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
-      </div>
-      <div class="profile-main">
-        <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div>
-        <section class="profile-panel active" data-profile-panel="account">
-          <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div><span class="profile-security-badge">Secure account</span></div>
-          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-password-eye" id="profile-password-eye" type="button" aria-label="Show password information" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></button></div><span class="profile-password-message" id="profile-password-message">For security, saved passwords cannot be revealed. Use your password manager, or sign in with an email link if forgotten.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
-        </section>
-        <section class="profile-panel profile-chatbot-panel" data-profile-panel="chatbots">
-          <div class="profile-panel-heading"><div><h3>Chatbot workspace</h3><p class="profile-intro">Scan your website, customise your assistant and manage leads.</p></div></div>
-          <div class="profile-frame-shell"><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot workspace…</div></div></div>
-        </section>
-        <section class="profile-panel" data-profile-panel="subscription">
-          <div class="profile-panel-heading"><div><h3>Subscription</h3><p class="profile-intro">Your current plan, billing status and testing controls.</p></div></div>
-          <div class="profile-panel-surface"><div class="profile-subscription-summary"><div><small>Current plan</small><strong id="profile-plan">—</strong></div><strong class="subscription-status none" id="profile-subscription-status">None</strong></div><div class="profile-detail-grid compact"><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Chatbot workspace</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>During testing, switch plans freely without payment.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Choose a plan<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></div>
-        </section>
-        <section class="profile-panel" data-profile-panel="affiliate">
-          <div class="profile-panel-heading"><div><h3>Affiliate programme</h3><p class="profile-intro">View your programme status or contact the Fise AI team.</p></div></div>
-          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></div>
-        </section>
-      </div>
-    </aside>
-  </div>`;
-}
-
-function freePricingCard() {
-  return html`<article class="pricing-card free-plan-card">
-    <span class="free-plan-label">Free to try</span>
-    <h3>Free</h3>
-    <p class="price-intro">A working Fise chatbot for testing your business setup.</p>
-    <p class="video-price">R0<small>/month</small></p>
-    <ul class="video-feature-list">
-      <li>GPT-5 mini</li>
-      <li>50 AI conversations per month</li>
-      <li>Customise and test in your dashboard</li>
-      <li class="unavailable">Website chatbot code</li>
-    </ul>
-    <a class="reference-button" href="/login">Start for free <span>→</span></a>
-  </article>`;
+  return html`<div class="profile-layer" id="profile-layer" aria-hidden="true"><button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button><aside class="profile-drawer" aria-labelledby="profile-title"><div class="profile-side"><div class="profile-side-title">My profile</div><nav class="profile-tabs" aria-label="Profile sections"><button class="profile-tab active" type="button" data-profile-tab="account">Account information</button><button class="profile-tab" type="button" data-profile-tab="chatbots">Chatbots</button><button class="profile-tab" type="button" data-profile-tab="subscription">Subscription</button><button class="profile-tab" type="button" data-profile-tab="affiliate">Affiliate</button></nav><form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form></div><div class="profile-main"><div class="profile-head"><h2 id="profile-title">My profile</h2><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div><section class="profile-panel active" data-profile-panel="account"><h3>Account information</h3><p class="profile-intro">Your Fise AI account and contact details.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Account name</small><strong id="profile-name">—</strong></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div><div class="profile-detail"><small>Account status</small><strong>Active</strong></div></div></section><section class="profile-panel" data-profile-panel="chatbots"><h3>Your chatbot dashboard</h3><p class="profile-intro">Create your chatbot, scan your website and manage the finished assistant here.</p><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot dashboard…</div></div></section><section class="profile-panel" data-profile-panel="subscription"><h3>Subscription</h3><p class="profile-intro">Your current Fise AI plan and subscription status.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Current plan</small><strong id="profile-plan">—</strong></div><div class="profile-detail"><small>Status</small><strong id="profile-subscription-status">—</strong></div><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Manage chatbots</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>Temporary testing control. Switch plans freely without payment while Fise AI is being tested.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Plan to test<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply test plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></section><section class="profile-panel" data-profile-panel="affiliate"><h3>Affiliate</h3><p class="profile-intro">Your Fise AI affiliate information.</p><div class="profile-detail-grid"><div class="profile-detail"><small>Affiliate status</small><strong id="profile-affiliate-status">Not enrolled</strong></div><div class="profile-detail"><small>Affiliate support</small><strong><a id="profile-affiliate-email" href="mailto:hello@fise.ai">Contact Fise AI</a></strong></div></div></section></div></aside></div>`;
 }
 
 function prepareReferenceBody(body, c) {
@@ -3513,15 +3152,6 @@ function prepareReferenceBody(body, c) {
   value = value.replace(
     /<section class="features-section"[\s\S]*?<\/section>/,
     `${trustedBusinessStrip()}${realisticFeatures()}${videoCustomerStories(c)}`,
-  );
-  value = value.replace(
-    /<div class="hero-media">[\s\S]*?<\/div><div class="assistant-badge">/,
-    '<div class="hero-media"><video class="hero-product-video" src="/fise-product-walkthrough.mp4" autoplay muted loop playsinline controls preload="metadata" aria-label="Fise AI product walkthrough"></video></div><div class="assistant-badge">',
-  );
-  value = value.replace('<div class="pricing-grid">', `<div class="pricing-grid">${freePricingCard()}`);
-  value = value.replace(
-    '<a class="reference-button dark" href="/#demo">Try the demo <span>→</span></a>',
-    '<a class="reference-button dark" href="/login">Start for free <span>→</span></a>',
   );
   value = value.replace(
     /<div class="demo-toolbar"><div class="device-switch">[\s\S]*?<\/div><a class="open-tab"[\s\S]*?<\/a><\/div>/,
@@ -3557,7 +3187,7 @@ function prepareReferenceBody(body, c) {
 }
 
 function referenceShell(title, description, body, c) {
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}${tidioInspiredStyles}:root{--cyan:${escapeWebsiteHtml(c.theme_primary || "#20c6d8")}}${c.site_css || ""}</style></head><body>${referenceHeader()}${prepareReferenceBody(body, c)}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}</script></body></html>`;
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}:root{--cyan:${escapeWebsiteHtml(c.theme_primary || "#20c6d8")}}${c.site_css || ""}</style></head><body>${referenceHeader()}${prepareReferenceBody(body, c)}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}</script></body></html>`;
 }
 
 function referenceJavascript() {
@@ -3607,21 +3237,10 @@ function referenceJavascript() {
     const demoSignin=document.getElementById('demo-signin');
     const modal=document.getElementById('account-modal');
     const email=document.getElementById('account-email');
-    const accountStandard=document.getElementById('account-standard');
-    const accountSetup=document.getElementById('account-setup');
     const profile=document.getElementById('profile-layer');
     let authenticated=false;
     let profileLoaded=false;
     function openAccount(){modal?.classList.add('open');modal?.setAttribute('aria-hidden','false');setTimeout(()=>email?.focus(),30)}
-    function showAccountView(name){
-      accountStandard?.classList.toggle('hide',name==='setup');
-      accountSetup?.classList.toggle('show',name==='setup');
-      document.querySelectorAll('[data-account-view]').forEach((button)=>button.classList.toggle('active',button.dataset.accountView===name));
-      document.querySelectorAll('[data-account-panel]').forEach((panel)=>panel.classList.toggle('active',panel.dataset.accountPanel===name));
-      openAccount();
-      const focusTarget=name==='setup'?document.getElementById('setup-username'):document.querySelector('[data-account-panel="'+name+'"] input');
-      setTimeout(()=>focusTarget?.focus(),30);
-    }
     function closeAccount(){modal?.classList.remove('open');modal?.setAttribute('aria-hidden','true')}
     function closeProfile(){profile?.classList.remove('open');profile?.setAttribute('aria-hidden','true')}
     function selectProfileTab(name){
@@ -3710,16 +3329,11 @@ function referenceJavascript() {
       if(!response.ok)throw new Error('Profile unavailable');
       const data=await response.json();
       profileText('profile-email',data.account?.email);
-      profileText('profile-name',data.account?.username||'Not added yet');
-      profileText('profile-password',data.account?.password_set?'••••••••••':'Not set');
+      profileText('profile-name',data.account?.name||'Not added yet');
       profileText('profile-created',data.account?.created_at?new Date(data.account.created_at).toLocaleDateString():'—');
-      profileText('profile-plan',data.subscription?.plan_code?titleCase(data.subscription.plan_code):'None');
-      const subscriptionStatus=document.getElementById('profile-subscription-status');
-      const displayStatus=String(data.subscription?.display_status||'None').toLowerCase();
-      profileText('profile-subscription-status',titleCase(displayStatus));
-      subscriptionStatus?.classList.remove('active','none','inactive');
-      subscriptionStatus?.classList.add(displayStatus==='active'?'active':displayStatus==='inactive'?'inactive':'none');
-      profileText('profile-provider',data.subscription?.provider?titleCase(data.subscription.provider):'None');
+      profileText('profile-plan',titleCase(data.subscription?.plan_code||'Starter'));
+      profileText('profile-subscription-status',titleCase(data.subscription?.status||'Active'));
+      profileText('profile-provider',titleCase(data.subscription?.provider||'Fise AI'));
       const planSelect=document.getElementById('profile-plan-select');
       if(planSelect){
         const currentPlan=String(data.subscription?.plan_code||'free').toLowerCase();
@@ -3745,27 +3359,7 @@ function referenceJavascript() {
     demoSignin?.addEventListener('click',openAccount);
     document.querySelectorAll('[data-close-account]').forEach((button)=>button.addEventListener('click',closeAccount));
     document.querySelectorAll('[data-close-profile]').forEach((button)=>button.addEventListener('click',closeProfile));
-    document.querySelectorAll('[data-account-view]').forEach((button)=>button.addEventListener('click',()=>showAccountView(button.dataset.accountView)));
-    document.querySelectorAll('[data-password-toggle]').forEach((button)=>button.addEventListener('click',()=>{
-      const input=document.getElementById(button.dataset.passwordToggle);
-      if(!input)return;
-      const showing=input.type==='text';
-      input.type=showing?'password':'text';
-      button.textContent=showing?'Show':'Hide';
-    }));
-    document.querySelectorAll('#account-modal form').forEach((form)=>form.addEventListener('submit',()=>{
-      let input=form.querySelector('input[name="return_to"]');
-      if(!input){input=document.createElement('input');input.type='hidden';input.name='return_to';form.appendChild(input)}
-      input.value=location.pathname+location.search+location.hash;
-    }));
     document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.addEventListener('click',()=>selectProfileTab(button.dataset.profileTab)));
-    const profilePasswordEye=document.getElementById('profile-password-eye');
-    const profilePasswordMessage=document.getElementById('profile-password-message');
-    profilePasswordEye?.addEventListener('click',()=>{
-      const showing=profilePasswordMessage?.classList.toggle('show');
-      profilePasswordEye.classList.toggle('active',Boolean(showing));
-      profilePasswordEye.setAttribute('aria-expanded',showing?'true':'false');
-    });
     const planForm=document.getElementById('profile-plan-form');
     planForm?.addEventListener('submit',async(event)=>{
       event.preventDefault();
@@ -3787,9 +3381,6 @@ function referenceJavascript() {
         if(!response.ok)throw new Error(data.error||'Could not change the testing plan');
         profileText('profile-plan',titleCase(data.subscription?.plan_code||select.value));
         profileText('profile-subscription-status',titleCase(data.subscription?.status||'active'));
-        const statusNode=document.getElementById('profile-subscription-status');
-        statusNode?.classList.remove('none','inactive');
-        statusNode?.classList.add('active');
         profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
         message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||select.value)+'. No payment was charged.';
       }catch(error){
@@ -3809,6 +3400,7 @@ function referenceJavascript() {
       return fetch('/api/auth/status',{credentials:'same-origin'})
         .then((response)=>response.ok?response.json():Promise.reject())
         .then((status)=>{
+          const wasAuthenticated=authenticated;
           authenticated=Boolean(status.authenticated);
           if(authenticated){
             stopAuthPoll();
@@ -3816,13 +3408,7 @@ function referenceJavascript() {
             demoLink?.classList.remove('requires-signin');
             if(demoLock)demoLock.hidden=true;
             if(demoFrame&&demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame);
-            if(status.credentials_required){
-              closeProfile();
-              showAccountView('setup');
-            }else{
-              closeAccount();
-              if(params.get('signed_in')==='1'||params.get('profile')==='1')openProfile();
-            }
+            if(params.get('signed_in')==='1'||params.get('profile')==='1'||(!wasAuthenticated&&params.get('sent')==='1'))openProfile();
           }else{
             demoLink?.classList.add('requires-signin');
             if(demoLock)demoLock.hidden=false;
@@ -3832,12 +3418,7 @@ function referenceJavascript() {
             }
             if(params.get('open_signin')==='1')openAccount();
           }
-          if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key))){
-            const cleanParams=new URLSearchParams(location.search);
-            ['sent','signed_in','profile','open_signin'].forEach((key)=>cleanParams.delete(key));
-            const cleanQuery=cleanParams.toString();
-            history.replaceState({},'',location.pathname+(cleanQuery?'?'+cleanQuery:'')+location.hash);
-          }
+          if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key)))history.replaceState({},'',location.pathname+location.hash);
         })
         .catch(()=>{});
     }
@@ -3857,35 +3438,6 @@ function referenceHome(c) {
 
 function referenceSimple(title, eyebrow, text, c) {
   return referenceShell(`${title} | Fise AI`,String(text).replaceAll("|"," ").slice(0,155),html`<main class="simple-reference"><div class="video-container"><article><div class="reference-eyebrow">${escapeWebsiteHtml(eyebrow)}</div><h1>${escapeWebsiteHtml(title)}</h1>${paragraphs(text)}</article></div></main>`,c);
-}
-
-function referenceBlog(c) {
-  return referenceShell(
-    "Practical AI Chatbot Guides | Fise AI",
-    "Simple, useful guides for building a helpful AI website chatbot and improving customer conversations.",
-    html`<main class="blog-reference"><div class="video-container">
-      <header class="blog-hero"><div class="reference-eyebrow">${escapeWebsiteHtml(c.blog_eyebrow || "Practical guidance")}</div><h1>Simple ideas for better customer conversations</h1><p>Clear, honest advice to help you set up your website chatbot, keep its answers useful and turn more visits into real enquiries.</p></header>
-      <nav class="blog-grid" aria-label="Blog articles">
-        <a class="blog-card" href="#what-a-chatbot-should-do"><small>Chatbot basics · 4 min</small><h2>What should an AI website chatbot actually do?</h2><p>Focus on the small number of jobs that genuinely help visitors and your team.</p><span>Read article →</span></a>
-        <a class="blog-card" href="#prepare-your-website"><small>Website scan · 5 min</small><h2>How to prepare your website before scanning it</h2><p>A few simple checks can make your chatbot’s answers much more accurate.</p><span>Read article →</span></a>
-        <a class="blog-card" href="#human-handover"><small>Customer support · 4 min</small><h2>When should your chatbot hand over to a person?</h2><p>Good automation knows when to help and when to bring in your team.</p><span>Read article →</span></a>
-        <a class="blog-card" href="#measure-results"><small>Performance · 5 min</small><h2>How to tell if your chatbot is helping your business</h2><p>Track a few useful signs instead of getting lost in complicated reports.</p><span>Read article →</span></a>
-        <a class="blog-card" href="#keep-answers-accurate"><small>Maintenance · 4 min</small><h2>How to keep chatbot answers accurate over time</h2><p>A short monthly routine can prevent most outdated or confusing answers.</p><span>Read article →</span></a>
-      </nav>
-      <div class="blog-list">
-        <article class="blog-article" id="what-a-chatbot-should-do"><header><small>Chatbot basics</small><h2>What should an AI website chatbot actually do?</h2></header><div class="blog-copy"><p>A good website chatbot does not need to sound clever. It needs to be useful. Most visitors arrive with a simple question: What do you offer? How much does it cost? Are you available? How do I book or contact someone?</p><p>Your chatbot should answer these common questions quickly, guide people to the right page and make the next step obvious. If a visitor is ready to speak to your business, the chatbot should collect the right details or show a clear contact option.</p><h3>Keep its main jobs simple</h3><ul><li>Answer questions using approved business information.</li><li>Help visitors find services, pricing, locations or contact details.</li><li>Collect useful enquiries without asking for unnecessary information.</li><li>Send uncertain or sensitive questions to a real person.</li></ul><p>Do not expect the chatbot to handle every situation. A focused assistant normally gives better answers than one with too many instructions and no clear purpose.</p><div class="blog-tip"><strong>Practical tip:</strong> Write down the ten questions your customers ask most often. Test each one before placing the chatbot on your website.</div></div></article>
-
-        <article class="blog-article" id="prepare-your-website"><header><small>Website scan</small><h2>How to prepare your website before scanning it</h2></header><div class="blog-copy"><p>Your chatbot learns from the information it can read. If your website is clear and current, the chatbot has a much better starting point. You do not need a perfect website, but a quick tidy-up can prevent many poor answers.</p><h3>Check the pages that matter most</h3><ul><li>Make sure every service has a short, clear explanation.</li><li>Update prices, opening hours, phone numbers and email addresses.</li><li>Remove offers, team members or services that are no longer available.</li><li>Add a useful FAQ page for questions customers ask repeatedly.</li><li>Use clear page headings instead of vague marketing language.</li></ul><p>Also check that important information is written as normal page text. Details hidden inside an image may be difficult for a website scanner to understand.</p><p>After scanning, test the chatbot with real customer questions. If an answer is weak, improve the source page or add a short approved document, then update the website knowledge.</p><div class="blog-tip"><strong>Practical tip:</strong> Ask someone who does not work in your business to read the website. If they find something confusing, the chatbot may find it confusing too.</div></div></article>
-
-        <article class="blog-article" id="human-handover"><header><small>Customer support</small><h2>When should your chatbot hand over to a person?</h2></header><div class="blog-copy"><p>A helpful chatbot should never pretend to know something it cannot confirm. Trust matters more than forcing an answer.</p><p>A human handover is useful when a question involves a complaint, a special quotation, private information, an unusual request or a decision only your team can make. It is also the right choice when the visitor clearly asks to speak to someone.</p><h3>Make the handover easy</h3><p>Use friendly language such as: “I’m unable to confirm that, but our team can help.” Then offer one clear next step. This could be a contact form, phone number, WhatsApp link or a short lead form inside the chatbot.</p><p>Do not make people repeat their entire question. If you collect a lead, include their original enquiry so your team already understands what they need.</p><div class="blog-tip"><strong>Practical tip:</strong> Decide who receives chatbot enquiries and how quickly they should respond. A good handover only works when a real person follows up.</div></div></article>
-
-        <article class="blog-article" id="measure-results"><header><small>Performance</small><h2>How to tell if your chatbot is helping your business</h2></header><div class="blog-copy"><p>You do not need a complicated report to understand whether your chatbot is useful. Start with a few practical questions.</p><ul><li>Are visitors using it?</li><li>Are common questions being answered correctly?</li><li>Are people clicking helpful links or completing enquiry forms?</li><li>Is your team receiving better information before following up?</li><li>Which questions still cannot be answered?</li></ul><p>Conversation numbers are useful, but they do not tell the full story. Ten well-qualified enquiries may be more valuable than hundreds of short conversations that go nowhere.</p><p>Review a small sample of conversations every month. Look for repeated questions, unclear answers and places where visitors leave. These patterns can improve both the chatbot and the website itself.</p><div class="blog-tip"><strong>Practical tip:</strong> Choose one clear goal for the chatbot, such as more quote requests or fewer repeated support questions. Measure that goal consistently.</div></div></article>
-
-        <article class="blog-article" id="keep-answers-accurate"><header><small>Maintenance</small><h2>How to keep chatbot answers accurate over time</h2></header><div class="blog-copy"><p>Your business changes. Prices move, services are updated and team details change. A chatbot that was accurate six months ago may now give an old answer.</p><p>Set aside a short time each month to review the information your chatbot uses. You do not need to rebuild everything. Focus on the pages and documents most likely to change.</p><h3>A simple monthly check</h3><ul><li>Confirm prices, offers, opening hours and contact details.</li><li>Update the website knowledge after important website changes.</li><li>Test ten common customer questions.</li><li>Read a few recent conversations and note weak answers.</li><li>Remove old files or instructions that are no longer correct.</li></ul><p>When the chatbot cannot answer confidently, it should guide the visitor to support instead of guessing. This keeps the experience honest and protects customer trust.</p><div class="blog-tip"><strong>Practical tip:</strong> Add chatbot maintenance to an existing monthly business task. A regular fifteen-minute check is easier than fixing months of outdated information.</div></div></article>
-      </div>
-    </div></main>`,
-    c,
-  );
 }
 
 function legalDetails(c, origin) {
@@ -4030,56 +3582,6 @@ function referenceCheckout(plan, c) {
   );
 }
 
-function referenceContact(c, status = "") {
-  const isError = status === "error";
-  const message = status === "sent"
-    ? html`<p class="contact-message" role="status">Thanks — your message is on its way to the Fise AI team. We will get back to you soon.</p>`
-    : isError
-      ? html`<p class="contact-message error" role="alert">Your message could not be sent just now. Please try again or email us directly.</p>`
-      : "";
-  return referenceShell(
-    "Contact Fise AI",
-    "Contact Fise AI for help with an AI website chatbot, setup or a plan.",
-    html`<main class="contact-reference"><div class="video-container contact-layout"><section class="contact-intro"><div class="reference-eyebrow">Contact Fise AI</div><h1>Let’s make your website more helpful.</h1><p>Tell us what you need. Whether you are exploring Fise AI, setting up a chatbot or need support, we will point you in the right direction.</p><ul class="contact-points"><li>Ask about the right plan for your business.</li><li>Get help with chatbot setup or website scanning.</li><li>Share a question and our team will follow up.</li></ul></section><section class="contact-card">${message}<form method="post" action="/api/contact"><label for="contact-name">Your name<input id="contact-name" name="name" autocomplete="name" maxlength="120" required placeholder="Your name"></label><label for="contact-email">Email address<input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"></label><label for="contact-business">Business name <span>(optional)</span><input id="contact-business" name="business" autocomplete="organization" maxlength="160" placeholder="Your business"></label><label for="contact-message">How can we help?<textarea id="contact-message" name="message" maxlength="4000" required placeholder="Tell us a little about what you need."></textarea></label><button class="reference-button dark" type="submit">Send message <span>→</span></button><p class="contact-note">We only use these details to respond to your query.</p></form></section></div></main>`,
-    c,
-  );
-}
-
-async function submitContactRequest(request, env) {
-  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
-  const form = await request.formData();
-  const name = String(form.get("name") || "").trim().replace(/[\r\n]+/g, " ").slice(0, 120);
-  const email = normalizeEmail(form.get("email"));
-  const business = String(form.get("business") || "").trim().replace(/[\r\n]+/g, " ").slice(0, 160);
-  const message = String(form.get("message") || "").trim().slice(0, 4000);
-  if (!name || !email || !message) return redirect("/contact?status=error");
-  if (!env.RESEND_API_KEY) return redirect("/contact?status=error");
-  const safeName = escapeHtml(name);
-  const safeEmail = escapeHtml(email);
-  const safeBusiness = escapeHtml(business || "Not provided");
-  const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
-  let sent = false;
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        from: "Fise AI <login@fise.get-found.co.za>",
-        to: ["sebslabbert1@gmail.com"],
-        reply_to: email,
-        subject: `New Fise AI contact query from ${name}`,
-        text: `Name: ${name}\nEmail: ${email}\nBusiness: ${business || "Not provided"}\n\nMessage:\n${message}`,
-        html: `<div style="font-family:Arial,sans-serif;max-width:620px;padding:24px;color:#102033"><h1 style="margin:0 0 18px;font-size:26px">New Fise AI contact query</h1><p><strong>Name:</strong> ${safeName}<br><strong>Email:</strong> ${safeEmail}<br><strong>Business:</strong> ${safeBusiness}</p><p style="line-height:1.6"><strong>Message:</strong><br>${safeMessage}</p></div>`,
-      }),
-    });
-    sent = response.ok;
-    if (!sent) console.error("Fise contact email failed", response.status);
-  } catch (error) {
-    console.error("Fise contact email error", error);
-  }
-  return redirect(sent ? "/contact?status=sent" : "/contact?status=error");
-}
-
 async function handlePublicWebsite(request, env) {
   const url = new URL(request.url);
   if (request.method !== "GET" || !PUBLIC_PATHS.has(url.pathname)) return null;
@@ -4089,7 +3591,7 @@ async function handlePublicWebsite(request, env) {
   if (url.pathname === "/ai-chatbots") return go("/#features");
   if (url.pathname === "/resources") return go("/#how-it-works");
   if (url.pathname === "/about") return response(referenceSimple(c.about_title,c.about_eyebrow,c.about_text,c));
-  if (url.pathname === "/blog") return response(referenceBlog(c));
+  if (url.pathname === "/blog") return response(referenceSimple(c.blog_title,c.blog_eyebrow,c.blog_text,c));
   if (url.pathname === "/privacy") return go("/privacy-policy");
   if (url.pathname === "/terms") return go("/terms-and-conditions");
   if (url.pathname === "/privacy-policy") return response(referenceLegal("privacy", c, url.origin));
@@ -4103,7 +3605,7 @@ async function handlePublicWebsite(request, env) {
     if (configured) return go(configured);
     return response(referenceCheckout(plan, c));
   }
-  return response(referenceContact(c, String(url.searchParams.get("status") || "")));
+  return response(referenceSimple(c.contact_title,c.contact_eyebrow,`${c.contact_text}|Email ${c.contact_email}`,c));
 }
 
 async function updateWebsiteContent(request, env, user) {
@@ -5106,7 +4608,6 @@ const MAGIC_LINK_SECONDS = 60 * 15;
 const CHATBOT_DELETE_LINK_SECONDS = 60 * 30;
 const CHATBOT_DELETE_REQUEST_LIMIT = 3;
 const DIRECT_EMAIL_LOGIN = false;
-const PASSWORD_ITERATIONS = 50000;
 
 const sharedStyles = html`
   :root { color-scheme:light; --blue:#1769e0; --blue2:#0d55bd; --dark:#102033;
@@ -5258,60 +4759,10 @@ const sharedStyles = html`
   15px;color:#fff;font-size:14px}.public-foot a{display:block;margin:9px
   0;color:#b8c8e2;text-decoration:none;font-size:13px}.public-foot
   a:hover{color:#fff}.public-foot-bottom{display:flex;justify-content:space-between;gap:20px;margin-top:45px;padding-top:22px;border-top:1px
-  solid #26395d;font-size:12px}
-  .dashboard-main{width:min(1180px,calc(100% - 40px));padding-top:42px}
-  .dashboard-hero{align-items:center;margin-bottom:24px;padding:0 2px}
-  .dashboard-hero h1{margin-bottom:8px;font-size:clamp(32px,4vw,46px)}
-  .dashboard-hero p{max-width:680px;margin:0;line-height:1.55}
-  .workspace-user{display:inline-flex;max-width:330px;min-height:38px;padding:0 13px;align-items:center;overflow:hidden;border:1px solid #dfe6ef;border-radius:999px;color:#536174;background:#fff;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;box-shadow:0 6px 18px rgba(22,45,76,.05)}
-  .dashboard-shell{display:grid;gap:20px}
-  .workspace-card{margin:0;padding:0;overflow:hidden;border-color:#dce4ee;border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(28,52,84,.08)}
-  .workspace-card .bot-top{align-items:center;padding:24px 26px;border-bottom:1px solid #e8edf3}
-  .usage-strip{display:grid;grid-template-columns:auto minmax(180px,1fr) auto;gap:18px;align-items:center;padding:16px 26px;border-bottom:1px solid #e8edf3;background:#fff}
-  .usage-strip small{display:block;margin-bottom:4px;color:#728094;font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.usage-strip strong{display:block;font-size:15px}.usage-meter{height:8px;overflow:hidden;border-radius:999px;background:#e7edf4}.usage-meter span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#1769e0,#32a9db)}.usage-count{color:#637083;font-size:11px;font-weight:750;white-space:nowrap}
-  .bot-identity{display:flex;min-width:0;align-items:center;gap:14px}
-  .bot-avatar{width:48px;height:48px;display:grid;place-items:center;flex:0 0 auto;border-radius:14px;color:#fff;background:linear-gradient(145deg,#1769e0,#0b4fae);box-shadow:0 9px 22px rgba(23,105,224,.2);font-size:18px;font-weight:900}
-  .bot-name-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .bot-name-row h2{margin:0;font-size:21px;letter-spacing:-.025em}
-  .bot-identity p{margin:3px 0;color:#637083;font-size:13px}
-  .bot-website{display:block;max-width:620px;overflow:hidden;color:#1769e0;text-decoration:none;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700}
-  .workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:22px 26px 26px;background:#f7f9fc}
-  .scan-box,.widget-tools{min-height:250px;margin:0;padding:22px;border:1px solid #dfe6ef;border-radius:16px;background:#fff;box-shadow:0 7px 22px rgba(31,55,86,.04)}
-  .scan-box.success{border-color:#cae8d7;background:#fff}
-  .scan-label{margin-bottom:13px;color:#728094;font-size:11px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
-  .scan-box>strong,.scan-title-row strong,.widget-tools h3{margin:0 0 7px;font-size:20px;letter-spacing:-.02em}
-  .scan-title-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
-  .scan-title-row strong{margin:0}
-  .scan-state-dot{width:10px;height:10px;flex:0 0 auto;border:3px solid #b9d2f6;border-radius:50%;background:#1769e0;box-shadow:0 0 0 4px #edf4ff}
-  .scan-complete-mark{width:25px;height:25px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;color:#fff;background:#167044;font-size:13px;font-weight:900}
-  .scan-percent{margin-left:auto;color:#1769e0;font-size:12px;font-weight:850}
-  .scan-box p,.widget-tools p{margin:0 0 15px;color:#637083;font-size:13px;line-height:1.55}
-  .scan-meta{display:flex;flex-wrap:wrap;gap:7px;margin:15px 0 18px}
-  .scan-meta span,.locked-step{padding:7px 9px;border-radius:8px;color:#536174;background:#f0f4f8;font-size:11px;font-weight:750}
-  .scan-box form{margin:0}.scan-box .btn{min-height:42px;padding:0 15px}
-  .progress{height:7px;margin:16px 0 12px;background:#e4ebf3}.progress span{background:linear-gradient(90deg,#1769e0,#35a8e0)}
-  .scan-error{display:grid;gap:4px;margin:14px 0;padding:11px 12px;border:1px solid #f0c4c4;border-radius:10px;color:#8f2525!important;background:#fff7f7;font-size:12px;line-height:1.45}
-  .scan-error strong{margin:0}.scan-error span{color:#8f2525}
-  .widget-tools{display:flex;flex-direction:column}
-  .widget-tools .button-row{margin-top:auto}
-  .widget-tools .btn{min-height:42px;padding:0 15px}
-  .action-count{display:inline-grid;min-width:20px;height:20px;place-items:center;margin-left:5px;border-radius:999px;background:rgba(16,32,51,.08);font-size:10px}
-  .pending-tools{justify-content:flex-start}.pending-tools .locked-step{width:max-content;margin-top:auto}
-  .advanced-details{border-top:1px solid #e5ebf2;background:#fff}
-  .advanced-details summary{display:flex;min-height:58px;padding:0 26px;align-items:center;justify-content:space-between;color:#536174;cursor:pointer;list-style:none;font-size:13px;font-weight:800}
-  .advanced-details summary::-webkit-details-marker{display:none}.advanced-details summary::after{content:"+";font-size:20px;font-weight:500}.advanced-details[open] summary::after{content:"−"}
-  .advanced-body{padding:0 26px 26px}.advanced-body .details{margin:0 0 14px}.advanced-body .details div{padding:13px;border:1px solid #e1e7ee;border-radius:11px;background:#f8fafc}
-  .install-block{margin-top:12px}.install-block>small{display:block;margin-bottom:7px;color:#637083;font-weight:750}.install-block .embed-code{margin:0}
-  .install-locked{padding:17px;border:1px solid #f0d1d1;border-radius:12px;background:#fff8f8}.install-locked strong{display:block;color:#8f2525;font-size:15px}.install-locked p{margin:6px 0 13px;color:#637083;font-size:12px;line-height:1.5}.install-locked .btn{min-height:38px;font-size:12px}
-  .advanced-body .delete-tools{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:18px;padding:16px;border-color:#f0d4d4;background:#fffafa}.advanced-body .delete-tools p{margin:4px 0 0}.advanced-body .delete-tools form{flex:0 0 auto}
-  .onboarding-card{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr);gap:38px;padding:34px;border-radius:20px;box-shadow:0 18px 50px rgba(28,52,84,.08)}
-  .onboarding-copy>p{color:#637083;line-height:1.6}
-  .setup-steps{display:grid;gap:4px;margin-top:26px}.setup-steps>div{display:grid;grid-template-columns:30px 1fr;column-gap:11px;padding:12px;border-radius:11px;color:#738094}.setup-steps>div.active{color:#102033;background:#eef5ff}.setup-steps span{width:30px;height:30px;display:grid;grid-row:1/3;place-items:center;border-radius:9px;color:#fff;background:#9aa8ba;font-size:12px;font-weight:900}.setup-steps .active span{background:#1769e0}.setup-steps strong{font-size:13px}.setup-steps small{margin-top:3px;font-size:11px;line-height:1.4}
-  .create-bot-form{padding:24px;border:1px solid #e0e6ed;border-radius:16px;background:#f9fbfd}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.create-bot-form label{margin:0;color:#3e4c5f;font-size:12px}.create-bot-form label input,.create-bot-form label textarea{margin-top:7px}.full-field{grid-column:1/-1}.colour-field{grid-column:1/-1}.colour-field input[type="color"]{width:62px;height:44px;padding:5px}.create-bot-form .btn.full{margin-top:18px}.form-assurance{margin:11px 0 0;color:#748092;text-align:center;font-size:11px}
-  @media (max-width:820px) {
-  .grid,.settings-grid,.workspace-grid,.onboarding-card{grid-template-columns:1fr}.usage-strip{grid-template-columns:1fr}.usage-count{white-space:normal}.setting-section.full{grid-column:auto}.dashboard-head{align-items:flex-start;flex-direction:column}.details{grid-template-columns:1fr}.public-links{display:none}.public-foot-grid{grid-template-columns:1fr
+  solid #26395d;font-size:12px} @media (max-width:820px) {
+  .grid,.settings-grid{grid-template-columns:1fr}.setting-section.full{grid-column:auto}.dashboard-head{align-items:flex-start;flex-direction:column}.details{grid-template-columns:1fr}.public-links{display:none}.public-foot-grid{grid-template-columns:1fr
   1fr} } @media (max-width:560px) { main{padding:38px 0
-  56px}.shell,.card{padding:21px}.wrap,.dashboard-main{width:min(100% - 24px,1080px)}.workspace-card{padding:0}.workspace-card .bot-top,.workspace-grid,.advanced-body{padding-left:18px;padding-right:18px}.workspace-card .bot-top{align-items:flex-start}.bot-identity{align-items:flex-start}.bot-avatar{width:42px;height:42px}.workspace-user{max-width:100%}.advanced-details summary{padding:0 18px}.advanced-body .delete-tools{align-items:stretch;flex-direction:column}.advanced-body .delete-tools .btn{width:100%}.form-grid{grid-template-columns:1fr}.full-field,.colour-field{grid-column:auto} }
+  56px}.shell,.card{padding:21px}.wrap{width:min(100% - 24px,1080px)} }
 `;
 
 function escapeHtml(value = "") {
@@ -5421,40 +4872,55 @@ function loginPage(message = "", isError = false, embedded = false) {
     html` <main class="wrap">
       <section class="shell">
         <div class="eyebrow">Customer platform</div>
-        <h1>Access Fise AI</h1>
-        <p class="lead">Create your account the first time, or sign in using your password or a one-time email link.</p>
+        <h1>Sign in to Fise AI</h1>
+        <p class="lead">
+          Enter your email address and we will send you a secure sign-in link.
+          After signing in, you will return to the Fise AI homepage and can
+          open My profile.
+        </p>
         ${notice}
-        <h2>First time here?</h2>
-        <form method="post" action="/api/auth/register">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <label for="register-username-page">Username</label><input id="register-username-page" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username" />
-          <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
-          <button class="btn full" type="submit">Create account</button>
-        </form>
-        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
-        <h2>Sign in with password</h2>
-        <form method="post" action="/api/auth/password">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="identifier-page">Email or username</label><input id="identifier-page" name="identifier" autocomplete="username" maxlength="254" required />
-          <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
-          <button class="btn full" type="submit">Sign in with password</button>
-        </form>
-        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
-        <h2>Sign in with email</h2>
         <form method="post" action="/api/auth/request">
           ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <button class="btn full" type="submit">Email me a one-time link</button>
+          <label for="email">Email address</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            maxlength="254"
+            required
+            placeholder="you@company.com"
+          />
+          <button class="btn full" type="submit">Email me a sign-in link</button>
         </form>
-        <p class="fine">Passwords are stored as protected one-way hashes and cannot be displayed from storage.</p>
+        <p class="fine">
+          Use the same email address whenever you want to return to this
+          dashboard.
+        </p>
       </section>
     </main>`,
   );
 }
 
-function verificationPage(success = true, message = "You can close this window and return to the Fise sign-in page.") {
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p></main></body></html>`;
+function verificationSuccessPage() {
+  return documentPage(
+    "Successfully verified",
+    html` <main class="wrap">
+      <section class="shell" style="text-align:center">
+        <div
+          aria-hidden="true"
+          style="width:64px;height:64px;display:grid;place-items:center;margin:0 auto 22px;border-radius:50%;color:#fff;background:var(--ok);font-size:34px;font-weight:900"
+        >
+          ✓
+        </div>
+        <div class="eyebrow">Email verified</div>
+        <h1>Successfully verified</h1>
+        <p class="lead" style="margin:0 auto">
+          You can close this window now and return to your browser.
+        </p>
+      </section>
+    </main>`,
+  );
 }
 
 function dashboardPage(
@@ -5473,121 +4939,189 @@ function dashboardPage(
   const botList = chatbots.length
     ? chatbots
         .map(
-          (bot) => {
-            const planCode = normalizedPlanCode(bot.plan_code);
-            const conversationLimit = Number(bot.conversation_limit || planConversationLimit(planCode));
-            const conversationUsed = Math.max(0, Number(bot.conversations_used || 0));
-            const conversationsRemaining = Math.max(0, conversationLimit - conversationUsed);
-            const usagePercent = Math.min(100, Math.round((conversationUsed / conversationLimit) * 100));
-            const isFree = planCode === "free";
-            return html` <article class="bot-card workspace-card">
+          (bot) =>
+            html` <article class="bot-card">
               <div class="bot-top">
-                <div class="bot-identity">
-                  <span class="bot-avatar" aria-hidden="true">${escapeHtml(String(bot.name || "F").charAt(0).toUpperCase())}</span>
-                  <div>
-                    <div class="bot-name-row"><h2>${escapeHtml(bot.name)}</h2><span class="plan-badge">${escapeHtml(planCode)}</span></div>
-                    <p>${escapeHtml(bot.business_name || "Your business")}</p>
-                    <a class="bot-website" href="${escapeHtml(bot.website_url || "#")}" target="_blank" rel="noopener">${escapeHtml(bot.website_url || "Website not set")}</a>
+                <div>
+                  <strong>${escapeHtml(bot.name)}</strong
+                  ><span class="plan-badge"
+                    >${escapeHtml(bot.plan_code || "starter")}</span
+                  >
+                  <div class="muted">
+                    ${escapeHtml(bot.business_name || "")}
                   </div>
                 </div>
                 <span class="badge">${escapeHtml(bot.status)}</span>
               </div>
-              <div class="usage-strip">
-                <div><small>Monthly usage</small><strong>${conversationsRemaining.toLocaleString()} conversations remaining</strong></div>
-                <div class="usage-meter" role="progressbar" aria-label="Monthly conversations used" aria-valuemin="0" aria-valuemax="${conversationLimit}" aria-valuenow="${Math.min(conversationUsed, conversationLimit)}"><span style="width:${usagePercent}%"></span></div>
-                <span class="usage-count">${Math.min(conversationUsed, conversationLimit).toLocaleString()} of ${conversationLimit.toLocaleString()} used</span>
+              <div class="details">
+                <div>
+                  <small>Website</small
+                  ><code>${escapeHtml(bot.website_url || "Not set")}</code>
+                </div>
+                <div>
+                  <small>OpenAI vector store</small
+                  ><code
+                    >${escapeHtml(bot.vector_store_id || "Being prepared")}</code
+                  >
+                </div>
+                <div>
+                  <small>Public chatbot key</small
+                  ><code>${escapeHtml(bot.public_key)}</code>
+                </div>
+                <div>
+                  <small>Model</small><code>${escapeHtml(bot.model)}</code>
+                </div>
               </div>
-              <div class="workspace-grid">
-                ${renderScanControls(bot, embedded)}
-                ${
+              ${renderScanControls(bot, embedded)}
+              ${
           bot.status === "ready"
             ? html` <div class="widget-tools">
-                <div class="scan-label">Chatbot tools</div>
-                <h3>Ready to customise</h3>
-                <p>Update the design and answers, test the experience, or review captured leads.</p>
+                <h3>Live chatbot</h3>
+                <p>
+                  Customize the experience, test it, then copy the installation
+                  code into the customer website.
+                </p>
                 <div class="button-row">
                   <a
                     class="btn"
                     href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"
-                    >Customise chatbot</a
+                    >Customize</a
                   >
                   <a
                     class="btn ghost"
                     href="/widget/test?key=${encodeURIComponent(bot.public_key)}"
-                    >Preview</a
+                    >Test chatbot</a
                   >
                   <a
                     class="btn ghost"
                     href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"
-                    >Leads <span class="action-count">${Number(bot.lead_count || 0)}</span></a
+                    >Leads (${Number(bot.lead_count || 0)})</a
                   >
                 </div>
+                <code class="embed-code"
+                  >&lt;script
+                  src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260829-support-1&quot;
+                  data-chatbot-key=&quot;${escapeHtml(bot.public_key)}&quot;&gt;&lt;/script&gt;</code
+                >
               </div>`
-            : html`<div class="widget-tools pending-tools"><div class="scan-label">Next step</div><h3>Complete the website scan</h3><p>Once your website knowledge is ready, you can customise and preview your chatbot here.</p><div class="locked-step">Chatbot tools unlock after scanning</div></div>`
+            : ""
         }
+              <div class="delete-tools">
+                <strong>Delete this chatbot permanently</strong>
+                <p>
+                  For security, Fise will email ${escapeHtml(user.email)} a
+                  30-minute confirmation link. Opening the email will not
+                  delete anything until the final button is pressed.
+                </p>
+                <form
+                  method="post"
+                  action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}"
+                >
+                  <button class="btn danger" type="submit">
+                    Email deletion confirmation
+                  </button>
+                </form>
               </div>
-              <details class="advanced-details">
-                <summary>Installation and technical details</summary>
-                <div class="advanced-body">
-                  <div class="details">
-                    <div><small>Model</small><code>${escapeHtml(bot.model)}</code></div>
-                    <div><small>Public chatbot key</small><code>${escapeHtml(bot.public_key)}</code></div>
-                    <div><small>Knowledge store</small><code>${escapeHtml(bot.vector_store_id || "Being prepared")}</code></div>
-                  </div>
-                  ${bot.status === "ready" ? (isFree
-                    ? html`<div class="install-block install-locked"><small>Website installation code</small><strong>Upgrade to add this chatbot to your website</strong><p>The Free plan includes dashboard previews only. Choose a paid plan to unlock the installation code.</p><a class="btn" href="/#pricing">View plans</a></div>`
-                    : html`<div class="install-block"><small>Website installation code</small><code class="embed-code">&lt;script src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260830-free-plan-1&quot; data-chatbot-key=&quot;${escapeHtml(bot.public_key)}&quot;&gt;&lt;/script&gt;</code></div>`) : ""}
-                  <div class="delete-tools">
-                    <div><strong>Delete chatbot</strong><p>Fise will email ${escapeHtml(user.email)} a secure confirmation link before anything is deleted.</p></div>
-                    <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}">
-                      <button class="btn danger" type="submit">Request deletion</button>
-                    </form>
-                  </div>
-                </div>
-              </details>
-            </article>`;
-          },
+            </article>`,
         )
         .join("")
-    : "";
+    : html`<div class="empty">No chatbot has been created yet.</div>`;
 
   const createPanel = chatbots.length
-    ? ""
-    : html`<section class="card onboarding-card">
-        <div class="onboarding-copy">
-          <div class="eyebrow">Quick setup</div>
-          <h2>Create your chatbot</h2>
-          <p>Start with the essentials. You can customise every detail after your website has been scanned.</p>
-          <div class="setup-steps"><div class="active"><span>1</span><strong>Business details</strong><small>Name your chatbot and add your website.</small></div><div><span>2</span><strong>Scan website</strong><small>Fise securely prepares up to 100 useful pages.</small></div><div><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div></div>
-        </div>
-        <form class="create-bot-form" method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
-          <div class="form-grid">
-            <label>Business name<input id="business_name" name="business_name" maxlength="100" required placeholder="Example Company" /></label>
-            <label>Chatbot name<input id="name" name="name" maxlength="80" required placeholder="Example Assistant" /></label>
-            <label class="full-field">Website URL<input id="website_url" name="website_url" type="url" maxlength="500" required placeholder="https://example.com" /></label>
-            <label class="full-field">Opening greeting<input id="greeting" name="greeting" maxlength="240" value="Hi! How can I help you today?" required /></label>
-            <label class="colour-field">Brand colour<input id="primary_colour" name="primary_colour" type="color" value="#1769e0" required /></label>
-            <label class="full-field">Chatbot guidance <span class="muted">(optional)</span><textarea id="instructions" name="instructions" maxlength="2000" placeholder="Be friendly, concise and helpful."></textarea></label>
-          </div>
-          <button class="btn full" type="submit">Create chatbot</button>
-          <p class="form-assurance">Your website remains unchanged until you install the finished chatbot.</p>
+    ? html`<section class="card">
+        <h2>Knowledge training</h2>
+        <p class="muted">
+          Fise checks the main header pages first, then footer links and other
+          pages. It can add up to 100 public pages to the private OpenAI
+          knowledge store. A scan can take up to 5 minutes.
+        </p>
+      </section>`
+    : html`<section class="card">
+        <div class="eyebrow">Step 1 of 3</div>
+        <h2>Create your first chatbot</h2>
+        <p class="muted">
+          Fise will automatically create a separate OpenAI knowledge store for
+          this chatbot.
+        </p>
+        <form method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
+          <label for="business_name">Business name</label>
+          <input
+            id="business_name"
+            name="business_name"
+            maxlength="100"
+            required
+            placeholder="Example Company"
+          />
+          <label for="name">Chatbot name</label>
+          <input
+            id="name"
+            name="name"
+            maxlength="80"
+            required
+            placeholder="Example Support Assistant"
+          />
+          <label for="website_url">Website URL</label>
+          <input
+            id="website_url"
+            name="website_url"
+            type="url"
+            maxlength="500"
+            required
+            placeholder="https://example.com"
+          />
+          <label for="greeting">Opening greeting</label>
+          <input
+            id="greeting"
+            name="greeting"
+            maxlength="240"
+            value="Hi! How can I help you today?"
+            required
+          />
+          <label for="primary_colour">Brand colour</label>
+          <input
+            id="primary_colour"
+            name="primary_colour"
+            type="color"
+            value="#1769e0"
+            required
+          />
+          <label for="instructions"
+            >How should it behave? <span class="muted">(optional)</span></label
+          >
+          <textarea
+            id="instructions"
+            name="instructions"
+            maxlength="2000"
+            placeholder="Be friendly, concise and helpful."
+          ></textarea>
+          <button class="btn full" type="submit">
+            Create chatbot and knowledge store
+          </button>
         </form>
       </section>`;
 
   const page = embedded ? embeddedDocumentPage : documentPage;
   return page(
     "Dashboard",
-    html` <main class="wrap dashboard-main">
-      <div class="dashboard-head dashboard-hero">
+    html` <main class="wrap">
+      <div class="dashboard-head">
         <div>
-          <div class="eyebrow">Fise workspace</div>
-          <h1>Chatbot dashboard</h1>
-          <p class="muted">Manage your website knowledge, chatbot experience and leads in one place.</p>
+          <div class="eyebrow">Customer dashboard</div>
+          <h1>Your chatbots</h1>
+          <p class="muted">Signed in as ${escapeHtml(user.email)}</p>
         </div>
-        <span class="workspace-user">${escapeHtml(user.email)}</span>
       </div>
       ${notice}
-      <div class="dashboard-shell">${botList}${createPanel}</div>
+      <div class="grid">
+        <section class="card">
+          <h2>Chatbot workspace</h2>
+          <p class="muted">
+            Each chatbot keeps its own settings and OpenAI vector store.
+          </p>
+          ${botList}
+        </section>
+        ${createPanel}
+      </div>
       <script src="/dashboard-progress.js" defer></script>
     </main>`,
   );
@@ -5686,100 +5220,6 @@ function normalizeEmail(value) {
   return email;
 }
 
-function normalizeUsername(value) {
-  const username = String(value || "").trim().replace(/\s+/g, " ");
-  if (username.length < 3 || username.length > 40) return "";
-  if (!/^[\p{L}\p{N}._ -]+$/u.test(username)) return "";
-  return username;
-}
-
-async function ensureAccountAuthSchema(env) {
-  // D1 promises are request-scoped in Cloudflare Workers. Never cache this
-  // promise at module level or a later browser request can throw error 1101.
-  const info = await env.DB.prepare("PRAGMA table_info(users)").all();
-  const columns = new Set((info.results || []).map((row) => row.name));
-  const additions = [
-    ["username", "TEXT"],
-    ["password_hash", "TEXT"],
-    ["password_salt", "TEXT"],
-    ["password_iterations", "INTEGER"],
-  ];
-  for (const [name, type] of additions) {
-    if (!columns.has(name))
-      await env.DB.prepare(`ALTER TABLE users ADD COLUMN ${name} ${type}`).run();
-  }
-  await env.DB.prepare(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_nocase ON users(username COLLATE NOCASE)",
-  ).run();
-}
-
-function bytesToBase64Url(bytes) {
-  let binary = "";
-  for (const value of bytes) binary += String.fromCharCode(value);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-function base64UrlToBytes(value) {
-  const padded = String(value).replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(String(value).length / 4) * 4, "=");
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
-async function passwordDigest(password, salt, iterations = PASSWORD_ITERATIONS) {
-  if (Number(iterations) === 0) {
-    const combined = new Uint8Array(salt.length + new TextEncoder().encode(password).length);
-    combined.set(salt, 0);
-    combined.set(new TextEncoder().encode(password), salt.length);
-    const digest = await crypto.subtle.digest("SHA-256", combined);
-    return bytesToBase64Url(new Uint8Array(digest));
-  }
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
-    key,
-    256,
-  );
-  return bytesToBase64Url(new Uint8Array(bits));
-}
-
-async function makePasswordRecord(password) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  return {
-    hash: await passwordDigest(password, salt),
-    salt: bytesToBase64Url(salt),
-    iterations: PASSWORD_ITERATIONS,
-  };
-}
-
-async function passwordMatches(password, user) {
-  if (!user?.password_hash || !user?.password_salt) return false;
-  const actual = await passwordDigest(
-    password,
-    base64UrlToBytes(user.password_salt),
-    user.password_iterations === null || user.password_iterations === undefined
-      ? PASSWORD_ITERATIONS
-      : Number(user.password_iterations),
-  );
-  const expected = String(user.password_hash);
-  if (actual.length !== expected.length) return false;
-  let difference = 0;
-  for (let index = 0; index < actual.length; index++)
-    difference |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
-  return difference === 0;
-}
-
-
-function validPassword(value) {
-  const password = String(value || "");
-  return password.length >= 8 && password.length <= 128 ? password : "";
-}
-
 function dashboardReturnUrl(request, values = {}) {
   const params = new URLSearchParams();
   if (new URL(request.url).searchParams.get("embed") === "1")
@@ -5790,25 +5230,6 @@ function dashboardReturnUrl(request, values = {}) {
   }
   const query = params.toString();
   return "/dashboard" + (query ? "?" + query : "");
-}
-
-function safeReturnPath(value, fallback = "/") {
-  const path = String(value || "").trim();
-  if (!path.startsWith("/") || path.startsWith("//") || /[\r\n]/.test(path))
-    return fallback;
-  try {
-    const url = new URL(path, "https://fise.local");
-    if (url.origin !== "https://fise.local") return fallback;
-    return url.pathname + url.search + url.hash;
-  } catch {
-    return fallback;
-  }
-}
-
-function returnPathWithFlag(path, key, value = "1") {
-  const url = new URL(safeReturnPath(path), "https://fise.local");
-  url.searchParams.set(key, value);
-  return url.pathname + url.search + url.hash;
 }
 
 function sameOrigin(request) {
@@ -5833,15 +5254,13 @@ function sameOrigin(request) {
 }
 
 async function currentUser(request, env) {
-  await ensureAccountAuthSchema(env);
   const token = cookieValue(request, SESSION_COOKIE);
   if (!token) return null;
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1000);
   return env.DB.prepare(
     `
-    SELECT users.id, users.email, users.name, users.username, users.created_at,
-      CASE WHEN users.password_hash IS NOT NULL AND users.password_hash != '' THEN 1 ELSE 0 END AS password_set
+    SELECT users.id, users.email, users.name, users.created_at
     FROM sessions JOIN users ON users.id = sessions.user_id
     WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'
   `,
@@ -5850,22 +5269,7 @@ async function currentUser(request, env) {
     .first();
 }
 
-async function createUserSession(userId, env, destination) {
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const nowIso = new Date().toISOString();
-  const sessionToken = randomToken();
-  const sessionHash = await hashToken(sessionToken);
-  await env.DB.prepare(
-    "INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)",
-  )
-    .bind(sessionHash, userId, nowSeconds + SESSION_SECONDS, nowIso)
-    .run();
-  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
-  return redirect(destination, { "set-cookie": cookie });
-}
-
 async function createEmailSession(email, env, destination = "/?signed_in=1") {
-  await ensureAccountAuthSchema(env);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const nowIso = new Date().toISOString();
   let user = await env.DB.prepare("SELECT id,email FROM users WHERE email = ?")
@@ -5888,88 +5292,16 @@ async function createEmailSession(email, env, destination = "/?signed_in=1") {
       .run();
   }
 
-  return createUserSession(user.id, env, destination);
-}
-
-async function registerAccount(request, env) {
-  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
-  await ensureAccountAuthSchema(env);
-  const form = await request.formData();
-  const email = normalizeEmail(form.get("email"));
-  const username = normalizeUsername(form.get("username"));
-  const password = validPassword(form.get("password"));
-  const embedded = String(form.get("embed") || "") === "1";
-  const returnTo = safeReturnPath(form.get("return_to"));
-  if (!email || !username || !password)
-    return htmlResponse(loginPage("Enter a valid email, a 3–40 character username, and a password of at least 8 characters.", true, embedded), 400);
-  const existing = await env.DB.prepare(
-    "SELECT id,email,username,password_hash FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
-  ).bind(email, username).first();
-  if (existing)
-    return htmlResponse(loginPage(
-      existing.email === email
-        ? "An account already uses this email. Sign in with your password or one-time email link."
-        : "That username is already in use. Choose another username.",
-      true,
-      embedded,
-    ), 409);
-  const record = await makePasswordRecord(password);
-  const userId = crypto.randomUUID();
-  const now = new Date().toISOString();
+  const sessionToken = randomToken();
+  const sessionHash = await hashToken(sessionToken);
   await env.DB.prepare(
-    "INSERT INTO users (id,email,username,password_hash,password_salt,password_iterations,status,created_at,updated_at) VALUES (?,?,?,?,?,?,'active',?,?)",
-  ).bind(userId, email, username, record.hash, record.salt, record.iterations, now, now).run();
-  return createUserSession(userId, env, embedded ? "/dashboard?embed=1" : returnTo);
+    "INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)",
+  )
+    .bind(sessionHash, user.id, nowSeconds + SESSION_SECONDS, nowIso)
+    .run();
+  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
+  return redirect(destination, { "set-cookie": cookie });
 }
-
-async function passwordLogin(request, env) {
-  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
-  await ensureAccountAuthSchema(env);
-  const form = await request.formData();
-  const identifier = String(form.get("identifier") || "").trim();
-  const password = String(form.get("password") || "");
-  const embedded = String(form.get("embed") || "") === "1";
-  const returnTo = safeReturnPath(form.get("return_to"));
-  const user = await env.DB.prepare(
-    "SELECT id,email,username,password_hash,password_salt,password_iterations,status FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
-  ).bind(normalizeEmail(identifier), identifier).first();
-  if (!user || user.status !== "active" || !(await passwordMatches(password, user))) {
-    const legacy = user && !user.password_hash;
-    return htmlResponse(loginPage(
-      legacy
-        ? "Use the one-time email link once, then Fise will ask you to create a username and password."
-        : "The email or username and password do not match.",
-      true,
-      embedded,
-    ), 401);
-  }
-  await env.DB.prepare("UPDATE users SET updated_at=? WHERE id=?")
-    .bind(new Date().toISOString(), user.id).run();
-  return createUserSession(user.id, env, embedded ? "/dashboard?embed=1" : returnTo);
-}
-
-async function saveAccountCredentials(request, env) {
-  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
-  const user = await currentUser(request, env);
-  if (!user) return redirect("/login");
-  const form = await request.formData();
-  const username = normalizeUsername(form.get("username"));
-  const password = validPassword(form.get("password"));
-  const returnTo = safeReturnPath(form.get("return_to"));
-  if (!username || !password)
-    return htmlResponse(loginPage("Choose a valid 3–40 character username and a password of at least 8 characters.", true), 400);
-  const duplicate = await env.DB.prepare(
-    "SELECT id FROM users WHERE username=? COLLATE NOCASE AND id!=? LIMIT 1",
-  ).bind(username, user.id).first();
-  if (duplicate)
-    return htmlResponse(loginPage("That username is already in use. Choose another username.", true), 409);
-  const record = await makePasswordRecord(password);
-  await env.DB.prepare(
-    "UPDATE users SET username=?,password_hash=?,password_salt=?,password_iterations=?,updated_at=? WHERE id=?",
-  ).bind(username, record.hash, record.salt, record.iterations, new Date().toISOString(), user.id).run();
-  return redirect(returnTo);
-}
-
 
 async function requestMagicLink(request, env) {
   if (!sameOrigin(request))
@@ -5978,7 +5310,6 @@ async function requestMagicLink(request, env) {
   const form = await request.formData();
   const email = normalizeEmail(form.get("email"));
   const embedded = String(form.get("embed") || "") === "1";
-  const returnTo = safeReturnPath(form.get("return_to"));
   if (!email)
     return htmlResponse(
       loginPage("Enter a valid email address.", true, embedded),
@@ -5988,7 +5319,7 @@ async function requestMagicLink(request, env) {
     return createEmailSession(
       email,
       env,
-      embedded ? "/dashboard?embed=1" : returnTo,
+      embedded ? "/dashboard?embed=1" : "/?signed_in=1",
     );
   if (!env.RESEND_API_KEY)
     return htmlResponse(
@@ -6080,15 +5411,14 @@ async function requestMagicLink(request, env) {
     );
   }
 
-  return redirect(returnPathWithFlag(returnTo, "sent"));
+  return redirect("/?sent=1");
 }
 
 async function verifyMagicLink(request, env) {
-  await ensureAccountAuthSchema(env);
   const url = new URL(request.url);
   const token = url.searchParams.get("token") || "";
   if (token.length < 20)
-    return htmlResponse(verificationPage(false, "This verification link is invalid. Return to the original sign-in page and request a new one."), 400);
+    return htmlResponse(loginPage("This sign-in link is invalid.", true), 400);
 
   const tokenHash = await hashToken(token);
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -6099,7 +5429,10 @@ async function verifyMagicLink(request, env) {
     .first();
   if (!link || link.used_at || Number(link.expires_at) <= nowSeconds) {
     return htmlResponse(
-      verificationPage(false, "This one-time link has expired or has already been used. Return to the original sign-in page to request a new one."),
+      loginPage(
+        "This sign-in link has expired or has already been used. Request a new one.",
+        true,
+      ),
       400,
     );
   }
@@ -6112,7 +5445,10 @@ async function verifyMagicLink(request, env) {
     .run();
   if (Number(claimed.meta?.changes || 0) !== 1) {
     return htmlResponse(
-      verificationPage(false, "This one-time link has expired or has already been used. Return to the original sign-in page to request a new one."),
+      loginPage(
+        "This sign-in link has expired or has already been used. Request a new one.",
+        true,
+      ),
       400,
     );
   }
@@ -6122,9 +5458,14 @@ async function verifyMagicLink(request, env) {
     .first();
   if (!user) {
     const userId = crypto.randomUUID();
-    await env.DB.prepare(
-      "INSERT INTO users (id,email,status,created_at,updated_at) VALUES (?,?,'active',?,?)",
-    ).bind(userId, link.email, nowIso, nowIso).run();
+    await env.DB.batch([
+      env.DB.prepare(
+        "INSERT INTO users (id,email,status,created_at,updated_at) VALUES (?,?,'active',?,?)",
+      ).bind(userId, link.email, nowIso, nowIso),
+      env.DB.prepare(
+        "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'manual','starter','active',?,?)",
+      ).bind(crypto.randomUUID(), userId, nowIso, nowIso),
+    ]);
     user = { id: userId, email: link.email };
   } else {
     await env.DB.prepare("UPDATE users SET updated_at = ? WHERE id = ?")
@@ -6142,7 +5483,7 @@ async function verifyMagicLink(request, env) {
     .run();
 
   const cookie = `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
-  return htmlResponse(verificationPage(true), 200, {
+  return htmlResponse(verificationSuccessPage(), 200, {
     "set-cookie": cookie,
   });
 }
@@ -6540,23 +5881,17 @@ async function accountProfile(request, env) {
       .all(),
     readWebsiteContent(env),
   ]);
-  const rawSubscriptionStatus = String(subscription?.status || "").toLowerCase();
-  const subscriptionWithDisplay = subscription
-    ? {
-        ...subscription,
-        display_status: ["active", "trialing"].includes(rawSubscriptionStatus)
-          ? "Active"
-          : "Inactive",
-      }
-    : null;
   return json({
     account: {
       email: user.email,
-      username: user.username || "",
-      password_set: Boolean(Number(user.password_set || 0)),
+      name: user.name || "",
       created_at: user.created_at || "",
     },
-    subscription: subscriptionWithDisplay,
+    subscription: subscription || {
+      plan_code: "starter",
+      status: "active",
+      provider: "Fise AI",
+    },
     chatbots: chatbotResult.results || [],
     affiliate: {
       status: "Not enrolled",
@@ -6578,10 +5913,6 @@ async function showDashboard(request, env) {
     `
     SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
       CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
-      (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
-       FROM messages m
-       JOIN conversations mc ON mc.id=m.conversation_id
-       WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
       (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
       (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
       (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
@@ -6591,7 +5922,7 @@ async function showDashboard(request, env) {
     WHERE c.user_id = ? ORDER BY c.created_at DESC
   `,
   )
-    .bind(monthStartIso(), user.id)
+    .bind(user.id)
     .all();
   const url = requestedUrl;
   let message = "";
@@ -6613,14 +5944,9 @@ async function showDashboard(request, env) {
     isError = true;
   }
   const embedded = url.searchParams.get("embed") === "1";
-  const dashboardBots = (result.results || []).map((bot) => ({
-    ...bot,
-    plan_code: normalizedPlanCode(bot.plan_code),
-    conversation_limit: planConversationLimit(bot.plan_code),
-  }));
   const content = dashboardPage(
     user,
-    dashboardBots,
+    result.results || [],
     new URL(request.url).origin,
     message,
     isError,
@@ -6642,10 +5968,8 @@ function dashboardProgressJavascript() {
         const percent = Math.max(0, Math.min(100, Number(data.percent || 0)));
         const bar = box.querySelector('.progress span');
         const label = box.querySelector('.scan-progress-label');
-        const percentLabel = box.querySelector('.scan-percent');
         if (bar) bar.style.width = Math.max(5, percent) + '%';
-        if (label) label.textContent = data.pages_found ? data.pages_processed + ' of ' + data.pages_found + ' pages processed' : 'Finding the most useful public pages…';
-        if (percentLabel) percentLabel.textContent = percent + '%';
+        if (label) label.textContent = data.pages_found ? percent + '% complete' : 'Finding the most important pages…';
         if (!active.has(data.status)) location.reload();
       } catch {}
     }
@@ -7263,12 +6587,7 @@ function dashboardSettingsJavascript() {
       button.disabled = true;
       status.textContent = 'Reading the scanned website…';
       try {
-        const response = await fetch(button.dataset.url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'accept': 'application/json', 'content-type': 'application/json', 'x-fise-action': 'suggest-greeting' },
-          body: JSON.stringify({ previous_greeting: field.value })
-        });
+        const response = await fetch(button.dataset.url, { method: 'POST', credentials: 'same-origin', headers: { 'accept': 'application/json', 'x-fise-action': 'suggest-greeting' } });
         const raw = await response.text();
         let data = {};
         try { data = JSON.parse(raw); } catch { throw new Error('Your session may have expired. Refresh the page and try again.'); }
@@ -7290,11 +6609,10 @@ function responseOutputText(data) {
     return data.output_text.trim();
   const parts = [];
   for (const item of data.output || []) {
-    if (typeof item.text === "string") parts.push(item.text);
+    if (item.type !== "message") continue;
     for (const content of item.content || []) {
-      if (typeof content.text === "string") parts.push(content.text);
-      else if (typeof content.output_text === "string")
-        parts.push(content.output_text);
+      if (content.type === "output_text" && content.text)
+        parts.push(content.text);
     }
   }
   return parts.join("\n").trim();
@@ -7307,10 +6625,6 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
   if (!user) return json({ error: "Sign in again to continue." }, 401);
   const bot = await ownedChatbot(env, user.id, chatbotId);
   if (!bot) return json({ error: "Chatbot not found." }, 404);
-  const payload = await request.json().catch(() => ({}));
-  const previousGreeting = String(payload.previous_greeting || "")
-    .trim()
-    .slice(0, 500);
   const pages = await env.DB.prepare(
     `SELECT title,source_url FROM knowledge_sources WHERE chatbot_id=? AND status='completed' ORDER BY updated_at DESC LIMIT 8`,
   )
@@ -7327,39 +6641,12 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
     })
     .filter(Boolean)
     .slice(0, 6);
-  const firstWords = (value, maximum) =>
-    String(value || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, maximum)
-      .join(" ");
-  const primaryTopic = firstWords(
-    String(pageHints[0] || bot.business_name || "our services")
-      .split(/\s*[|–—]\s*/)[0]
-      .replace(/[,:;]+$/, ""),
-    8,
-  );
-  const shortName = firstWords(bot.name || "Fise", 3);
-  const fallbackOptions = [
-    `Hi, I’m ${shortName}. I can help with ${primaryTopic}. What would you like to know?`,
-    `Hello, I’m ${shortName}. Ask me about ${primaryTopic}, and I’ll help you find the right information.`,
-    `Welcome! I’m ${shortName}. Looking for help with ${primaryTopic}? Ask me anything to get started.`,
-    `Hi! I’m ${shortName}, your guide to ${primaryTopic}. What can I help you find today?`,
-  ];
-  const greetingKey = (value) =>
-    String(value || "")
-      .toLocaleLowerCase("en")
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
-      .trim();
-  const previousKey = greetingKey(previousGreeting);
-  const differentFallbacks = fallbackOptions.filter(
-    (option) => greetingKey(option) !== previousKey,
-  );
-  const randomValues = crypto.getRandomValues(new Uint32Array(1));
-  const fallback = differentFallbacks[
-    randomValues[0] % differentFallbacks.length
-  ];
+  const topicText = pageHints.slice(0, 3).join(", ");
+  const fallback =
+    `Hi, I’m ${bot.name}. I can help you with ${topicText || bot.business_name || "our services"}, answer common questions and guide you to the right next step. What would you like help with today?`.slice(
+      0,
+      500,
+    );
   if (!env.OPENAI_API_KEY || !bot.vector_store_id || bot.status !== "ready") {
     return json({ greeting: fallback, fallback: true });
   }
@@ -7375,14 +6662,14 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
       },
       body: JSON.stringify({
         model: bot.model || "gpt-5-mini",
-        instructions: `Create one concise, welcoming opening message for ${bot.name}, the website chatbot for ${bot.business_name || "this business"}. Use the scanned website to mention one or two specific things the visitor can get help with. Include the chatbot name and end with a clear question. Use no more than 25 words. Return only the message as plain text.`,
+        instructions: `Create one welcoming opening message for ${bot.name}, the website chatbot for ${bot.business_name || "this business"}. Use the scanned website to mention two or three specific things the visitor can get help with. Make it warm, polished and useful rather than generic. Use 35 to 60 words. Start naturally, include the chatbot name, and end with a clear question. Return only the message as plain text.`,
         input: [
           {
             role: "user",
             content: [
               {
                 type: "input_text",
-                text: `Suggest the best opening message. Useful scanned page topics include: ${pageHints.join(", ") || "the business home page"}. The current message is: ${previousGreeting || "none"}. Create a clearly different alternative.`,
+                text: `Suggest the best opening message. Useful scanned page topics include: ${pageHints.join(", ") || "the business home page"}.`,
               },
             ],
           },
@@ -7395,7 +6682,7 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
           },
         ],
         reasoning: { effort: "low" },
-        max_output_tokens: 500,
+        max_output_tokens: 180,
         store: false,
       }),
       signal: AbortSignal.timeout(15000),
@@ -7420,14 +6707,11 @@ async function suggestChatbotGreeting(request, env, chatbotId) {
     .replace(/^['\"]|['\"]$/g, "")
     .trim()
     .slice(0, 500);
-  const greetingWordCount = greeting ? greeting.split(/\s+/).length : 0;
-  if (!greeting || greetingWordCount > 25 || greetingKey(greeting) === previousKey) {
-    console.error(
-      "Greeting suggestion was empty, repeated or exceeded 25 words",
-      JSON.stringify({ status: data.status, incomplete_details: data.incomplete_details, greetingWordCount }),
+  if (!greeting)
+    return json(
+      { error: "Fise could not create a useful suggestion. Please try again." },
+      502,
     );
-    return json({ greeting: fallback, fallback: true });
-  }
   return json({ greeting });
 }
 
@@ -7905,8 +7189,6 @@ export default {
         }
       }
 
-      if (url.pathname === "/fise-product-walkthrough.mp4" && request.method === "GET" && env.ASSETS)
-        return env.ASSETS.fetch(request);
       if (url.pathname === "/widget.js" && request.method === "GET")
         return serveWidgetScript();
       if (
@@ -7990,10 +7272,6 @@ export default {
       if (url.pathname === "/widget/test" && request.method === "GET") {
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
-        const key = String(url.searchParams.get("key") || "").slice(0, 180);
-        const owned = await env.DB.prepare("SELECT id FROM chatbots WHERE public_key=? AND user_id=? LIMIT 1")
-          .bind(key, user.id).first();
-        if (!owned) return response("Chatbot preview not found.", 404);
         return serveWidgetTest(request);
       }
       if (
@@ -8016,32 +7294,18 @@ export default {
       // Keep /demo as a convenient address for its embedded demo section.
       if (url.pathname === "/demo" && request.method === "GET")
         return redirect("/#demo");
-      if (url.pathname === "/api/contact" && request.method === "POST")
-        return submitContactRequest(request, env);
       const publicWebsiteResponse = await handlePublicWebsite(request, env);
       if (publicWebsiteResponse) return publicWebsiteResponse;
       if (url.pathname === "/api/auth/status" && request.method === "GET") {
         const user = await currentUser(request, env);
-        return json({
-          authenticated: Boolean(user),
-          email: user?.email || "",
-          credentials_required: Boolean(user && !Number(user.password_set || 0)),
-        });
+        return json({ authenticated: Boolean(user), email: user?.email || "" });
       }
-      if (url.pathname === "/auth/complete" && request.method === "GET")
-        return htmlResponse(verificationPage(false, "This verification window has finished. You can close it and return to the original sign-in page."));
       if (url.pathname === "/api/account/profile" && request.method === "GET")
         return accountProfile(request, env);
       if (url.pathname === "/api/account/testing-plan" && request.method === "POST")
         return changeTestingPlan(request, env);
       if (url.pathname === "/api/auth/request" && request.method === "POST")
         return requestMagicLink(request, env);
-      if (url.pathname === "/api/auth/register" && request.method === "POST")
-        return registerAccount(request, env);
-      if (url.pathname === "/api/auth/password" && request.method === "POST")
-        return passwordLogin(request, env);
-      if (url.pathname === "/api/account/credentials" && request.method === "POST")
-        return saveAccountCredentials(request, env);
       if (url.pathname === "/auth/verify" && request.method === "GET")
         return verifyMagicLink(request, env);
       if (url.pathname === "/dashboard" && request.method === "GET")
