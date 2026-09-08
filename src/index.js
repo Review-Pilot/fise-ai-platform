@@ -737,6 +737,7 @@ function parseUiSettings(value) {
     parsed = {};
   }
   return {
+    widget_version: parsed.widget_version === "2" ? "2" : "1",
     helpful_pages_enabled: parsed.helpful_pages_enabled === true,
     popular_questions_bold: parsed.popular_questions_bold !== false,
     popular_question_border: parsed.popular_question_border === "normal" ? "normal" : "bold",
@@ -747,6 +748,32 @@ function parseUiSettings(value) {
   };
 }
 
+async function tailoredPopularQuestions(env, bot) {
+  const result = await env.DB.prepare(`
+    SELECT title,source_url FROM knowledge_sources
+    WHERE chatbot_id=? AND status='completed'
+    ORDER BY updated_at DESC LIMIT 30
+  `).bind(bot.id).all();
+  const pages = result.results || [];
+  const haystack = pages.map((page) => `${page.title || ""} ${page.source_url || ""}`.toLowerCase()).join(" ");
+  const business = String(bot.business_name || bot.name || "this business").trim();
+  const questions = [];
+  const add = (question) => { if (question && !questions.includes(question)) questions.push(question); };
+
+  if (/service|product|solution|what-we-do|offering/.test(haystack)) add(`What does ${business} offer?`);
+  if (/price|pricing|plan|package|rate|cost/.test(haystack)) add("What are your prices or plans?");
+  if (/book|quote|contact|enquir|appointment|consult/.test(haystack)) add(`How can I contact or book with ${business}?`);
+  if (/location|branch|store|office|visit|find-us/.test(haystack)) add(`Where is ${business} located?`);
+  if (/about|story|team|company/.test(haystack)) add(`Tell me about ${business}`);
+  if (/faq|frequently-asked|help|support/.test(haystack)) add("What should I know before getting started?");
+
+  add(`How can ${business} help me?`);
+  add(`What does ${business} offer?`);
+  add("How do I get started?");
+  add(`How can I contact ${business}?`);
+  return questions.slice(0, 6);
+}
+
 async function configResponse(request, env) {
   const key = new URL(request.url).searchParams.get("key") || "";
   const bot = await botForKey(env, key);
@@ -755,12 +782,14 @@ async function configResponse(request, env) {
   if (!auth.ok) return json({ error: "This website is not allowed to use the chatbot" }, 403, corsHeaders(auth.origin));
   const questions = parseQuestions(bot.popular_questions_json);
   const ui = parseUiSettings(bot.ui_settings_json);
+  const tailoredQuestions = questions.length ? questions : await tailoredPopularQuestions(env, bot);
   return json({
     name: bot.name,
     business_name: bot.business_name || "",
     greeting: bot.greeting,
     primary_colour: /^#[0-9a-f]{6}$/i.test(bot.primary_colour || "") ? bot.primary_colour : "#1769e0",
-    popular_questions: questions.length ? questions : ["What do you offer?", "Plans and pricing", "How does it work?", "Who is it for?"],
+    popular_questions: tailoredQuestions,
+    widget_version: ui.widget_version,
     default_size: ["standard", "large"].includes(bot.default_size) ? bot.default_size : "standard",
     allow_files: Boolean(Number(bot.allow_files)),
     allow_voice: Boolean(Number(bot.allow_voice)),
@@ -1337,10 +1366,10 @@ async function leadResponse(request, env) {
   return json({ ok: true, message: "Thank you. Your details have been sent." }, 200, corsHeaders(auth.origin));
 }
 
-function widgetBootstrap() {
-  const script = document.currentScript;
-  if (!script || script.dataset.fiseLoaded === "1") return;
-  script.dataset.fiseLoaded = "1";
+function widgetBootstrap(configOverride = null, scriptOverride = null) {
+  const script = scriptOverride || document.currentScript;
+  if (!script || (!configOverride && script.dataset.fiseLoaded === "1")) return;
+  if (!configOverride) script.dataset.fiseLoaded = "1";
   const key = script.dataset.chatbotKey || "";
   if (!key) return;
   const api = new URL(script.src).origin;
@@ -1348,6 +1377,11 @@ function widgetBootstrap() {
   const visitorKey = "fise-visitor";
   let visitor = localStorage.getItem(visitorKey);
   if (!visitor) { visitor = crypto.randomUUID(); localStorage.setItem(visitorKey, visitor); }
+
+  if (configOverride) {
+    mount(configOverride);
+    return;
+  }
 
   fetch(api + "/api/widget/config?key=" + encodeURIComponent(key), { mode: "cors" })
     .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unavailable")))
@@ -1959,11 +1993,258 @@ function widgetBootstrapV2() {
   function safe(value) { return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
 }
 
+function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
+  const script = scriptOverride || document.currentScript;
+  if (!script || (!configOverride && script.dataset.fiseLoaded === "1")) return;
+  if (!configOverride) script.dataset.fiseLoaded = "1";
+  const key = script.dataset.chatbotKey || "";
+  if (!key) return;
+  const api = new URL(script.src).origin;
+  const storageKey = "fise-chat-" + key.slice(-16);
+  const visitorKey = "fise-visitor";
+  let visitor = localStorage.getItem(visitorKey);
+  if (!visitor) { visitor = crypto.randomUUID(); localStorage.setItem(visitorKey, visitor); }
+
+  if (configOverride) { mount(configOverride); return; }
+  fetch(api + "/api/widget/config?key=" + encodeURIComponent(key), { mode: "cors" })
+    .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unavailable")))
+    .then((config) => mount(config))
+    .catch((error) => console.warn("Fise widget:", error.message));
+
+  function mount(config) {
+    const host = document.createElement("div");
+    host.id = "fise-chat-widget";
+    document.body.appendChild(host);
+    const root = host.attachShadow({ mode: "open" });
+    const name = safe(config.name || "Assistant");
+
+    root.innerHTML = `
+      <style>
+        :host{all:initial;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#111318}
+        *{box-sizing:border-box}button,textarea,input{font:inherit}
+        .callout{position:fixed;right:20px;bottom:104px;z-index:2147483000;padding:12px 16px;border:2px solid #c7cbd1;border-radius:14px;color:#111318;background:#fff;box-shadow:0 13px 34px rgba(17,24,39,.14);font:750 13px/1.2 inherit;transition:transform .2s ease,box-shadow .2s ease}.callout:hover{transform:translateY(-2px);box-shadow:0 17px 38px rgba(17,24,39,.18)}
+        .launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:70px;height:70px;display:grid;place-items:center;overflow:hidden;padding:8px;border:3px solid transparent;border-radius:22px;background:linear-gradient(#fff,#fff) padding-box,conic-gradient(from 35deg,#ff42c6,#8448ff,#2a9cff,#ff42c6) border-box;box-shadow:0 17px 40px rgba(17,24,39,.2);cursor:pointer;transition:box-shadow .2s ease}.launcher img{width:48px;height:48px;display:block;object-fit:cover;border-radius:12px;transform:scale(1.14)}.launcher:hover{animation:fiseIconTurn .42s ease both;box-shadow:0 20px 45px rgba(73,71,190,.24)}@keyframes fiseIconTurn{0%{transform:rotate(0) scale(1)}48%{transform:rotate(12deg) scale(1.035)}100%{transform:rotate(0) scale(1)}}
+        .panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;border:1px solid #d9dce1;border-radius:22px;color:#111318;background:#fff;box-shadow:0 32px 90px rgba(17,24,39,.25);transition:width .24s ease,height .24s ease,inset .24s ease,transform .24s ease}.panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(480px,calc(100vw - 36px));height:min(740px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}.panel.large{left:50%;top:50%;width:min(960px,calc(100vw - 40px));height:min(790px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}.panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:18px}
+        .head{position:relative;min-height:58px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:9px 11px;border-bottom:1px solid #e2e4e8;background:#fff}.history-trigger{justify-self:start;min-width:92px;height:38px;display:flex;align-items:center;gap:7px;padding:0 10px;border:0;border-radius:10px;color:#1b1d22;background:transparent;cursor:pointer;font:750 12px/1 inherit}.history-trigger:hover,.view-control:hover{background:#f0f1f3}.history-trigger svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.identity{min-width:0;text-align:center}.identity strong{display:block;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#08090b;font:900 16px/1.2 inherit;letter-spacing:-.01em}.view-tools{justify-self:end;display:flex;align-items:center;gap:3px}.view-control{width:38px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;color:#17191d;background:#fff;cursor:pointer}.view-control svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.view-control.close svg{stroke-width:2.2}
+        .messages{min-width:0;min-height:0;overflow:auto;padding:22px;background:#fff;scroll-behavior:smooth;scrollbar-color:#b9bec6 transparent}.welcome{width:min(100%,720px);min-height:100%;display:flex;flex-direction:column;justify-content:center;margin:auto;padding:28px 0}.welcome h2{margin:0 0 18px;color:#08090b;text-align:center;font:900 clamp(20px,3vw,30px)/1.18 inherit;letter-spacing:-.025em}.welcome p{margin:0 0 16px;color:#777d87;text-align:center;font:650 12px/1.4 inherit}.question-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.standard .question-grid{grid-template-columns:1fr}.question{min-width:0;min-height:72px;padding:13px 14px;border:1.5px solid #d7d9de;border-radius:13px;color:#17191e;background:#fff;box-shadow:0 5px 14px rgba(17,24,39,.055);cursor:pointer;text-align:left;font:700 12px/1.4 inherit;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.question:hover{transform:translateY(-2px);border-color:#969ca6;box-shadow:0 9px 20px rgba(17,24,39,.1)}
+        .row{width:min(100%,760px);display:flex;margin:0 auto 16px;animation:messageSlide .26s cubic-bezier(.22,.8,.32,1) both}.row.user{justify-content:flex-end}@keyframes messageSlide{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}.bubble{min-width:0;max-width:88%;padding:13px 15px;border:1px solid #e1e3e7;border-radius:16px 16px 16px 5px;color:#111318;background:#f3f4f5;overflow-wrap:anywhere;word-break:break-word;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:850;color:#050608}.user .bubble{border-color:#111318;border-radius:16px 16px 5px 16px;color:#fff;background:#111318}.user .bubble strong,.user .bubble a{color:#fff}.bubble a{color:#111318;font-weight:800;text-decoration:underline;text-underline-offset:3px}.date-divider{width:min(100%,760px);margin:0 auto 18px;color:#737984;text-align:center;font:750 11px/1.2 inherit}.typing-bubble{min-width:62px}.typing-dots{height:21px;display:flex;align-items:center;justify-content:center;gap:5px}.typing-dots i{width:6px;height:6px;border-radius:50%;background:#111318;animation:fiseBounce .9s infinite ease-in-out}.typing-dots i:nth-child(2){animation-delay:.14s}.typing-dots i:nth-child(3){animation-delay:.28s}@keyframes fiseBounce{0%,60%,100%{transform:translateY(2px);opacity:.3}30%{transform:translateY(-4px);opacity:1}}.sources{margin-top:12px;padding-top:9px;border-top:1px solid #d8dbe0;color:#606671;font:750 10px/1.4 inherit}.sources a{display:block;margin-top:6px;color:#111318}
+        .history-view{display:none;min-height:0;overflow:auto;padding:18px 22px;background:#fff}.panel.history .messages,.panel.history .composer-wrap{display:none}.panel.history .history-view{display:block}.history-title{margin-bottom:8px;color:#111318;font:850 16px/1.2 inherit}.history-item{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 5px;border:0;border-bottom:1px solid #e4e6e9;color:#24272d;background:#fff;cursor:pointer;text-align:left}.history-item:hover{background:#f6f7f8}.history-copy{min-width:0}.history-first{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 12px/1.4 inherit}.history-date{display:block;margin-top:3px;color:#747a84;font:500 10px/1.3 inherit}.history-arrow{font-size:20px}.history-empty{padding:34px 10px;color:#747a84;text-align:center;font:600 12px/1.5 inherit}.history-new{margin:18px auto 0;padding:11px 15px;border:1.5px solid #bfc3ca;border-radius:11px;color:#111318;background:#fff;cursor:pointer;font:800 11px inherit}.history-new:hover{transform:translateY(-1px);box-shadow:0 6px 12px rgba(17,24,39,.09)}
+        .composer-wrap{padding:10px 12px 8px;border-top:1px solid #e2e4e8;background:#fff}.composer{position:relative;display:flex;flex-direction:column;border:1.5px solid #c9cdd3;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(17,24,39,.07);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}.composer:focus-within{border-color:#8d939c;background:#f3f4f5;box-shadow:0 0 0 4px rgba(17,24,39,.075),0 9px 23px rgba(17,24,39,.08)}.input{width:100%;min-width:0;min-height:58px;max-height:120px;padding:13px 14px 4px;border:0;outline:none;resize:none;color:#111318;background:transparent;font:500 13px/1.45 inherit}.input::placeholder{color:#7a808a}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;align-items:center;gap:4px}.tool{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px;border:0;border-radius:9px;color:#505660;background:transparent;cursor:pointer;font:700 11px/1 inherit}.tool:hover{color:#111318;background:#e7e9ec}.tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool.active{color:#fff;background:#111318}.send{width:40px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;color:#fff;background:#111318;box-shadow:0 5px 12px rgba(17,24,39,.18);cursor:pointer}.send svg{width:18px;height:18px;fill:currentColor}.send:disabled{opacity:.5;cursor:wait}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #d6d9de;border-radius:9px;background:#fff;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#555b65;background:transparent;cursor:pointer;font:800 11px inherit}
+        .powered{padding:7px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:6px 13px;border:2px solid #b8bdc5;border-radius:999px;color:#08090b;background:#fff;text-decoration:none;font:850 10px/1 inherit;transition:transform .18s ease,box-shadow .18s ease}.powered a:hover{transform:translateY(-2px);box-shadow:0 7px 14px rgba(17,24,39,.12)}.lead-card{width:min(100%,560px);padding:17px;border:1.5px solid #c7cbd1;border-radius:16px;background:#fff;box-shadow:0 9px 24px rgba(17,24,39,.09)}.lead-card h3{margin:0 0 5px;font:850 16px inherit}.lead-card p{margin:0 0 12px;color:#676d77;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:5px;font:750 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:10px;border:1px solid #cbd0d7;border-radius:9px;outline:none}.lead-card input:focus,.lead-card textarea:focus{border-color:#8d939c;box-shadow:0 0 0 3px rgba(17,24,39,.07)}.lead-card textarea{min-height:70px;resize:vertical}.lead-submit{margin-top:10px;padding:11px 14px;border:0;border-radius:9px;color:#fff;background:#111318;cursor:pointer;font:800 11px inherit}.hidden{display:none!important}
+        @media(max-width:700px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:17px}.head{grid-template-columns:auto 1fr auto;gap:5px;padding:8px}.history-trigger{min-width:0;padding:0 7px}.history-trigger span{display:none}.identity strong{max-width:150px;font-size:14px}.view-tools{gap:0}.view-control{width:34px}.messages{padding:14px}.question-grid,.standard .question-grid{grid-template-columns:1fr}.welcome{padding:14px 0}.bubble{max-width:94%}.tool span{display:none}.tool{width:36px;padding:0;justify-content:center}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}}@media(prefers-reduced-motion:reduce){.launcher:hover,.row{animation:none}.panel,.question,.powered a{transition:none}}
+      </style>
+      <div class="callout">Ask ${name} for help</div>
+      <button class="launcher" type="button" aria-label="Open chat with ${name}"><img src="${api}/chatbot-v2-icon.png" alt=""></button>
+      <section class="panel ${safe(config.default_size || "standard")}" aria-label="Chat with ${name}">
+        <header class="head">
+          <button class="history-trigger" type="button" title="New chat and chat history" aria-label="New chat and chat history"><span>New chat</span><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></svg></button>
+          <div class="identity"><strong>${name}</strong></div>
+          <div class="view-tools">
+            <button class="view-control" type="button" data-size="standard" title="Standard" aria-label="Standard view"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"/></svg></button>
+            <button class="view-control" type="button" data-size="large" title="Large" aria-label="Large view"><svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="2"/></svg></button>
+            <button class="view-control" type="button" data-size="fullscreen" title="Full screen" aria-label="Full-screen view"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
+            <button class="view-control close" type="button" title="Close" aria-label="Close chat"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+          </div>
+        </header>
+        <div class="messages" aria-live="polite"></div>
+        <div class="history-view"><div class="history-title">Your conversations</div><div class="history-list"></div><button class="history-new" type="button">Start a new chat</button></div>
+        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Message ${name}…" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg><span>Files</span></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg><span>Voice</span></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="m4 3 17 9-17 9 3-9-3-9Zm3 9h14"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
+      </section>`;
+
+    const panel = root.querySelector(".panel"), launcher = root.querySelector(".launcher"), callout = root.querySelector(".callout");
+    const close = root.querySelector(".close"), historyTrigger = root.querySelector(".history-trigger"), historyList = root.querySelector(".history-list"), historyNew = root.querySelector(".history-new");
+    const form = root.querySelector(".composer"), input = root.querySelector(".input"), send = root.querySelector(".send"), messages = root.querySelector(".messages");
+    const attach = root.querySelector(".attach"), fileInput = root.querySelector(".file-input"), attachmentBar = root.querySelector(".attachment-bar"), attachmentName = root.querySelector(".attachment-name"), removeFile = root.querySelector(".remove-file"), mic = root.querySelector(".mic");
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    let conversation = saved.conversation || "", pendingFile = null, recorder = null, recordingStream = null, chunks = [];
+
+    renderWelcome();
+    launcher.onclick = () => { panel.classList.add("open"); callout.style.display = "none"; launcher.style.display = "none"; input.focus(); };
+    close.onclick = () => { panel.classList.remove("open", "history"); launcher.style.display = "grid"; };
+    historyTrigger.onclick = () => { if (panel.classList.toggle("history")) loadHistory(); else input.focus(); };
+    historyNew.onclick = () => { panel.classList.remove("history"); resetMessages(true); input.focus(); };
+    for (const action of root.querySelectorAll("[data-size]")) action.onclick = () => { panel.classList.remove("standard", "large", "fullscreen"); panel.classList.add(action.dataset.size); input.focus(); };
+    form.addEventListener("submit", (event) => { event.preventDefault(); submitMessage(input.value.trim()); });
+    input.addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submitMessage(input.value.trim()); } });
+    if (!config.allow_files) attach.classList.add("hidden");
+    if (!config.allow_voice || !navigator.mediaDevices || !window.MediaRecorder) mic.classList.add("hidden");
+    attach.onclick = () => fileInput.click();
+    fileInput.onchange = () => { if (fileInput.files && fileInput.files[0]) uploadVisitorFile(fileInput.files[0]); };
+    removeFile.onclick = clearAttachment;
+    mic.onclick = toggleRecording;
+
+    function renderWelcome() {
+      messages.innerHTML = "";
+      const welcome = document.createElement("section");
+      welcome.className = "welcome";
+      welcome.innerHTML = `<h2>Ask ${name} for help with…</h2><p>Choose a popular question or type your own below.</p><div class="question-grid"></div>`;
+      const grid = welcome.querySelector(".question-grid");
+      for (const question of (config.popular_questions || []).slice(0, 6)) {
+        const button = document.createElement("button");
+        button.type = "button"; button.className = "question"; button.textContent = question;
+        button.onclick = () => submitMessage(question); grid.appendChild(button);
+      }
+      if (config.lead_capture) {
+        const button = document.createElement("button");
+        button.type = "button"; button.className = "question"; button.textContent = config.lead_cta_label || "Talk to us";
+        button.onclick = () => showLeadForm(true); grid.appendChild(button);
+      }
+      messages.appendChild(welcome);
+    }
+
+    async function uploadVisitorFile(file) {
+      clearAttachment();
+      if (file.size > 8 * 1024 * 1024) { add("assistant", "Please choose a file smaller than 8 MB."); return; }
+      attach.disabled = true; attachmentBar.classList.add("show"); attachmentName.textContent = "Preparing " + file.name + "…";
+      try {
+        const upload = new FormData(); upload.append("file", file, file.name);
+        const response = await fetch(api + "/api/widget/file?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "The file could not be uploaded");
+        pendingFile = data; attachmentName.textContent = "📎 " + data.name;
+      } catch (error) { clearAttachment(); add("assistant", error.message || "The file could not be uploaded."); }
+      finally { attach.disabled = false; fileInput.value = ""; }
+    }
+    function clearAttachment() { pendingFile = null; attachmentBar.classList.remove("show"); attachmentName.textContent = ""; fileInput.value = ""; }
+
+    async function toggleRecording() {
+      if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+      try {
+        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true }); chunks = []; recorder = new MediaRecorder(recordingStream);
+        recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); }; recorder.onstop = transcribeRecording; recorder.start();
+        mic.classList.add("active"); mic.title = "Stop recording"; mic.setAttribute("aria-label", "Stop recording");
+      } catch { add("assistant", "Microphone access was not allowed."); }
+    }
+    async function transcribeRecording() {
+      mic.classList.remove("active"); mic.title = "Record a voice message"; mic.setAttribute("aria-label", "Record a voice message");
+      if (recordingStream) recordingStream.getTracks().forEach((track) => track.stop());
+      const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" }); if (!blob.size) return;
+      mic.disabled = true; input.placeholder = "Transcribing voice message…";
+      try {
+        const upload = new FormData(); upload.append("audio", blob, "voice-message.webm");
+        const response = await fetch(api + "/api/widget/transcribe?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "Voice transcription failed"); input.value = data.text || ""; input.focus();
+      } catch (error) { add("assistant", error.message || "The voice message could not be transcribed."); }
+      finally { mic.disabled = false; input.placeholder = "Message " + config.name + "…"; }
+    }
+
+    async function submitMessage(text) {
+      if ((!text && !pendingFile) || send.disabled) return;
+      messages.querySelector(".welcome")?.remove();
+      const fileForMessage = pendingFile, display = text || "Please review the attached file."; input.value = "";
+      add("user", display + (fileForMessage ? "\n📎 " + fileForMessage.name : "")); send.disabled = true;
+      const waiting = addTyping();
+      try {
+        const response = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href, stream: false }) });
+        const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.error || "Could not send message");
+        conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); clearAttachment();
+        completeAssistant(waiting, data.reply, config.helpful_pages_enabled ? (data.sources || []) : []);
+        if (data.show_lead_form && config.lead_capture) showLeadForm(false);
+      } catch (error) { completeAssistant(waiting, error.message || "Please try again.", []); }
+      finally { send.disabled = false; input.focus(); }
+    }
+
+    async function loadHistory() {
+      historyList.innerHTML = '<div class="history-empty">Loading conversations…</div>';
+      try {
+        const response = await fetch(api + "/api/widget/history?key=" + encodeURIComponent(key) + "&visitor_id=" + encodeURIComponent(visitor), { mode: "cors" });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "History unavailable");
+        historyList.innerHTML = "";
+        if (!data.conversations || !data.conversations.length) { historyList.innerHTML = '<div class="history-empty">No saved conversations yet.</div>'; return; }
+        for (const item of data.conversations) {
+          const button = document.createElement("button");
+          button.type = "button"; button.className = "history-item";
+          button.innerHTML = `<span class="history-copy"><span class="history-first">${safe(item.first_message || "Conversation")}</span><span class="history-date">${safe(formatDate(item.updated_at))}</span></span><span class="history-arrow">›</span>`;
+          button.onclick = () => openConversation(item.id); historyList.appendChild(button);
+        }
+      } catch (error) { historyList.innerHTML = `<div class="history-empty">${safe(error.message || "History unavailable")}</div>`; }
+    }
+    async function openConversation(id) {
+      try {
+        const response = await fetch(api + "/api/widget/conversation?key=" + encodeURIComponent(key) + "&visitor_id=" + encodeURIComponent(visitor) + "&conversation_id=" + encodeURIComponent(id), { mode: "cors" });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "Conversation unavailable");
+        conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); panel.classList.remove("history"); messages.innerHTML = "";
+        const firstDate = data.messages && data.messages[0] ? data.messages[0].created_at : new Date().toISOString(); addDate(firstDate);
+        for (const item of data.messages || []) add(item.role === "user" ? "user" : "assistant", item.content, [], false);
+        messages.scrollTop = messages.scrollHeight; input.focus();
+      } catch (error) { historyList.innerHTML = `<div class="history-empty">${safe(error.message || "Conversation unavailable")}</div>`; }
+    }
+    function resetMessages(clearSaved) { if (clearSaved) { conversation = ""; localStorage.removeItem(storageKey); clearAttachment(); } renderWelcome(); }
+    function formatDate(value) { try { return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(value)); } catch { return ""; } }
+    function addDate(value) { const date = document.createElement("div"); date.className = "date-divider"; date.textContent = formatDate(value || new Date()); messages.appendChild(date); }
+
+    function showLeadForm(autoScroll) {
+      messages.querySelector(".welcome")?.remove();
+      const existing = messages.querySelector(".lead-card");
+      if (existing) { if (autoScroll) existing.scrollIntoView({ behavior: "smooth", block: "nearest" }); return; }
+      const before = messages.scrollTop, row = document.createElement("div"), card = document.createElement("form");
+      row.className = "row assistant"; card.className = "lead-card";
+      card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Answer these four quick questions and the team can respond directly.</p><div class="lead-grid"><div><label>1. Name *</label><input name="name" maxlength="100" required></div><div><label>2. Email *</label><input name="email" type="email" maxlength="254" required></div><div class="wide"><label>3. Phone *</label><input name="phone" maxlength="50" required></div><div class="wide"><label>4. Your query *</label><textarea name="enquiry" maxlength="1200" required></textarea></div></div><button class="lead-submit">Send my details</button>`;
+      card.onsubmit = async (event) => {
+        event.preventDefault(); const button = card.querySelector(".lead-submit"); button.disabled = true; button.textContent = "Sending…";
+        const values = Object.fromEntries(new FormData(card).entries()); values.conversation_id = conversation;
+        try {
+          const response = await fetch(api + "/api/widget/lead?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify(values) });
+          const data = await response.json(); if (!response.ok) throw new Error(data.error || "Could not send your details");
+          card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
+        } catch (error) { button.disabled = false; button.textContent = "Send my details"; alert(error.message || "Please try again."); }
+      };
+      row.appendChild(card); messages.appendChild(row); messages.scrollTop = autoScroll ? messages.scrollHeight : before;
+    }
+
+    function addTyping() {
+      const row = document.createElement("div"), bubble = document.createElement("div");
+      row.className = "row assistant"; bubble.className = "bubble typing-bubble"; bubble.innerHTML = '<span class="typing-dots" aria-label="Typing"><i></i><i></i><i></i></span>';
+      row.appendChild(bubble); messages.appendChild(row); messages.scrollTop = messages.scrollHeight; return row;
+    }
+    function completeAssistant(row, text, sources) {
+      const bubble = row.querySelector(".bubble"); bubble.className = "bubble"; bubble.textContent = ""; appendRichText(bubble, text); appendSources(bubble, sources);
+      row.style.animation = "none"; requestAnimationFrame(() => { row.style.animation = ""; messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" }); });
+    }
+    function add(role, text, sources = [], autoScroll = true) {
+      const row = document.createElement("div"), bubble = document.createElement("div");
+      row.className = "row " + role; bubble.className = "bubble"; appendRichText(bubble, text); appendSources(bubble, sources); row.appendChild(bubble); messages.appendChild(row);
+      if (autoScroll) messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" }); return row;
+    }
+    function appendSources(bubble, sources) {
+      if (!sources || !sources.length) return;
+      const box = document.createElement("div"); box.className = "sources"; box.textContent = "Helpful pages:";
+      for (const source of sources.slice(0, 3)) {
+        if (!/^https?:\/\//i.test(source.url || "")) continue;
+        const link = document.createElement("a"); link.href = source.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = source.title || source.url; box.appendChild(link);
+      }
+      bubble.appendChild(box);
+    }
+    function appendRichText(container, text) {
+      const lines = String(text || "").replace(/\r/g, "").split("\n"); let list = null;
+      for (const rawLine of lines) {
+        const line = rawLine.trim(); if (!line) { list = null; continue; }
+        if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) {
+          if (!list) { list = document.createElement("ul"); container.appendChild(list); }
+          const item = document.createElement("li"); appendInline(item, line.replace(/^(?:[-*•]|\d+[.)])\s+/, "")); list.appendChild(item);
+        } else {
+          list = null; const paragraph = document.createElement("p"); appendInline(paragraph, line); container.appendChild(paragraph);
+        }
+      }
+    }
+    function appendInline(container, value) {
+      const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi; let last = 0, match;
+      while ((match = pattern.exec(value))) {
+        if (match.index > last) container.appendChild(document.createTextNode(value.slice(last, match.index)));
+        if (match[1]) { const strong = document.createElement("strong"); strong.textContent = match[1]; container.appendChild(strong); }
+        else { const link = document.createElement("a"); link.href = match[3] || match[4]; link.target = "_blank"; link.rel = "noopener"; link.textContent = match[2] || match[4]; container.appendChild(link); }
+        last = pattern.lastIndex;
+      }
+      if (last < value.length) container.appendChild(document.createTextNode(value.slice(last)));
+    }
+  }
+  function safe(value) { return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
+}
+
 function widgetJavascript() {
   // Wrangler/esbuild may add __name(...) calls when serialising this function.
   // Define the helper inside the delivered browser script so those calls cannot
   // prevent the widget from mounting.
-  return `(()=>{const __name=(target)=>target;(${widgetBootstrapV2.toString()})();})();`;
+  return `(()=>{const __name=(target)=>target;const legacy=${widgetBootstrap.toString()};const modern=${widgetBootstrapV2Clean.toString()};const script=document.currentScript;if(!script||script.dataset.fiseLoaded==="1")return;script.dataset.fiseLoaded="1";const key=script.dataset.chatbotKey||"";if(!key)return;const api=new URL(script.src).origin;fetch(api+"/api/widget/config?key="+encodeURIComponent(key),{mode:"cors"}).then((response)=>response.ok?response.json():Promise.reject(new Error("Unavailable"))).then((config)=>(config.widget_version==="2"?modern:legacy)(config,script)).catch((error)=>console.warn("Fise widget:",error.message));})();`;
 }
 
 function serveWidgetScript() {
@@ -1977,18 +2258,24 @@ function serveWidgetScript() {
   });
 }
 
-function serveWidgetTest(request) {
+function widgetTestJavascript() {
+  return `(()=>{const select=document.querySelector('[data-version-select]');if(select)select.addEventListener('change',()=>select.form.requestSubmit());})();`;
+}
+
+function serveWidgetTest(request, chatbotId, widgetVersion = "1") {
   const url = new URL(request.url);
   const key = url.searchParams.get("key") || "";
   const embed = url.searchParams.get("embed") === "1";
   const origin = url.origin;
+  const version = widgetVersion === "2" ? "2" : "1";
+  const versionControl = embed ? "" : `<form class="version-control" method="post" action="/api/chatbots/${encodeURIComponent(chatbotId)}/version"><input type="hidden" name="return_to" value="preview"><input type="hidden" name="key" value="${escapeHtml(key)}"><label for="widget-version">Chatbot version</label><span class="select-wrap"><select id="widget-version" name="widget_version" data-version-select aria-label="Chatbot version"><option value="1" ${version === "1" ? "selected" : ""}>Version 1</option><option value="2" ${version === "2" ? "selected" : ""}>Version 2</option></select></span></form>`;
   const intro = embed
     ? ""
     : `<main class="wrap"><section class="card"><h1>Test your chatbot</h1><p>Open the live widget in the bottom-right corner. Test instant answers, Chat History, files, voice, emojis and the contact survey.</p><a class="back" href="/dashboard">Return to dashboard</a></section></main>`;
   const autoOpen = embed
     ? `<script>(()=>{let attempts=0;const timer=setInterval(()=>{attempts+=1;const host=document.getElementById('fise-chat-widget');const root=host?.shadowRoot;const launcher=root?.querySelector('.launcher');const panel=root?.querySelector('.panel');if(launcher&&panel){launcher.click();panel.classList.remove('standard','large');panel.classList.add('fullscreen');clearInterval(timer)}else if(attempts>120){clearInterval(timer)}},100)})();</script>`
     : "";
-  const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:80px 0}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}</style></head><body>${intro}<script src="${escapeHtml(origin)}/widget.js?v=20260829-support-1" data-chatbot-key="${escapeHtml(key)}"></script>${autoOpen}</body></html>`;
+  const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:96px 0 80px}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}.version-control{position:fixed;top:24px;right:24px;z-index:50;display:flex;align-items:center;gap:10px;padding:7px 8px 7px 13px;border:1px solid #e0e2e6;border-radius:11px;color:#737882;background:#f0f1f3;box-shadow:0 7px 18px rgba(17,24,39,.07)}.version-control label{font-size:12px;font-weight:750}.select-wrap{position:relative}.select-wrap:after{content:"";position:absolute;right:11px;top:50%;width:7px;height:7px;border-right:2px solid #a8adb5;border-bottom:2px solid #a8adb5;transform:translateY(-70%) rotate(45deg);pointer-events:none}.version-control select{min-width:116px;height:36px;padding:0 31px 0 12px;border:0;border-radius:8px;appearance:none;color:#25282e;background:#e7e9ec;outline:none;font-size:13px;font-weight:800;cursor:pointer}.version-control select:focus{box-shadow:0 0 0 3px rgba(17,24,39,.09)}@media(max-width:650px){.version-control{top:12px;right:12px}.version-control label{display:none}.wrap{padding-top:74px}}</style></head><body>${versionControl}${intro}<script src="${escapeHtml(origin)}/widget.js?v=20260908-versions-1" data-chatbot-key="${escapeHtml(key)}"></script><script src="/widget-test.js" defer></script>${autoOpen}</body></html>`;
   const scriptPolicy = embed ? "'self' 'unsafe-inline'" : "'self'";
   // A preview URL is for testing inside Fise, never for re-use as an iframe on
   // another website. Website installation is authorised separately by plan.
@@ -5230,7 +5517,14 @@ const sharedStyles = html`
   text-align:left; vertical-align:top; } .lead-table th { color:var(--muted);
   font-size:11px; text-transform:uppercase; letter-spacing:.05em; } .lead-table
   td { overflow-wrap:anywhere; } .table-wrap { overflow:auto; } .top-actions {
-  display:flex; flex-wrap:wrap; gap:9px; margin:0 0 20px; } .save-bar {
+  display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin:0 0 20px; }
+  .version-settings-control { display:flex; align-items:center; gap:9px; min-height:46px;
+  padding:5px 7px 5px 12px; border:1px solid #dfe3e8; border-radius:11px;
+  color:#687181; background:#f1f3f5; } .version-settings-control label { margin:0;
+  color:#687181; font-size:12px; font-weight:800; } .version-settings-control select {
+  width:auto; min-width:112px; height:34px; padding:0 31px 0 10px; border:0;
+  border-radius:8px; color:#20242a; background:#e4e7eb; font-size:12px;
+  font-weight:850; cursor:pointer; } .save-bar {
   display:flex; align-items:center; justify-content:space-between; gap:15px; }
   .save-bar .btn { min-width:160px; } .embed-code { display:block;
   margin-top:12px; padding:11px; overflow-wrap:anywhere; border-radius:9px;
@@ -6745,6 +7039,7 @@ function uiSettings(value) {
     parsed = {};
   }
   return {
+    widget_version: parsed.widget_version === "2" ? "2" : "1",
     helpful_pages_enabled: parsed.helpful_pages_enabled === true,
     popular_questions_bold: parsed.popular_questions_bold !== false,
     popular_question_border:
@@ -6763,7 +7058,45 @@ function uiSettings(value) {
   };
 }
 
-function settingsPage(user, bot, origin, message = "", isError = false) {
+async function updateChatbotVersion(request, env, chatbotId) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  const user = await currentUser(request, env);
+  if (!user) return redirect("/login");
+  const bot = await ownedChatbot(env, user.id, chatbotId);
+  if (!bot) return redirect("/dashboard?error=" + encodeURIComponent("Chatbot not found."));
+  const form = await request.formData();
+  const version = String(form.get("widget_version")) === "2" ? "2" : "1";
+  const ui = uiSettings(bot.ui_settings_json);
+  ui.widget_version = version;
+  const now = new Date().toISOString();
+  await env.DB.prepare(`
+    INSERT INTO chatbot_settings
+      (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(chatbot_id) DO UPDATE SET ui_settings_json=excluded.ui_settings_json,updated_at=excluded.updated_at
+  `).bind(
+    chatbotId,
+    bot.answer_length || "short",
+    bot.formality || "friendly",
+    bot.popular_questions_json || "[]",
+    ["standard", "large"].includes(bot.default_size) ? bot.default_size : "standard",
+    Number(bot.allow_files) ? 1 : 0,
+    Number(bot.allow_voice) ? 1 : 0,
+    Number(bot.lead_capture_enabled) ? 1 : 0,
+    bot.lead_cta_label || "Talk to us",
+    bot.lead_destination_email || "",
+    bot.google_sheets_webhook || "",
+    JSON.stringify(ui),
+    now,
+    now,
+  ).run();
+  if (String(form.get("return_to")) === "settings") {
+    return redirect(`/dashboard/chatbots/${encodeURIComponent(chatbotId)}/settings?version_saved=1`);
+  }
+  return redirect(`/widget/test?key=${encodeURIComponent(bot.public_key)}`);
+}
+
+function settingsPage(user, bot, origin, message = "", isError = false, suggestedQuestions = []) {
   let questions = [];
   try {
     const parsed = JSON.parse(bot.popular_questions_json || "[]");
@@ -6771,13 +7104,12 @@ function settingsPage(user, bot, origin, message = "", isError = false) {
   } catch {
     questions = [];
   }
-  if (!questions.length)
-    questions = [
-      "What do you offer?",
-      "Plans and pricing",
-      "How does it work?",
-      "Who is it for?",
-    ];
+  if (!questions.length) questions = suggestedQuestions.length ? suggestedQuestions : [
+    `How can ${bot.business_name || bot.name} help me?`,
+    `What does ${bot.business_name || bot.name} offer?`,
+    "How do I get started?",
+    `How can I contact ${bot.business_name || bot.name}?`,
+  ];
   const ui = uiSettings(bot.ui_settings_json);
   const growth = planHasLeadCapture(bot);
   const notice = message
@@ -6800,6 +7132,14 @@ function settingsPage(user, bot, origin, message = "", isError = false) {
       </div>
       ${notice}
       <div class="top-actions">
+        <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/version" class="version-settings-control">
+          <input type="hidden" name="return_to" value="settings" />
+          <label for="settings-widget-version">Chatbot version</label>
+          <select id="settings-widget-version" name="widget_version" data-version-select>
+            <option value="1" ${selected(ui.widget_version, "1")}>Version 1</option>
+            <option value="2" ${selected(ui.widget_version, "2")}>Version 2</option>
+          </select>
+        </form>
         <a
           class="btn"
           href="/widget/test?key=${encodeURIComponent(bot.public_key)}"
@@ -6816,6 +7156,7 @@ function settingsPage(user, bot, origin, message = "", isError = false) {
         action="/api/chatbots/${encodeURIComponent(bot.id)}/settings"
         enctype="multipart/form-data"
       >
+        <input type="hidden" name="widget_version" value="${escapeHtml(ui.widget_version)}" />
         <div class="settings-stack">
           <details class="settings-group" open>
             <summary>1. Appearance</summary>
@@ -6835,12 +7176,9 @@ function settingsPage(user, bot, origin, message = "", isError = false) {
                     required
                     value="${escapeHtml(bot.name)}"
                   />
-                  <p class="fine">
-                    The header uses Fise's clean chat icon and automatically
-                    says “Chat with [chatbot name]”.
-                  </p>
+                  <p class="fine">${ui.widget_version === "2" ? "Version 2 shows the chatbot name in bold black text in the centre of the top banner." : "Version 1 shows the chatbot name with its existing branded header."}</p>
                 </section>
-                <section class="setting-section">
+                <section class="setting-section" style="${ui.widget_version === "2" ? "display:none" : ""}">
                   <h2>Colour and header pattern</h2>
                   <p>
                     The pattern automatically uses a lighter or darker shade of
@@ -6914,6 +7252,11 @@ function settingsPage(user, bot, origin, message = "", isError = false) {
                     ${info("Adds gentle light and shade to the header.")}</label
                   >
                 </section>
+                <section class="setting-section" style="${ui.widget_version === "2" ? "" : "display:none"}">
+                  <h2>Version 2 appearance</h2>
+                  <p>Version 2 uses a clean white interface, soft grey secondary surfaces and black text.</p>
+                  <div class="locked"><strong>Included automatically</strong><br />Gradient chatbot icon, smooth message motion, centred chatbot name and direct Standard, Large and Full-screen controls.</div>
+                </section>
               </div>
             </div>
           </details>
@@ -6922,7 +7265,7 @@ function settingsPage(user, bot, origin, message = "", isError = false) {
             <summary>2. Conversation</summary>
             <div class="settings-group-body">
               <div class="settings-grid">
-                <section class="setting-section full">
+                <section class="setting-section full" style="${ui.widget_version === "2" ? "display:none" : ""}">
                   <h2>Opening line</h2>
                   <p>
                     Use your own message or let Fise suggest one from the
@@ -6948,6 +7291,10 @@ ${escapeHtml(bot.greeting)}</textarea>
                       Suggest a message</button
                     ><span class="suggest-status" aria-live="polite"></span>
                   </div>
+                </section>
+                <section class="setting-section full" style="${ui.widget_version === "2" ? "" : "display:none"}">
+                  <h2>Starting prompt</h2>
+                  <p>Version 2 does not show an opening greeting. It starts with <strong>“Ask ${escapeHtml(bot.name)} for help with…”</strong> and the chatbot's website-specific popular questions.</p>
                 </section>
                 <section class="setting-section">
                   <h2>Answer style</h2>
@@ -7067,7 +7414,7 @@ ${escapeHtml(questions.slice(0, 6).join("\n"))}</textarea>
                 </section>
                 <section class="setting-section">
                   <h2>Visitor tools</h2>
-                  <p>Choose what visitors are allowed to use.</p>
+                  <p>${ui.widget_version === "2" ? "Files and Voice appear together below the message box." : "Choose what visitors are allowed to use."}</p>
                   <label for="default_size"
                     >Opening size
                     ${info("Choose how large the chatbot is when opened.")}</label
@@ -7106,7 +7453,7 @@ ${escapeHtml(questions.slice(0, 6).join("\n"))}</textarea>
                     Allow voice messages
                     ${info("Visitors can speak instead of typing.")}</label
                   >
-                  <label class="check"
+                  <label class="check" style="${ui.widget_version === "2" ? "display:none" : ""}"
                     ><input
                       type="checkbox"
                       name="allow_emoji"
@@ -7241,20 +7588,25 @@ async function showChatbotSettings(request, env, chatbotId) {
     );
   const url = new URL(request.url);
   const saved = url.searchParams.get("saved") === "1";
+  const versionSaved = url.searchParams.get("version_saved") === "1";
   const error = url.searchParams.get("error") || "";
+  const suggestedQuestions = await tailoredPopularQuestions(env, bot);
   return htmlResponse(
     settingsPage(
       user,
       bot,
       url.origin,
-      saved ? "Your chatbot settings were saved." : error,
+      saved ? "Your chatbot settings were saved." : versionSaved ? "Your chatbot version was changed." : error,
       Boolean(error),
+      suggestedQuestions,
     ),
   );
 }
 
 function dashboardSettingsJavascript() {
   return String.raw`(() => {
+    const versionSelect = document.querySelector('[data-version-select]');
+    if (versionSelect) versionSelect.addEventListener('change', () => versionSelect.form.requestSubmit());
     const button = document.querySelector('.suggest-greeting');
     const field = document.querySelector('#greeting');
     const status = document.querySelector('.suggest-status');
@@ -7496,7 +7848,9 @@ async function updateChatbotSettings(request, env, chatbotId) {
   ].slice(0, 6);
   const allowFiles = form.get("allow_files") === "1" ? 1 : 0;
   const allowVoice = form.get("allow_voice") === "1" ? 1 : 0;
+  const widgetVersion = String(form.get("widget_version")) === "2" ? "2" : "1";
   const nextUiSettings = {
+    widget_version: widgetVersion,
     helpful_pages_enabled: form.get("helpful_pages_enabled") === "1",
     popular_questions_bold: form.get("popular_questions_bold") === "1",
     popular_question_border:
@@ -7933,6 +8287,15 @@ export default {
           },
         });
       }
+      if (url.pathname === "/widget-test.js" && request.method === "GET") {
+        return new Response(widgetTestJavascript(), {
+          headers: {
+            "content-type": "application/javascript; charset=utf-8",
+            "cache-control": "no-store",
+            "x-content-type-options": "nosniff",
+          },
+        });
+      }
       if (url.pathname === "/website-studio.js" && request.method === "GET") {
         return new Response(websiteStudioJavascript(), {
           headers: {
@@ -7991,10 +8354,13 @@ export default {
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
         const key = String(url.searchParams.get("key") || "").slice(0, 180);
-        const owned = await env.DB.prepare("SELECT id FROM chatbots WHERE public_key=? AND user_id=? LIMIT 1")
-          .bind(key, user.id).first();
+        const owned = await env.DB.prepare(`
+          SELECT c.id,COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json
+          FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
+          WHERE c.public_key=? AND c.user_id=? LIMIT 1
+        `).bind(key, user.id).first();
         if (!owned) return response("Chatbot preview not found.", 404);
-        return serveWidgetTest(request);
+        return serveWidgetTest(request, owned.id, uiSettings(owned.ui_settings_json).widget_version);
       }
       if (
         url.pathname.startsWith("/api/widget/") &&
@@ -8108,6 +8474,15 @@ export default {
           request,
           env,
           decodeURIComponent(settingsApiMatch[1]),
+        );
+      const versionApiMatch = url.pathname.match(
+        /^\/api\/chatbots\/([^/]+)\/version$/,
+      );
+      if (versionApiMatch && request.method === "POST")
+        return updateChatbotVersion(
+          request,
+          env,
+          decodeURIComponent(versionApiMatch[1]),
         );
       const greetingApiMatch = url.pathname.match(
         /^\/api\/chatbots\/([^/]+)\/suggest-greeting$/,
