@@ -634,6 +634,7 @@ function corsHeaders(origin) {
 
 async function botForKey(env, key) {
   if (!key || key.length > 180) return null;
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`).run();
   return env.DB.prepare(`
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,
            c.model,c.primary_colour,c.greeting,c.instructions,c.allowed_domains_json,c.monthly_message_limit,
@@ -648,10 +649,14 @@ async function botForKey(env, key) {
            COALESCE(cs.lead_destination_email,'') AS lead_destination_email,
            COALESCE(cs.google_sheets_webhook,'') AS google_sheets_webhook,
            COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,
+           COALESCE(cds.system_prompt_append,'') AS system_prompt_append,
+           COALESCE(cds.widget_css,'') AS widget_css,
+           COALESCE(cds.functions_json,'[]') AS functions_json,
            COALESCE(s.plan_code,'starter') AS plan_code,
            COALESCE(s.status,'inactive') AS subscription_status
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
+    LEFT JOIN chatbot_developer_settings cds ON cds.chatbot_id=c.id
     LEFT JOIN subscriptions s ON s.user_id=c.user_id
     WHERE c.public_key = ? LIMIT 1
   `).bind(key).first();
@@ -804,7 +809,8 @@ async function configResponse(request, env) {
     header_gradient: ui.header_gradient,
     lead_capture: growthAccess(bot) && Boolean(Number(bot.lead_capture_enabled)),
     lead_cta_label: bot.lead_cta_label || "Talk to us",
-    powered_by_url: FISE_WEBSITE_URL
+    powered_by_url: FISE_WEBSITE_URL,
+    widget_css: String(bot.widget_css || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "").slice(0, 30000)
   }, 200, corsHeaders(auth.origin));
 }
 
@@ -1084,6 +1090,7 @@ async function chatResponse(request, env) {
     `).bind(conversationId, bot.id, visitorHash).first();
   }
   const now = new Date().toISOString();
+  const isNewConversation = !conversation;
   if (!conversation) {
     conversationId = crypto.randomUUID();
     await env.DB.prepare(`
@@ -1104,6 +1111,11 @@ async function chatResponse(request, env) {
   await env.DB.prepare(`
     INSERT INTO messages (id,conversation_id,role,content,created_at) VALUES (?,?,'user',?,?)
   `).bind(crypto.randomUUID(), conversationId, recordedMessage, now).run();
+  if (env.SCAN_QUEUE) {
+    const payload = { conversation_id: conversationId, page_url: pageUrl, message: recordedMessage, created_at: now };
+    if (isNewConversation) await env.SCAN_QUEUE.send({ type: "chatbot_automation", chatbotId: bot.id, trigger: "conversation_started", payload });
+    await env.SCAN_QUEUE.send({ type: "chatbot_automation", chatbotId: bot.id, trigger: "message_received", payload });
+  }
   if ((Number(monthMessages?.total || 0) + 1) % CONVERSATION_MESSAGE_GROUP_SIZE === 0) {
     await env.DB.prepare(`
       INSERT INTO usage_events (id,user_id,chatbot_id,event_type,quantity,created_at)
@@ -1151,7 +1163,8 @@ async function chatResponse(request, env) {
     growthAccess(bot) && Number(bot.lead_capture_enabled)
       ? "Lead capture is an important goal. For unavailable pricing, missing business information, contact support, a quote, callback, sales help or human assistance, answer briefly and end with [[FISE_LEAD_FORM]] so the support survey opens and is logged as a lead. For a completely unrelated or useless question such as personal preferences, weather, sport or general trivia, say exactly: 'I'm unable to help with that. If you would like, I can connect you with our support team.' and end with [[FISE_TEAM_OFFER]]. Do not immediately show the survey for an unrelated question; wait for the visitor to agree. Never display or explain either marker."
       : "If exact pricing is unavailable or the visitor asks for information you cannot answer, direct them briefly to the business support or contact page. For a completely unrelated question, say: 'I'm unable to help with that. Please contact our support team if you need assistance.'",
-    bot.instructions || ""
+    bot.instructions || "",
+    bot.system_prompt_append || ""
   ].filter(Boolean).join("\n");
 
   const userContent = attachmentId
@@ -1364,6 +1377,12 @@ async function leadResponse(request, env) {
     INSERT INTO leads (id,chatbot_id,conversation_id,name,email,phone,business_name,enquiry,created_at)
     VALUES (?,?,?,?,?,?,?,?,?)
   `).bind(crypto.randomUUID(), bot.id, validConversation, lead.name, lead.email, lead.phone, lead.business_name, lead.enquiry, lead.created_at).run();
+  if (env.SCAN_QUEUE) await env.SCAN_QUEUE.send({
+    type: "chatbot_automation",
+    chatbotId: bot.id,
+    trigger: "lead_captured",
+    payload: { ...lead, conversation_id: validConversation }
+  });
   await deliverLead(env, bot, lead);
   return json({ ok: true, message: "Thank you. Your details have been sent." }, 200, corsHeaders(auth.origin));
 }
@@ -1405,6 +1424,7 @@ function widgetBootstrap(configOverride = null, scriptOverride = null) {
         @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr 1fr}.head{min-height:76px;padding:11px 12px}.avatar{width:42px;height:42px}.head-tools{gap:5px}.size{width:86px}.newchat{padding:0 8px}.callout{right:14px;bottom:86px}.launcher{right:14px;bottom:14px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
         @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:11px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr}.question:nth-child(n+5){display:none}.head strong{font-size:15px}.head small{max-width:145px}.newchat{display:none}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}}
         .composer{border-color:#b8c3d1;background:#f3f4f6}
+        ${String(config.widget_css || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "")}
       </style>
       <div class="callout">Need help with anything? 👋</div>
       <button class="launcher" aria-label="Open chat">💬</button>
@@ -2034,6 +2054,7 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
         .composer-wrap{padding:10px 12px 8px;border-top:1px solid #e2e4e8;background:#fff}.composer{position:relative;display:flex;flex-direction:column;border:1.5px solid #c9cdd3;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(17,24,39,.07);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}.composer:focus-within{border-color:#8d939c;background:#f3f4f5;box-shadow:0 0 0 4px rgba(17,24,39,.075),0 9px 23px rgba(17,24,39,.08)}.input{width:100%;min-width:0;min-height:58px;max-height:120px;padding:13px 14px 4px;border:0;outline:none;resize:none;color:#111318;background:transparent;font:500 13px/1.45 inherit}.input::placeholder{color:#7a808a}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;align-items:center;gap:4px}.tool{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px;border:0;border-radius:9px;color:#505660;background:transparent;cursor:pointer;font:700 11px/1 inherit}.tool:hover{color:#111318;background:#e7e9ec}.tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool.active{color:#fff;background:#111318}.send{width:40px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;color:#fff;background:#111318;box-shadow:0 5px 12px rgba(17,24,39,.18);cursor:pointer}.send svg{width:18px;height:18px;fill:currentColor}.send:disabled{opacity:.5;cursor:wait}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #d6d9de;border-radius:9px;background:#fff;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#555b65;background:transparent;cursor:pointer;font:800 11px inherit}
         .powered{padding:7px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:6px 13px;border:2px solid #b8bdc5;border-radius:999px;color:#08090b;background:#fff;text-decoration:none;font:850 10px/1 inherit;transition:transform .18s ease,box-shadow .18s ease}.powered a:hover{transform:translateY(-2px);box-shadow:0 7px 14px rgba(17,24,39,.12)}.lead-card{width:min(100%,560px);padding:17px;border:1.5px solid #c7cbd1;border-radius:16px;background:#fff;box-shadow:0 9px 24px rgba(17,24,39,.09)}.lead-card h3{margin:0 0 5px;font:850 16px inherit}.lead-card p{margin:0 0 12px;color:#676d77;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:5px;font:750 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:10px;border:1px solid #cbd0d7;border-radius:9px;outline:none}.lead-card input:focus,.lead-card textarea:focus{border-color:#8d939c;box-shadow:0 0 0 3px rgba(17,24,39,.07)}.lead-card textarea{min-height:70px;resize:vertical}.lead-submit{margin-top:10px;padding:11px 14px;border:0;border-radius:9px;color:#fff;background:#111318;cursor:pointer;font:800 11px inherit}.hidden{display:none!important}
         @media(max-width:700px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:17px}.head{grid-template-columns:auto 1fr auto;gap:5px;padding:8px}.history-trigger{min-width:0;padding:0 7px}.history-trigger span{display:none}.identity strong{max-width:150px;font-size:14px}.view-tools{gap:0}.view-control{width:34px}.messages{padding:14px}.question-grid,.standard .question-grid{grid-template-columns:1fr}.welcome{padding:14px 0}.bubble{max-width:94%}.tool span{display:none}.tool{width:36px;padding:0;justify-content:center}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}}@media(prefers-reduced-motion:reduce){.launcher:hover,.row{animation:none}.panel,.question,.powered a{transition:none}}
+        ${String(config.widget_css || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "")}
       </style>
       <div class="callout">Ask ${name} for help</div>
       <button class="launcher" type="button" aria-label="Open chat with ${name}"><img src="${api}/chatbot-v2-icon.png" alt=""></button>
@@ -2268,6 +2289,7 @@ function serveWidgetTest(request, chatbotId, widgetVersion = "1") {
   const url = new URL(request.url);
   const key = url.searchParams.get("key") || "";
   const embed = url.searchParams.get("embed") === "1";
+  const studio = embed && url.searchParams.get("studio") === "1";
   const origin = url.origin;
   const version = widgetVersion === "2" ? "2" : "1";
   const versionControl = embed ? "" : `<form class="version-control" method="post" action="/api/chatbots/${encodeURIComponent(chatbotId)}/version"><input type="hidden" name="return_to" value="preview"><input type="hidden" name="key" value="${escapeHtml(key)}"><label for="widget-version">Chatbot version</label><span class="select-wrap"><select id="widget-version" name="widget_version" data-version-select aria-label="Chatbot version"><option value="1" ${version === "1" ? "selected" : ""}>Version 1</option><option value="2" ${version === "2" ? "selected" : ""}>Version 2</option></select></span></form>`;
@@ -2281,7 +2303,7 @@ function serveWidgetTest(request, chatbotId, widgetVersion = "1") {
   const scriptPolicy = embed ? "'self' 'unsafe-inline'" : "'self'";
   // A preview URL is for testing inside Fise, never for re-use as an iframe on
   // another website. Website installation is authorised separately by plan.
-  return new Response(content, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": `default-src 'self'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'`, "permissions-policy": "microphone=(self)", "x-content-type-options": "nosniff", "x-frame-options": "DENY" } });
+  return new Response(content, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": `default-src 'self'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors ${studio ? "'self'" : "'none'"}; base-uri 'none'`, "permissions-policy": "microphone=(self)", "x-content-type-options": "nosniff", "x-frame-options": studio ? "SAMEORIGIN" : "DENY" } });
 }
 
 async function handleWidgetApi(request, env) {
@@ -2303,13 +2325,7 @@ async function handleWidgetApi(request, env) {
   return json({ error: "Not found" }, 404);
 }
 
-return {
-  handleWidgetApi,
-  serveWidgetScript,
-  serveWidgetTest,
-  tailoredPopularQuestions,
-  widgetTestJavascript,
-};
+return { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript };
 })();
 const WebsiteModule = (() => {
 const LEGAL_DOCUMENTS = {
@@ -2448,6 +2464,7 @@ const WEBSITE_DEFAULTS = {
   seo_pricing_description:
     "Simple AI website chatbot packages for growing businesses.",
   site_css: "",
+  visual_overrides_json: "{}",
   custom_html: "",
   custom_css: "",
   custom_js: "",
@@ -2581,6 +2598,13 @@ async function saveWebsiteContent(
         key.startsWith("custom_") || key === "site_css" ? 30000 : 12000,
       );
   clean.site_css = clean.site_css.replace(/<\/?style\b[^>]*>/gi, "");
+  try {
+    const parsed = JSON.parse(clean.visual_overrides_json || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid");
+    clean.visual_overrides_json = JSON.stringify(Object.fromEntries(Object.entries(parsed).slice(0, 100).filter(([selector]) => String(selector).length <= 300).map(([selector, value]) => [String(selector), String(value ?? "").slice(0, 5000)])));
+  } catch {
+    clean.visual_overrides_json = "{}";
+  }
   if (!/^#[0-9a-f]{6}$/i.test(clean.theme_primary))
     clean.theme_primary = WEBSITE_DEFAULTS.theme_primary;
   if (!/^#[0-9a-f]{6}$/i.test(clean.theme_navy))
@@ -2788,6 +2812,7 @@ function shell(title, description, content, c) {
             </div>
           </div>
         </footer>
+        <script>${visualOverridesJavascript(c)}</script>
       </body>
     </html>`;
 }
@@ -3852,7 +3877,14 @@ function prepareReferenceBody(body, c) {
 }
 
 function referenceShell(title, description, body, c) {
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}${tidioInspiredStyles}:root{--cyan:${escapeWebsiteHtml(c.theme_primary || "#20c6d8")}}${c.site_css || ""}</style></head><body>${referenceHeader()}${prepareReferenceBody(body, c)}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}</script></body></html>`;
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}${tidioInspiredStyles}:root{--cyan:${escapeWebsiteHtml(c.theme_primary || "#20c6d8")}}${c.site_css || ""}</style></head><body>${referenceHeader()}${prepareReferenceBody(body, c)}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}${visualOverridesJavascript(c)}</script></body></html>`;
+}
+
+function visualOverridesJavascript(c) {
+  let overrides = {};
+  try { overrides = JSON.parse(c.visual_overrides_json || "{}"); } catch { overrides = {}; }
+  const safe = JSON.stringify(overrides).replaceAll("<", "\\u003c");
+  return `(()=>{const edits=${safe};for(const [selector,text] of Object.entries(edits)){try{const element=document.querySelector(selector);if(element)element.textContent=String(text)}catch{}}})();`;
 }
 
 function referenceJavascript() {
@@ -4378,23 +4410,9 @@ async function submitContactRequest(request, env) {
 async function handlePublicWebsite(request, env) {
   const url = new URL(request.url);
   if (request.method !== "GET" || !PUBLIC_PATHS.has(url.pathname)) return null;
-
-  const legacyPaths = new Set([
-    "/",
-    "/ai-chatbots",
-    "/pricing",
-    "/resources",
-    "/about",
-    "/blog",
-    "/privacy",
-    "/terms",
-    "/contact",
-  ]);
-  if (legacyPaths.has(url.pathname))
-    return handlePublicWebsiteLegacy(request, env);
-
+  const legacyPaths = new Set(["/", "/ai-chatbots", "/pricing", "/resources", "/about", "/blog", "/privacy", "/terms", "/contact"]);
+  if (legacyPaths.has(url.pathname)) return handlePublicWebsiteLegacy(request, env);
   const { content: c } = await readWebsiteContent(env);
-  if (url.pathname === "/") return response(referenceHome(c));
   if (url.pathname === "/privacy-policy") return response(referenceLegal("privacy", c, url.origin));
   if (url.pathname === "/terms-and-conditions") return response(referenceLegal("terms", c, url.origin));
   if (url.pathname === "/cookies") return response(referenceLegal("cookies", c, url.origin));
@@ -4445,7 +4463,7 @@ function websiteFrameJavascript() {
 return { WEBSITE_DEFAULTS, escapeWebsiteHtml, handlePublicWebsite, readWebsiteContent, saveWebsiteContent, updateWebsiteContent, websiteFrameJavascript };
 })();
 const StudioModule = (() => {
-const { WEBSITE_DEFAULTS, escapeWebsiteHtml: esc, readWebsiteContent, saveWebsiteContent } = WebsiteModule;
+const { WEBSITE_DEFAULTS, escapeWebsiteHtml: esc, readWebsiteContent, saveWebsiteContent, handlePublicWebsite } = WebsiteModule;
 const html = String.raw;
 const MAX_WORKERS = 5;
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -4658,6 +4676,15 @@ async function ensureStudioSchema(env) {
     env.DB.prepare(
       `CREATE TABLE IF NOT EXISTS website_media (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,file_name TEXT NOT NULL,mime_type TEXT NOT NULL,size_bytes INTEGER NOT NULL,r2_key TEXT NOT NULL,openai_file_id TEXT,created_at TEXT NOT NULL,created_by TEXT)`,
     ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`,
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS chatbot_automations (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,chatbot_id TEXT NOT NULL,name TEXT NOT NULL,trigger_event TEXT NOT NULL,action_type TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,config_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL,updated_at TEXT NOT NULL)`,
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS chatbot_automation_runs (id TEXT PRIMARY KEY,automation_id TEXT NOT NULL,chatbot_id TEXT NOT NULL,trigger_event TEXT NOT NULL,status TEXT NOT NULL,response_code INTEGER,error_message TEXT,created_at TEXT NOT NULL)`,
+    ),
   ]);
 }
 
@@ -4680,7 +4707,7 @@ async function ensureFirstWorker(env, user) {
 
 async function studioState(env, user) {
   await ensureFirstWorker(env, user);
-  const [site, workers, media, versions, tasks] = await Promise.all([
+  const [site, workers, media, versions, tasks, chatbots, automations] = await Promise.all([
     readWebsiteContent(env),
     env.DB.prepare(
       "SELECT * FROM website_workers WHERE user_id=? ORDER BY slot",
@@ -4700,6 +4727,16 @@ async function studioState(env, user) {
     )
       .bind(user.id)
       .all(),
+    env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.public_key,c.status,c.model,c.primary_colour,c.greeting,c.instructions,
+      COALESCE(cs.answer_length,'short') answer_length,COALESCE(cs.formality,'friendly') formality,
+      COALESCE(cs.popular_questions_json,'[]') popular_questions_json,COALESCE(cs.default_size,'standard') default_size,
+      COALESCE(cs.allow_files,1) allow_files,COALESCE(cs.allow_voice,1) allow_voice,COALESCE(cs.lead_capture_enabled,0) lead_capture_enabled,
+      COALESCE(cs.lead_cta_label,'Talk to us') lead_cta_label,COALESCE(cs.lead_destination_email,'') lead_destination_email,
+      COALESCE(cs.google_sheets_webhook,'') google_sheets_webhook,COALESCE(cs.ui_settings_json,'{}') ui_settings_json,
+      COALESCE(ds.system_prompt_append,'') system_prompt_append,COALESCE(ds.widget_css,'') widget_css,COALESCE(ds.functions_json,'[]') functions_json
+      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN chatbot_developer_settings ds ON ds.chatbot_id=c.id
+      WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all(),
+    env.DB.prepare("SELECT * FROM chatbot_automations WHERE user_id=? ORDER BY created_at").bind(user.id).all(),
   ]);
   return {
     site,
@@ -4707,20 +4744,22 @@ async function studioState(env, user) {
     media: media.results || [],
     versions: versions.results || [],
     tasks: tasks.results || [],
+    chatbots: chatbots.results || [],
+    automations: automations.results || [],
     targets: Object.fromEntries(
       Object.entries(TARGETS).map(([k, v]) => [k, v.label]),
     ),
   };
 }
 
-function studioCss() {
+function legacyStudioCss() {
   return String.raw`
   :root{--navy:#071b45;--blue:#1769e0;--blue2:#0d55bd;--bg:#f4f7fb;--line:#dce4ef;--muted:#66758b;--green:#13734b;--red:#a52b2b}*{box-sizing:border-box}body{margin:0;color:var(--navy);background:var(--bg);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}.layout{display:grid;grid-template-columns:245px 1fr;min-height:100vh}.side{position:sticky;top:0;height:100vh;padding:22px 15px;color:#dbe8ff;background:#061633}.brand{display:flex;align-items:center;gap:11px;padding:0 8px 22px}.mark{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;color:white;background:#2576ed;font-weight:950}.brand b{display:block;color:#fff;font-size:18px}.brand small{display:block;color:#8fa8cc}.side nav{display:grid;gap:4px}.side button{width:100%;padding:11px 12px;border:0;border-radius:9px;color:#b7c8e2;background:transparent;text-align:left;font-weight:700}.side button:hover,.side button.active{color:#fff;background:#163264}.side-foot{position:absolute;left:15px;right:15px;bottom:18px;display:grid;gap:8px}.side-foot a{padding:10px 12px;border:1px solid #2d4771;border-radius:9px;color:#dbe8ff;text-decoration:none;font-size:13px;font-weight:750}.main{min-width:0}.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:82px;padding:15px 28px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}.top h1{margin:0;font-size:24px}.top p{margin:4px 0 0;color:var(--muted);font-size:12px}.actions{display:flex;gap:9px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:0;border-radius:10px;color:#fff;background:var(--blue);font-weight:850;text-decoration:none}.btn:hover{background:var(--blue2)}.btn.ghost{color:var(--navy);background:#e9eff7}.btn.danger{color:var(--red);background:#fff0f0}.content{width:min(1240px,calc(100% - 42px));margin:28px auto 70px}.panel{display:none}.panel.active{display:block}.intro{margin:0 0 20px;color:var(--muted);line-height:1.55}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{padding:22px;border:1px solid var(--line);border-radius:17px;background:#fff;box-shadow:0 9px 28px rgba(19,55,105,.055)}.card h2,.card h3{margin:0 0 7px}.card>p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5}.field{display:block;margin:14px 0;color:#263b5d;font-size:12px;font-weight:850}.field input,.field textarea,.field select{width:100%;margin-top:7px;padding:11px 12px;border:1px solid #cbd6e5;border-radius:9px;color:#14294b;background:#fff;outline:none}.field textarea{min-height:88px;resize:vertical;line-height:1.5}.field textarea.code{min-height:180px;color:#dbeafe;background:#0b1831;font-family:ui-monospace,Consolas,monospace}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(23,105,224,.1)}.worker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}.worker{position:relative}.worker-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.status{display:inline-flex;padding:5px 9px;border-radius:999px;color:#53647b;background:#eaf0f7;font-size:10px;font-weight:900;text-transform:uppercase}.status.running,.status.queued{color:#0d55bd;background:#e7f1ff}.status.failed{color:var(--red);background:#fff0f0}.worker textarea{min-height:116px}.worker-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.result{margin-top:13px;padding:11px 12px;border-radius:9px;color:#52627a;background:#f4f7fb;font-size:12px;line-height:1.45}.result.ok{color:var(--green);background:#edf9f2}.result.error{color:var(--red);background:#fff1f1}.media-list,.version-list,.task-list{display:grid;gap:10px}.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff}.row strong{display:block;font-size:13px}.row small{color:var(--muted)}.upload{padding:26px;border:2px dashed #bfd0e6;border-radius:15px;background:#f9fbfe;text-align:center}.upload input{max-width:100%}.preview{width:100%;height:720px;border:1px solid var(--line);border-radius:14px;background:#fff}.notice{display:none;margin-bottom:18px;padding:12px 14px;border-radius:10px;color:var(--green);background:#eaf9f1;font-size:13px;font-weight:750}.notice.show{display:block}.mobile{display:none}.empty{padding:25px;border:1px dashed #bdcadd;border-radius:13px;color:var(--muted);text-align:center}.help{padding:13px;border-left:4px solid var(--blue);border-radius:8px;background:#eaf2ff;color:#365178;font-size:13px;line-height:1.5}
   @media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:fixed;z-index:50;width:245px;transform:translateX(-105%);transition:.2s}.side.open{transform:none}.main{width:100%}.mobile{display:inline-flex}.worker-grid,.grid{grid-template-columns:1fr}.content{width:min(100% - 24px,1240px)}.top{padding:13px 15px}.preview{height:580px}}
 `;
 }
 
-function studioPage(state, user, message = "") {
+function legacyStudioPage(state, user, message = "") {
   const safe = JSON.stringify(state).replaceAll("<", "\\u003c");
   const nav = [
     ...FIELD_GROUPS.map(([id, ,]) => [
@@ -4733,6 +4772,15 @@ function studioPage(state, user, message = "") {
     ["preview", "Live Preview"],
   ];
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Website Studio | Fise AI</title><style>${studioCss()}</style></head><body><div class="layout"><aside class="side" id="side"><div class="brand"><span class="mark">F</span><div><b>Fise AI</b><small>Website Studio</small></div></div><nav>${nav.map(([id, label], i) => `<button data-panel="${id}" class="${i === 0 ? "active" : ""}">${esc(label)}</button>`).join("")}</nav><div class="side-foot"><a href="/dashboard">← Chatbot dashboard</a><a href="/" target="_blank">View live website ↗</a></div></aside><main class="main"><header class="top"><button class="btn ghost mobile" id="mobile">☰</button><div><h1 id="title">Overview</h1><p>Signed in as ${esc(user.email)} · Changes publish automatically when an AI task finishes.</p></div><div class="actions"><button class="btn ghost" id="refresh">Refresh</button><button class="btn" id="save">Save changes</button></div></header><div class="content"><div class="notice ${message ? "show" : ""}" id="notice">${esc(message)}</div><div id="panels"></div></div></main></div><script>window.STUDIO=${safe};</script><script src="/website-studio.js?v=5" defer></script></body></html>`;
+}
+
+function studioCss() {
+  return String.raw`:root{--ink:#111827;--muted:#667085;--line:#e4e7ec;--blue:#1769e0;--panel:#fff;--soft:#f6f7f9}*{box-sizing:border-box}html,body{height:100%}body{margin:0;overflow:hidden;color:var(--ink);background:#eef1f5;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}.studio-top{height:66px;display:grid;grid-template-columns:260px 180px minmax(280px,1fr) auto;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);background:#fff}.brand{display:flex;align-items:center;gap:10px;min-width:0}.mark{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;color:#fff;background:#1769e0;font-weight:950}.brand b{display:block}.brand small{display:block;color:var(--muted);font-size:11px}.switch{display:flex;padding:3px;border-radius:10px;background:#eef1f5}.switch button{flex:1;padding:8px;border:0;border-radius:8px;color:#667085;background:transparent;font-size:12px;font-weight:800}.switch button.active{color:#111827;background:#fff;box-shadow:0 1px 4px #0002}.ai-command{display:flex;gap:7px;min-width:0}.ai-command input{width:100%;padding:10px 12px;border:1px solid #cfd5df;border-radius:10px;outline:none}.ai-command input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1769e018}.top-actions{display:flex;align-items:center;gap:7px}.btn{min-height:38px;padding:0 13px;border:0;border-radius:9px;color:#fff;background:var(--blue);font-weight:800;text-decoration:none;white-space:nowrap}.btn.ghost{color:#344054;background:#eef1f5}.btn.small{min-height:32px;padding:0 9px;font-size:11px}.page-select{max-width:125px;padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff}.studio-grid{height:calc(100vh - 66px);display:grid;grid-template-columns:282px minmax(360px,1fr) 318px}.rail{min-height:0;overflow:auto;padding:16px;border-right:1px solid var(--line);background:#fff}.rail.right{border-right:0;border-left:1px solid var(--line)}.rail h2{margin:0 0 5px;font-size:16px}.rail-note{margin:0 0 15px;color:var(--muted);font-size:11px;line-height:1.45}.nav-list{display:grid;gap:5px}.nav-list button{width:100%;padding:10px 11px;border:0;border-radius:8px;color:#344054;background:transparent;text-align:left;font-size:12px;font-weight:750}.nav-list button:hover,.nav-list button.active{color:#175cd3;background:#eff6ff}.panel{display:none}.panel.active{display:block}.field{display:block;margin:12px 0;color:#344054;font-size:11px;font-weight:800}.field input,.field textarea,.field select{width:100%;margin-top:6px;padding:9px 10px;border:1px solid #d0d5dd;border-radius:8px;color:#111827;background:#fff;outline:none}.field textarea{min-height:82px;resize:vertical;line-height:1.45}.field textarea.code{min-height:150px;color:#dbeafe;background:#101828;font-family:ui-monospace,monospace}.check{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12px}.check input{width:auto}.divider{height:1px;margin:16px 0;background:var(--line)}.section-title{margin:16px 0 7px;font-size:12px}.canvas{min-width:0;min-height:0;display:flex;flex-direction:column;padding:13px;background:#dde2e9}.canvas-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.device{display:flex;gap:4px;padding:3px;border-radius:8px;background:#cfd5dd}.device button{padding:6px 9px;border:0;border-radius:6px;color:#475467;background:transparent;font-size:11px;font-weight:800}.device button.active{color:#101828;background:#fff}.frame-wrap{flex:1;min-height:0;display:flex;justify-content:center;overflow:auto}.frame-shell{width:100%;height:100%;overflow:hidden;border:1px solid #cbd1da;border-radius:10px;background:#fff;box-shadow:0 12px 35px #1018281f;transition:width .2s}.frame-shell.tablet{width:820px}.frame-shell.mobile{width:390px}.preview{width:100%;height:100%;border:0;background:#fff}.card{margin-bottom:12px;padding:13px;border:1px solid var(--line);border-radius:10px;background:#fff}.card h3{margin:0 0 5px;font-size:13px}.card p{margin:0 0 9px;color:var(--muted);font-size:11px;line-height:1.45}.media-list,.automation-list{display:grid;gap:7px}.media-item,.automation{padding:9px;border:1px solid var(--line);border-radius:8px;background:#fafafa;font-size:11px}.row-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.notice{position:fixed;left:50%;bottom:18px;z-index:99;max-width:560px;padding:11px 15px;border-radius:9px;color:#fff;background:#101828;box-shadow:0 8px 28px #0004;transform:translate(-50%,20px);opacity:0;pointer-events:none;transition:.2s;font-size:12px;font-weight:700}.notice.show{transform:translate(-50%,0);opacity:1}.empty{padding:18px;border:1px dashed #cbd1da;border-radius:9px;color:var(--muted);text-align:center;font-size:11px}.inspector-empty{padding:26px 10px;color:var(--muted);text-align:center;font-size:12px;line-height:1.5}.dirty{color:#b54708!important}.selected-tag{display:inline-block;max-width:100%;overflow:hidden;padding:5px 8px;border-radius:6px;color:#175cd3;background:#eff6ff;text-overflow:ellipsis;white-space:nowrap;font:700 10px ui-monospace,monospace}@media(max-width:1100px){.studio-top{grid-template-columns:180px 160px 1fr}.top-actions .page-select,.top-actions .ghost{display:none}.studio-grid{grid-template-columns:245px 1fr 280px}}@media(max-width:820px){body{overflow:auto}.studio-top{height:auto;grid-template-columns:1fr 1fr;position:sticky;top:0;z-index:20}.ai-command{grid-column:1/-1}.studio-grid{height:auto;grid-template-columns:1fr}.rail,.rail.right{max-height:none;border:0;border-bottom:1px solid var(--line)}.canvas{height:70vh;order:-1}}`;
+}
+
+function studioPage(state, user, message = "") {
+  const safe = JSON.stringify(state).replaceAll("<", "\\u003c");
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise Visual Studio</title><style>${studioCss()}</style></head><body><header class="studio-top"><div class="brand"><span class="mark">F</span><div><b>Fise Studio</b><small>${esc(user.email)}</small></div></div><div class="switch"><button class="active" data-mode="website">Website</button><button data-mode="chatbot">Chatbot</button></div><form class="ai-command" id="ai-command"><input id="ai-prompt" maxlength="6000" placeholder="Ask AI to change anything…"><button class="btn" type="submit">Build</button></form><div class="top-actions"><select class="page-select" id="page"><option value="/">Home</option><option value="/ai-chatbots">Chatbots</option><option value="/pricing">Pricing</option><option value="/resources">Resources</option><option value="/about">About</option><option value="/blog">Blog</option><option value="/contact">Contact</option></select><button class="btn ghost" id="refresh" type="button">Refresh</button><a class="btn ghost" href="/" target="_blank">Live ↗</a><button class="btn" id="save" type="button">Save</button></div></header><main class="studio-grid"><aside class="rail"><h2 id="rail-title">Website</h2><p class="rail-note">Choose a section, upload media, or click any visible element in the preview.</p><div id="left"></div></aside><section class="canvas"><div class="canvas-bar"><span id="canvas-label">Live website canvas</span><div class="device"><button class="active" data-device="desktop">Desktop</button><button data-device="tablet">Tablet</button><button data-device="mobile">Mobile</button></div></div><div class="frame-wrap"><div class="frame-shell" id="frame-shell"><iframe class="preview" id="preview" title="Live editable preview"></iframe></div></div></section><aside class="rail right"><h2>Inspector</h2><p class="rail-note">Changes appear instantly in the canvas and publish when you save.</p><div id="right"></div></aside></main><div class="notice ${message ? "show" : ""}" id="notice">${esc(message)}</div><script>window.STUDIO=${safe};</script><script src="/website-studio.js?v=9" defer></script></body></html>`;
 }
 
 async function showWebsiteEditor(env, user, message = "") {
@@ -4748,7 +4796,22 @@ async function showWebsiteEditor(env, user, message = "") {
   });
 }
 
-function websiteStudioJavascript() {
+async function showStudioWebsitePreview(request, env) {
+  const url = new URL(request.url);
+  const allowed = new Set(["/", "/ai-chatbots", "/pricing", "/resources", "/about", "/blog", "/contact", "/privacy-policy", "/terms-and-conditions"]);
+  const path = allowed.has(url.searchParams.get("path")) ? url.searchParams.get("path") : "/";
+  const previewRequest = new Request(new URL(path, url.origin), { method: "GET", headers: request.headers });
+  const response = await handlePublicWebsite(previewRequest, env);
+  if (!response) return new Response("Preview not found", { status: 404 });
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "no-store");
+  headers.set("x-frame-options", "SAMEORIGIN");
+  const csp = headers.get("content-security-policy") || "default-src 'self'";
+  headers.set("content-security-policy", /frame-ancestors\s+[^;]+/.test(csp) ? csp.replace(/frame-ancestors\s+[^;]+/, "frame-ancestors 'self'") : `${csp}; frame-ancestors 'self'`);
+  return new Response(response.body, { status: response.status, headers });
+}
+
+function legacyWebsiteStudioJavascript() {
   return String.raw`(()=>{
   let S=window.STUDIO,C=S.site.content,current='overview',poll=null,drafts={};const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
   const groups=${JSON.stringify(FIELD_GROUPS)},labels=${JSON.stringify(LABELS)},defaults=${JSON.stringify(WEBSITE_DEFAULTS)},targets=${JSON.stringify(Object.fromEntries(Object.entries(TARGETS).map(([k, v]) => [k, v.label])))},booleanKeys=new Set(${JSON.stringify(NAVIGATION_KEYS.filter((key) => key.endsWith("_enabled") || key.endsWith("_dropdown")))});
@@ -4773,6 +4836,46 @@ function websiteStudioJavascript() {
   function bind(){$$('[data-key]').forEach(el=>el.addEventListener('input',()=>C[el.dataset.key]=el.value));$$('[data-role="attach"]').forEach(input=>input.onchange=async()=>{const card=input.closest('.worker'),status=$('[data-role="attach-status"]',card),file=input.files&&input.files[0];if(!file)return;capture();status.textContent='Uploading '+file.name+'…';input.disabled=true;try{const d=await uploadOne(file);drafts[card.dataset.worker]=drafts[card.dataset.worker]||{};drafts[card.dataset.worker].media=[...(drafts[card.dataset.worker].media||[]),d.id];await reload('File attached successfully.')}catch(e){status.textContent=e.message;input.disabled=false}});$$('.run').forEach(b=>b.onclick=async()=>{const card=b.closest('.worker'),prompt=$('[data-role="prompt"]',card).value.trim(),media=$('[data-role="media"]',card);if(!prompt)return notice('Type an instruction first.');b.disabled=true;b.textContent='Starting…';try{await api('/api/website/studio/workers/'+card.dataset.worker+'/run',{method:'POST',body:JSON.stringify({prompt,target:$('[data-role="target"]',card).value,media_ids:media?[...media.selectedOptions].map(x=>x.value):[]})});await reload('The AI worker has started. You can keep using the other workers.')}catch(e){notice(e.message);b.disabled=false;b.textContent='Start working'}});$$('.duplicate').forEach(b=>b.onclick=async()=>{const card=b.closest('.worker');try{await api('/api/website/studio/workers/'+card.dataset.worker+'/duplicate',{method:'POST',body:'{}'});await reload('A new AI worker is ready.')}catch(e){notice(e.message)}});$$('.restore').forEach(b=>b.onclick=async()=>{if(!confirm('Restore this website version? A new backup version will be created.'))return;try{await api('/api/website/studio/versions/'+b.dataset.id+'/restore',{method:'POST',body:'{}'});await reload('The selected version is live.')}catch(e){notice(e.message)}});$$('.copy-url').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(location.origin+'/website-media/'+b.dataset.id).then(()=>notice('File URL copied.')));const up=$('#upload');if(up)up.onsubmit=async e=>{e.preventDefault();const file=$('input[type="file"]',up).files[0],status=$('#upload-status');if(!file)return;status.textContent=' Uploading…';try{const d=await uploadOne(file);await reload(d.message||'File uploaded.')}catch(err){status.textContent=' '+err.message}}}
   $$('[data-panel]').forEach(b=>b.onclick=()=>{capture();current=b.dataset.panel;$$('[data-panel]').forEach(x=>x.classList.toggle('active',x===b));$('#title').textContent=b.textContent;$('#side').classList.remove('open');render()});$('#save').onclick=async()=>{capture();try{await api('/api/website/studio/config',{method:'PUT',body:JSON.stringify({content:C,revision:S.site.revision})});await reload('Your website changes are live.')}catch(e){notice(e.message)}};$('#refresh').onclick=()=>reload('Studio refreshed.');$('#mobile').onclick=()=>$('#side').classList.toggle('open');
   render();polling();
+})();`;
+}
+
+function websiteStudioJavascript() {
+  return String.raw`(()=>{
+  let S=window.STUDIO,C={...S.site.content},mode='website',section='overview',bot=null,autos=[],dirty=false,selected=null;
+  const $=(q,r=document)=>r.querySelector(q),$$=(q,r=document)=>[...r.querySelectorAll(q)],esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const labels=${JSON.stringify(LABELS)},groups=${JSON.stringify(FIELD_GROUPS)},bools=new Set(${JSON.stringify(NAVIGATION_KEYS.filter(k=>k.endsWith('_enabled')||k.endsWith('_dropdown')))});
+  function toast(t){const n=$('#notice');n.textContent=t;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),4500)}
+  async function api(url,opt={}){const headers=opt.body instanceof FormData?{}:{'content-type':'application/json'};const r=await fetch(url,{credentials:'same-origin',...opt,headers:{...headers,...(opt.headers||{})}}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed');return d}
+  function mark(){dirty=true;$('#canvas-label').textContent=(mode==='website'?'Live website canvas':'Live chatbot canvas')+' · unsaved';$('#canvas-label').classList.add('dirty')}
+  function field(key,value=C[key]){const label=esc(labels[key]||key.replaceAll('_',' '));if(bools.has(key))return '<label class="field">'+label+'<select data-site="'+key+'"><option value="true" '+(String(value)!=='false'?'selected':'')+'>Shown</option><option value="false" '+(String(value)==='false'?'selected':'')+'>Hidden</option></select></label>';const multi=key.endsWith('_text')||key.endsWith('_quote')||key.includes('description')||key.includes('css')||key.includes('html')||key.includes('js')||key==='footer_text'||String(value).length>100;return '<label class="field">'+label+(multi?'<textarea class="'+(key.includes('css')||key.includes('html')||key.includes('js')?'code':'')+'" data-site="'+key+'">'+esc(value)+'</textarea>':'<input data-site="'+key+'" type="'+(key.includes('colour')||key.includes('primary')||key.includes('navy')?'color':'text')+'" value="'+esc(value)+'">')+'</label>'}
+  function websiteLeft(){const nav=groups.map(([id,name])=>'<button class="'+(section===id?'active':'')+'" data-section="'+id+'">'+esc(name)+'</button>').join('');return '<div class="nav-list">'+nav+'<button class="'+(section==='media'?'active':'')+'" data-section="media">Media & uploads</button><button class="'+(section==='ai'?'active':'')+'" data-section="ai">AI workers</button><button class="'+(section==='versions'?'active':'')+'" data-section="versions">Versions</button></div>'}
+  function websiteRight(){if(selected)return inspector();if(section==='media')return mediaPanel();if(section==='ai')return aiPanel();if(section==='versions')return versionPanel();const g=groups.find(x=>x[0]===section)||groups[0];return '<div class="card"><h3>'+esc(g[1])+'</h3><p>Edit structured content and design settings.</p>'+g[2].map(k=>field(k)).join('')+'</div>'}
+  function mediaPanel(){return '<div class="card"><h3>Upload media</h3><p>Images, logos, documents and videos are stored for immediate website use.</p><input id="media-file" type="file"><button class="btn small" id="upload" type="button" style="margin-top:8px">Upload</button></div><div class="media-list">'+(S.media.length?S.media.map(m=>'<div class="media-item"><b>'+esc(m.file_name)+'</b><div>'+esc(m.mime_type)+' · '+Math.ceil(m.size_bytes/1024)+' KB</div><div class="row-actions"><button class="btn small ghost" data-copy="'+m.id+'">Copy URL</button>'+(String(m.mime_type).startsWith('image/')?'<button class="btn small ghost" data-logo="'+m.id+'">Use as logo</button>':'')+(String(m.mime_type).startsWith('video/')?'<button class="btn small ghost" data-video="'+m.id+'">Use in story</button>':'')+'</div></div>').join(''):'<div class="empty">No media yet</div>')+'</div>'}
+  function aiPanel(){return '<div class="card"><h3>AI website team</h3><p>The command bar uses your first available worker. Detailed tasks continue safely in the background.</p>'+(S.workers||[]).map(w=>'<div class="media-item"><b>'+esc(w.name)+'</b><div>'+esc(w.status)+(w.last_summary?' · '+esc(w.last_summary):'')+'</div></div>').join('')+'</div>'}
+  function versionPanel(){return '<div class="card"><h3>Version history</h3><p>Restore any prior published configuration.</p>'+(S.versions||[]).map(v=>'<div class="media-item"><b>Version '+v.revision+'</b><div>'+esc(v.summary||'Update')+'</div><button class="btn small ghost" data-restore="'+v.id+'">Restore</button></div>').join('')+'</div>'}
+  function selectorFor(el){if(el.id)return '#'+CSS.escape(el.id);let parts=[];while(el&&el.nodeType===1&&el.tagName.toLowerCase()!=='body'&&parts.length<5){let p=el.tagName.toLowerCase();const cls=[...el.classList].filter(x=>!x.startsWith('fise-studio')).slice(0,2);if(cls.length)p+='.'+cls.map(CSS.escape).join('.');const sib=el.parentElement?[...el.parentElement.children].filter(x=>x.tagName===el.tagName):[];if(sib.length>1)p+=':nth-of-type('+(sib.indexOf(el)+1)+')';parts.unshift(p);el=el.parentElement}return parts.join(' > ')}
+  function inspector(){return '<div class="card"><h3>Selected element</h3><p class="selected-tag">'+esc(selected.selector)+'</p><label class="field">Text<textarea id="inspect-text">'+esc(selected.text)+'</textarea></label><label class="field">Text colour<input id="inspect-color" type="color" value="'+esc(selected.color)+'"></label><label class="field">Background<input id="inspect-bg" type="color" value="'+esc(selected.background)+'"></label><label class="field">Font size<input id="inspect-size" type="number" min="8" max="120" value="'+esc(selected.fontSize)+'"></label><button class="btn ghost" id="clear-selection">Clear selection</button></div>'}
+  function pick(el){if(!el||['SCRIPT','STYLE','HTML','BODY'].includes(el.tagName))return;const doc=el.ownerDocument;doc.querySelectorAll('.fise-studio-selected').forEach(x=>{x.classList.remove('fise-studio-selected');x.style.outline=''});el.classList.add('fise-studio-selected');el.style.outline='3px solid #1769e0';const st=doc.defaultView.getComputedStyle(el),hex=toHex(st.color),bg=toHex(st.backgroundColor);selected={el,selector:selectorFor(el),text:el.textContent.trim().slice(0,5000),color:hex,background:bg,fontSize:parseInt(st.fontSize)||16};renderRight()}
+  function toHex(value){const m=String(value).match(/\d+/g);if(!m||m.length<3)return '#ffffff';return '#'+m.slice(0,3).map(x=>Math.max(0,Math.min(255,+x)).toString(16).padStart(2,'0')).join('')}
+  function applyStyle(prop,val){if(!selected)return;selected.el.style[prop]=val;const rule='\n'+selected.selector+'{'+prop.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())+':'+val+'!important}';C.site_css=(C.site_css||'')+rule;mark()}
+  function bindFrame(){const frame=$('#preview');frame.onload=()=>{if(mode!=='website')return;try{const doc=frame.contentDocument;doc.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pick(e.target)},true)}catch{toast('Preview loaded, but click editing is unavailable for this page.')}}}
+  function loadPreview(){const frame=$('#preview');selected=null;if(mode==='website')frame.src='/dashboard/website/preview?path='+encodeURIComponent($('#page').value);else if(bot)frame.src='/widget/test?key='+encodeURIComponent(bot.public_key)+'&embed=1&studio=1';else frame.src='about:blank';bindFrame()}
+  function chatbotLeft(){return '<label class="field">Chatbot<select id="bot-select">'+S.chatbots.map(b=>'<option value="'+b.id+'" '+(bot?.id===b.id?'selected':'')+'>'+esc(b.name)+'</option>').join('')+'</select></label><div class="nav-list">'+[['appearance','Appearance'],['brain','Brain & behaviour'],['automations','Automations'],['developer','Developer & functions']].map(([id,n])=>'<button data-section="'+id+'" class="'+(section===id?'active':'')+'">'+n+'</button>').join('')+'</div>'}
+  function botField(key,label,type='text'){const v=bot?.[key]??'';if(type==='check')return '<label class="check"><input data-bot="'+key+'" type="checkbox" '+(Number(v)?'checked':'')+'>'+label+'</label>';return '<label class="field">'+label+(type==='textarea'?'<textarea data-bot="'+key+'">'+esc(v)+'</textarea>':'<input data-bot="'+key+'" type="'+type+'" value="'+esc(v)+'">')+'</label>'}
+  function chatbotRight(){if(!bot)return '<div class="empty">Create a chatbot in the dashboard first.</div>';if(section==='appearance')return '<div class="card"><h3>Appearance</h3>'+botField('name','Assistant name')+botField('business_name','Business name')+botField('primary_colour','Primary colour','color')+botField('greeting','Greeting','textarea')+'<label class="field">Widget version<select data-bot="widget_version"><option value="1" '+(botVersion()==='1'?'selected':'')+'>Version 1</option><option value="2" '+(botVersion()==='2'?'selected':'')+'>Version 2</option></select></label><label class="field">Default size<select data-bot="default_size"><option>standard</option><option>large</option></select></label>'+botField('allow_files','Allow files','check')+botField('allow_voice','Allow voice','check')+'</div>';if(section==='brain')return '<div class="card"><h3>Brain & behaviour</h3>'+botField('model','AI model')+botField('instructions','Core instructions','textarea')+botField('system_prompt_append','Advanced system prompt','textarea')+'<label class="field">Answer length<select data-bot="answer_length"><option>short</option><option>standard</option><option>detailed</option></select></label><label class="field">Formality<select data-bot="formality"><option>friendly</option><option>professional</option><option>formal</option></select></label>'+botField('popular_questions_json','Popular questions JSON','textarea')+'<div class="divider"></div><h3>Lead capture</h3>'+botField('lead_capture_enabled','Enable lead capture','check')+botField('lead_cta_label','Lead button label')+botField('lead_destination_email','Notification email','email')+botField('google_sheets_webhook','Google Sheets webhook')+'</div>';if(section==='automations')return automationPanel();return '<div class="card"><h3>Developer</h3><p>Safe declarative functions can describe integrations. Arbitrary server-side JavaScript is deliberately not executed.</p>'+botField('widget_css','Widget CSS','textarea')+botField('functions_json','Functions JSON','textarea')+'</div>'}
+  function botVersion(){try{return JSON.parse(bot.ui_settings_json||'{}').widget_version==='2'?'2':'1'}catch{return'1'}}
+  function automationPanel(){return '<div class="card"><h3>Automations</h3><p>Run a webhook, email or audit record when a conversation starts, a message arrives, or a lead is captured.</p><button class="btn small" id="add-auto">Add automation</button></div><div class="automation-list">'+(autos.length?autos.map((a,i)=>{const cfg=typeof a.config_json==='string'?a.config_json:JSON.stringify(a.config_json||{});return '<div class="automation" data-auto="'+i+'"><input data-a="name" value="'+esc(a.name||'Automation')+'"><label class="field">Trigger<select data-a="trigger_event"><option>conversation_started</option><option>message_received</option><option>lead_captured</option></select></label><label class="field">Action<select data-a="action_type"><option>record</option><option>webhook</option><option>email</option></select></label><label class="field">Configuration JSON<textarea data-a="config_json">'+esc(cfg)+'</textarea></label><label class="check"><input data-a="enabled" type="checkbox" '+(a.enabled!==false&&Number(a.enabled)!==0?'checked':'')+'>Enabled</label><button class="btn small ghost" data-remove-auto="'+i+'">Remove</button></div>'}).join(''):'<div class="empty">No automations yet</div>')+'</div>'}
+  function renderLeft(){$('#rail-title').textContent=mode==='website'?'Website':'Chatbot';$('#left').innerHTML=mode==='website'?websiteLeft():chatbotLeft();bindCommon()}
+  function renderRight(){$('#right').innerHTML=mode==='website'?websiteRight():chatbotRight();bindRight()}
+  function render(){renderLeft();renderRight();loadPreview()}
+  function bindCommon(){$$('[data-section]').forEach(b=>b.onclick=()=>{section=b.dataset.section;selected=null;renderLeft();renderRight()});const s=$('#bot-select');if(s)s.onchange=()=>{bot=S.chatbots.find(b=>b.id===s.value);autos=S.automations.filter(a=>a.chatbot_id===bot.id).map(a=>({...a}));render()}}
+  function bindRight(){$$('[data-site]').forEach(el=>el.oninput=()=>{C[el.dataset.site]=el.value;mark()});$$('[data-bot]').forEach(el=>{if(el.tagName==='SELECT'&&el.dataset.bot!=='widget_version')el.value=bot[el.dataset.bot]||el.value;el.oninput=()=>{bot[el.dataset.bot]=el.type==='checkbox'?(el.checked?1:0):el.value;if(el.dataset.bot==='widget_version'){const ui=JSON.parse(bot.ui_settings_json||'{}');ui.widget_version=el.value;bot.ui_settings_json=JSON.stringify(ui)}mark()}});if($('#inspect-text'))$('#inspect-text').oninput=e=>{selected.el.textContent=e.target.value;selected.text=e.target.value;let ov={};try{ov=JSON.parse(C.visual_overrides_json||'{}')}catch{}ov[selected.selector]=e.target.value;C.visual_overrides_json=JSON.stringify(ov);mark()};if($('#inspect-color'))$('#inspect-color').oninput=e=>applyStyle('color',e.target.value);if($('#inspect-bg'))$('#inspect-bg').oninput=e=>applyStyle('backgroundColor',e.target.value);if($('#inspect-size'))$('#inspect-size').oninput=e=>applyStyle('fontSize',e.target.value+'px');if($('#clear-selection'))$('#clear-selection').onclick=()=>{selected=null;renderRight()};if($('#upload'))$('#upload').onclick=uploadMedia;$$('[data-copy]').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(location.origin+'/website-media/'+b.dataset.copy).then(()=>toast('Media URL copied.')));$$('[data-logo]').forEach(b=>b.onclick=()=>{C.logo_url='/website-media/'+b.dataset.logo;mark();toast('Logo selected. Save to publish.')});$$('[data-video]').forEach(b=>b.onclick=()=>{C.client_story_1_video_url='/website-media/'+b.dataset.video;mark();toast('Video added to the first customer story.')});$$('[data-restore]').forEach(b=>b.onclick=async()=>{if(!confirm('Restore this version?'))return;await api('/api/website/studio/versions/'+b.dataset.restore+'/restore',{method:'POST',body:'{}'});await reload('Version restored.')});if($('#add-auto'))$('#add-auto').onclick=()=>{autos.push({name:'New automation',trigger_event:'message_received',action_type:'record',enabled:true,config_json:'{}'});mark();renderRight()};$$('[data-remove-auto]').forEach(b=>b.onclick=()=>{autos.splice(+b.dataset.removeAuto,1);mark();renderRight()});$$('[data-auto]').forEach(card=>$$('[data-a]',card).forEach(el=>{const a=autos[+card.dataset.auto];if(el.tagName==='SELECT')el.value=a[el.dataset.a];el.oninput=()=>{a[el.dataset.a]=el.type==='checkbox'?el.checked:el.value;mark()}}))}
+  async function uploadMedia(){const file=$('#media-file').files[0];if(!file)return toast('Choose a file first.');const f=new FormData();f.append('file',file);try{await api('/api/website/studio/media',{method:'POST',body:f});await reload('File uploaded.')}catch(e){toast(e.message)}}
+  async function save(){try{if(mode==='website'){await api('/api/website/studio/config',{method:'PUT',body:JSON.stringify({content:C,revision:S.site.revision})})}else if(bot){const payload={...bot,widget_version:botVersion(),automations:autos};await api('/api/website/studio/chatbots/'+encodeURIComponent(bot.id),{method:'PUT',body:JSON.stringify(payload)})}await reload('Changes published.')}catch(e){toast(e.message)}}
+  async function pollAi(workerId){for(let i=0;i<80;i++){await new Promise(r=>setTimeout(r,2500));const next=await api('/api/website/studio/state'),w=next.workers.find(x=>x.id===workerId);S=next;if(!w||!['queued','running'].includes(w.status)){C={...next.site.content};sync();toast(w?.last_error||w?.last_summary||'AI website edit finished.');return}}toast('The AI task is still running; you can safely refresh later.')}
+  async function runAi(e){e.preventDefault();const input=$('#ai-prompt'),prompt=input.value.trim();if(!prompt)return toast('Describe a change first.');const button=e.submitter;button.disabled=true;button.textContent='Building…';try{if(mode==='website'){const worker=S.workers.find(w=>!['queued','running'].includes(w.status));if(!worker)throw new Error('All AI workers are busy.');await api('/api/website/studio/workers/'+worker.id+'/run',{method:'POST',body:JSON.stringify({prompt,target:'global',media_ids:[]})});toast('AI website edit started. You can keep editing while it works.');pollAi(worker.id)}else{if(!bot)throw new Error('Select a chatbot first.');const d=await api('/api/website/studio/chatbot-ai',{method:'POST',body:JSON.stringify({chatbot_id:bot.id,prompt})});S=d.state;toast(d.summary||'AI chatbot change published.');sync()}input.value=''}catch(err){toast(err.message)}finally{button.disabled=false;button.textContent='Build'}}
+  async function reload(msg){S=await api('/api/website/studio/state');C={...S.site.content};sync();if(msg)toast(msg)}function sync(){bot=S.chatbots.find(b=>b.id===bot?.id)||S.chatbots[0]||null;autos=bot?S.automations.filter(a=>a.chatbot_id===bot.id).map(a=>({...a})):[];dirty=false;$('#canvas-label').classList.remove('dirty');render()}
+  $$('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;$$('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));section=mode==='website'?'overview':'appearance';sync()});$$('[data-device]').forEach(b=>b.onclick=()=>{$$('[data-device]').forEach(x=>x.classList.toggle('active',x===b));$('#frame-shell').className='frame-shell '+(b.dataset.device==='desktop'?'':b.dataset.device)});$('#page').onchange=loadPreview;$('#refresh').onclick=()=>reload('Studio refreshed.');$('#save').onclick=save;$('#ai-command').onsubmit=runAi;window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});sync();
 })();`;
 }
 
@@ -5043,6 +5146,109 @@ async function restoreVersion(env, user, id) {
   );
 }
 
+const CHATBOT_TRIGGER_EVENTS = new Set(["conversation_started", "message_received", "lead_captured"]);
+const CHATBOT_ACTION_TYPES = new Set(["webhook", "email", "record"]);
+
+function parseStudioJson(value, fallback) {
+  try { return JSON.parse(typeof value === "string" ? value : JSON.stringify(value)); } catch { return fallback; }
+}
+
+function cleanWidgetCss(value) {
+  return String(value || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "").slice(0, 30000);
+}
+
+function studioFlag(value, fallback = 0) {
+  if (value === undefined || value === null || value === "") return Number(fallback) ? 1 : 0;
+  return value === true || value === 1 || value === "1" || value === "true" || value === "on" ? 1 : 0;
+}
+
+function publicAutomationUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || host === "localhost" || host === "127.0.0.1" || host === "::1" || /^10\.|^192\.168\.|^169\.254\.|^172\.(?:1[6-9]|2\d|3[01])\./.test(host)) return "";
+    return url.toString();
+  } catch { return ""; }
+}
+
+function normaliseAutomation(item, user, chatbotId) {
+  const trigger = CHATBOT_TRIGGER_EVENTS.has(String(item?.trigger_event)) ? String(item.trigger_event) : "message_received";
+  const action = CHATBOT_ACTION_TYPES.has(String(item?.action_type)) ? String(item.action_type) : "record";
+  const config = parseStudioJson(item?.config_json ?? item?.config ?? {}, {});
+  if (action === "webhook") {
+    config.url = publicAutomationUrl(config.url);
+    if (!config.url) throw new Error("Webhook automations require a public HTTPS URL.");
+  }
+  if (action === "email") {
+    config.to = String(config.to || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.to)) throw new Error("Email automations require a valid destination address.");
+    config.subject = String(config.subject || "Fise chatbot event").slice(0, 180);
+    config.body = String(config.body || "Event: {{event}}\n{{payload.message}}").slice(0, 6000);
+  }
+  return { id: String(item?.id || crypto.randomUUID()).slice(0, 80), user_id: user.id, chatbot_id: chatbotId, name: String(item?.name || "Automation").trim().slice(0, 100) || "Automation", trigger_event: trigger, action_type: action, enabled: item?.enabled === false || Number(item?.enabled) === 0 ? 0 : 1, config_json: JSON.stringify(config) };
+}
+
+function normaliseChatbotStudioPayload(body, current) {
+  const questions = Array.isArray(body.popular_questions) ? body.popular_questions : parseStudioJson(body.popular_questions_json ?? current.popular_questions_json ?? "[]", []);
+  const functions = parseStudioJson(body.functions_json ?? current.functions_json ?? "[]", []);
+  if (!Array.isArray(functions)) throw new Error("Functions must be a JSON array.");
+  const colour = /^#[0-9a-f]{6}$/i.test(String(body.primary_colour || "")) ? String(body.primary_colour).toLowerCase() : (current.primary_colour || "#1769e0");
+  const ui = { ...parseStudioJson(current.ui_settings_json, {}), ...parseStudioJson(body.ui_settings_json, {}) };
+  if (body.widget_version) ui.widget_version = String(body.widget_version) === "2" ? "2" : "1";
+  const model = /^[A-Za-z0-9._-]+$/.test(String(body.model || "")) ? String(body.model) : (current.model || "gpt-5-mini");
+  return {
+    name: String(body.name ?? current.name).trim().slice(0, 80) || current.name,
+    business_name: String(body.business_name ?? current.business_name).trim().slice(0, 120), model, primary_colour: colour,
+    greeting: String(body.greeting ?? current.greeting).trim().slice(0, 500), instructions: String(body.instructions ?? current.instructions).trim().slice(0, 6000),
+    answer_length: ["short","standard","detailed"].includes(body.answer_length) ? body.answer_length : (current.answer_length || "short"),
+    formality: ["friendly","professional","formal"].includes(body.formality) ? body.formality : (current.formality || "friendly"),
+    popular_questions_json: JSON.stringify([...new Set(questions.map(x => String(x).trim().slice(0,120)).filter(Boolean))].slice(0,6)),
+    default_size: ["standard","large"].includes(body.default_size) ? body.default_size : (current.default_size || "standard"),
+    allow_files: studioFlag(body.allow_files,current.allow_files), allow_voice: studioFlag(body.allow_voice,current.allow_voice),
+    lead_capture_enabled: studioFlag(body.lead_capture_enabled,current.lead_capture_enabled),
+    lead_cta_label: String(body.lead_cta_label ?? current.lead_cta_label ?? "Talk to us").slice(0,80),
+    lead_destination_email: String(body.lead_destination_email ?? current.lead_destination_email ?? "").trim().toLowerCase().slice(0,254),
+    google_sheets_webhook: String(body.google_sheets_webhook ?? current.google_sheets_webhook ?? "").trim().slice(0,700), ui_settings_json: JSON.stringify(ui),
+    system_prompt_append: String(body.system_prompt_append ?? current.system_prompt_append ?? "").trim().slice(0,12000), widget_css: cleanWidgetCss(body.widget_css ?? current.widget_css), functions_json: JSON.stringify(functions).slice(0,30000)
+  };
+}
+
+async function persistStudioChatbot(env, user, chatbotId, body) {
+  const current = await env.DB.prepare(`SELECT c.*,COALESCE(cs.answer_length,'short') answer_length,COALESCE(cs.formality,'friendly') formality,COALESCE(cs.popular_questions_json,'[]') popular_questions_json,COALESCE(cs.default_size,'standard') default_size,COALESCE(cs.allow_files,1) allow_files,COALESCE(cs.allow_voice,1) allow_voice,COALESCE(cs.lead_capture_enabled,0) lead_capture_enabled,COALESCE(cs.lead_cta_label,'Talk to us') lead_cta_label,COALESCE(cs.lead_destination_email,'') lead_destination_email,COALESCE(cs.google_sheets_webhook,'') google_sheets_webhook,COALESCE(cs.ui_settings_json,'{}') ui_settings_json,COALESCE(ds.system_prompt_append,'') system_prompt_append,COALESCE(ds.widget_css,'') widget_css,COALESCE(ds.functions_json,'[]') functions_json FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN chatbot_developer_settings ds ON ds.chatbot_id=c.id WHERE c.id=? AND c.user_id=?`).bind(chatbotId,user.id).first();
+  if (!current) throw new Error("Chatbot not found.");
+  const next = normaliseChatbotStudioPayload(body, current), now = new Date().toISOString();
+  const automations = Array.isArray(body.automations) ? body.automations.map(item => normaliseAutomation(item,user,chatbotId)).slice(0,30) : null;
+  const statements = [
+    env.DB.prepare("UPDATE chatbots SET name=?,business_name=?,model=?,primary_colour=?,greeting=?,instructions=?,updated_at=? WHERE id=? AND user_id=?").bind(next.name,next.business_name,next.model,next.primary_colour,next.greeting,next.instructions,now,chatbotId,user.id),
+    env.DB.prepare(`INSERT INTO chatbot_settings (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(chatbot_id) DO UPDATE SET answer_length=excluded.answer_length,formality=excluded.formality,popular_questions_json=excluded.popular_questions_json,default_size=excluded.default_size,allow_files=excluded.allow_files,allow_voice=excluded.allow_voice,lead_capture_enabled=excluded.lead_capture_enabled,lead_cta_label=excluded.lead_cta_label,lead_destination_email=excluded.lead_destination_email,google_sheets_webhook=excluded.google_sheets_webhook,ui_settings_json=excluded.ui_settings_json,updated_at=excluded.updated_at`).bind(chatbotId,next.answer_length,next.formality,next.popular_questions_json,next.default_size,next.allow_files,next.allow_voice,next.lead_capture_enabled,next.lead_cta_label,next.lead_destination_email,next.google_sheets_webhook,next.ui_settings_json,now,now),
+    env.DB.prepare(`INSERT INTO chatbot_developer_settings (chatbot_id,user_id,system_prompt_append,widget_css,functions_json,updated_at,updated_by) VALUES (?,?,?,?,?,?,?) ON CONFLICT(chatbot_id) DO UPDATE SET system_prompt_append=excluded.system_prompt_append,widget_css=excluded.widget_css,functions_json=excluded.functions_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(chatbotId,user.id,next.system_prompt_append,next.widget_css,next.functions_json,now,user.email),
+    env.DB.prepare("DELETE FROM response_cache WHERE chatbot_id=?").bind(chatbotId)
+  ];
+  if (automations) {
+    statements.push(env.DB.prepare("DELETE FROM chatbot_automations WHERE chatbot_id=? AND user_id=?").bind(chatbotId,user.id));
+    for (const a of automations) statements.push(env.DB.prepare("INSERT INTO chatbot_automations (id,user_id,chatbot_id,name,trigger_event,action_type,enabled,config_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(a.id,a.user_id,a.chatbot_id,a.name,a.trigger_event,a.action_type,a.enabled,a.config_json,now,now));
+  }
+  await env.DB.batch(statements);
+  return next;
+}
+
+async function runChatbotBuilderAi(request, env, user) {
+  if (!env.OPENAI_API_KEY) return json({ error: "The OpenAI key is not configured." },503);
+  const body = await request.json(), chatbotId = String(body.chatbot_id || ""), prompt = String(body.prompt || "").trim().slice(0,6000);
+  if (!prompt) return json({ error: "Describe the chatbot change first." },400);
+  const state = await studioState(env,user), current = state.chatbots.find(bot => bot.id === chatbotId);
+  if (!current) return json({ error: "Chatbot not found." },404);
+  const fields = ["name","business_name","model","primary_colour","greeting","instructions","answer_length","formality","popular_questions_json","default_size","allow_files","allow_voice","lead_capture_enabled","lead_cta_label","lead_destination_email","google_sheets_webhook","system_prompt_append","widget_css","functions_json","widget_version"];
+  const schema = { type:"object",properties:{summary:{type:"string"},changes:{type:"array",items:{type:"object",properties:{field:{type:"string",enum:fields},value:{type:"string"}},required:["field","value"],additionalProperties:false}},automations:{type:"array",items:{type:"object",properties:{name:{type:"string"},trigger_event:{type:"string",enum:[...CHATBOT_TRIGGER_EVENTS]},action_type:{type:"string",enum:[...CHATBOT_ACTION_TYPES]},enabled:{type:"boolean"},config_json:{type:"string"}},required:["name","trigger_event","action_type","enabled","config_json"],additionalProperties:false}}},required:["summary","changes","automations"],additionalProperties:false };
+  const response = await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{authorization:`Bearer ${env.OPENAI_API_KEY}`,"content-type":"application/json"},body:JSON.stringify({model:env.CHATBOT_BUILDER_MODEL||env.WEBSITE_AI_MODEL||"gpt-5.6-terra",reasoning:{effort:"high"},instructions:"You are an advanced chatbot product engineer. Translate the request into safe structured configuration. Use widget_css for cosmetic changes, instructions/system_prompt_append for behaviour, functions_json for declarative callable function definitions, and automations for webhook/email/record workflows. Never output executable JavaScript. Return every existing automation unchanged unless the user asks to replace or remove it.",input:`Request: ${prompt}\n\nCurrent chatbot: ${JSON.stringify(current)}\nCurrent automations: ${JSON.stringify(state.automations.filter(a=>a.chatbot_id===chatbotId))}`,text:{format:{type:"json_schema",name:"chatbot_builder",strict:true,schema}},max_output_tokens:6000})});
+  const data = await response.json().catch(()=>({})); if(!response.ok) return json({error:data.error?.message||"The AI builder could not complete that change."},502);
+  const plan = parseAiJson(outputText(data)), patch = {};
+  for(const item of plan.changes||[]) if(fields.includes(item.field)) patch[item.field]=item.value;
+  if (patch.widget_version) patch.ui_settings_json = JSON.stringify({ ...parseStudioJson(current.ui_settings_json,{}), widget_version: patch.widget_version === "2" ? "2" : "1" });
+  await persistStudioChatbot(env,user,chatbotId,{...patch,automations:plan.automations});
+  return json({ok:true,summary:String(plan.summary||"Chatbot updated"),state:await studioState(env,user)});
+}
+
 async function handleWebsiteStudioApi(request, env, user) {
   await ensureFirstWorker(env, user);
   const url = new URL(request.url),
@@ -5072,6 +5278,13 @@ async function handleWebsiteStudioApi(request, env, user) {
   }
   if (p === "/api/website/studio/media" && request.method === "POST")
     return uploadMedia(request, env, user);
+  if (p === "/api/website/studio/chatbot-ai" && request.method === "POST")
+    return runChatbotBuilderAi(request, env, user);
+  let chatbotMatch = p.match(/^\/api\/website\/studio\/chatbots\/([^/]+)$/);
+  if (chatbotMatch && request.method === "PUT") {
+    try { await persistStudioChatbot(env,user,decodeURIComponent(chatbotMatch[1]),await request.json()); return json({ok:true,state:await studioState(env,user)}); }
+    catch(error){ return json({error:String(error?.message||error).slice(0,500)},400); }
+  }
   let m = p.match(
     /^\/api\/website\/studio\/workers\/([^/]+)\/(duplicate|run)$/,
   );
@@ -5182,7 +5395,7 @@ async function processAiTask(env, taskId) {
     },
     body: JSON.stringify({
       model: env.WEBSITE_AI_MODEL || "gpt-5.6-terra",
-      reasoning: { effort: "low" },
+      reasoning: { effort: "medium" },
       instructions:
         "You are Fise Website AI, a hands-on professional website editor. Understand ordinary language, make the smallest complete set of changes, and be honest about limitations. Never report a task as complete unless the returned settings would satisfy the user's actual instruction.",
       input: [{ role: "user", content }],
@@ -5268,7 +5481,7 @@ async function processAiTask(env, taskId) {
       headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, "content-type": "application/json" },
       body: JSON.stringify({
         model: env.WEBSITE_AI_MODEL || "gpt-5.6-terra",
-        reasoning: { effort: "low" },
+        reasoning: { effort: "high" },
         instructions: "Verify strictly whether the resulting live website settings satisfy the user's instruction. Inspect CSS geometry and states carefully. Do not assume success merely because fields changed.",
         input: `User instruction: ${task.prompt}\n\nBefore:\n${JSON.stringify(current)}\n\nAfter:\n${JSON.stringify(state)}\n\nChanged fields: ${keys.join(", ")}`,
         text: { format: { type: "json_schema", name: "website_verification", strict: true, schema: verifySchema } },
@@ -5368,6 +5581,39 @@ async function processMediaIndex(env, body) {
       .run();
 }
 
+function automationTemplate(template, event, payload) {
+  return String(template || "").replace(/\{\{\s*(event|payload(?:\.[A-Za-z0-9_]+)?)\s*\}\}/g, (_, key) => {
+    if (key === "event") return event;
+    const value = key === "payload" ? payload : payload?.[key.slice(8)];
+    return typeof value === "object" ? JSON.stringify(value) : String(value ?? "");
+  });
+}
+
+async function processChatbotAutomation(env, body) {
+  await ensureStudioSchema(env);
+  if (!CHATBOT_TRIGGER_EVENTS.has(String(body.trigger))) return;
+  const rows = await env.DB.prepare("SELECT * FROM chatbot_automations WHERE chatbot_id=? AND trigger_event=? AND enabled=1").bind(body.chatbotId,body.trigger).all();
+  const bot = await env.DB.prepare("SELECT id,name,business_name FROM chatbots WHERE id=?").bind(body.chatbotId).first();
+  if (!bot) return;
+  for (const automation of rows.results || []) {
+    let status = "completed", responseCode = null, errorMessage = null;
+    try {
+      const config = parseStudioJson(automation.config_json,{});
+      if (automation.action_type === "webhook") {
+        const target = publicAutomationUrl(config.url); if(!target) throw new Error("Unsafe webhook URL blocked");
+        const response = await fetch(target,{method:"POST",headers:{"content-type":"application/json","user-agent":"Fise-Automation/1.0"},body:JSON.stringify({event:body.trigger,chatbot:bot,payload:body.payload||{}}),signal:AbortSignal.timeout(8000)});
+        responseCode=response.status; if(!response.ok) throw new Error(`Webhook returned ${response.status}`);
+      } else if (automation.action_type === "email") {
+        if(!env.RESEND_API_KEY) throw new Error("Email service is not configured");
+        const to=String(config.to||""); if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error("Invalid automation email");
+        const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{authorization:`Bearer ${env.RESEND_API_KEY}`,"content-type":"application/json"},body:JSON.stringify({from:"Fise AI <login@fise.get-found.co.za>",to:[to],subject:automationTemplate(config.subject||"Fise chatbot event",body.trigger,body.payload||{}),text:automationTemplate(config.body||"Event: {{event}}\n{{payload}}",body.trigger,body.payload||{})})});
+        responseCode=response.status; if(!response.ok) throw new Error(`Email delivery returned ${response.status}`);
+      }
+    } catch(error) { status="failed"; errorMessage=String(error?.message||error).slice(0,500); }
+    await env.DB.prepare("INSERT INTO chatbot_automation_runs (id,automation_id,chatbot_id,trigger_event,status,response_code,error_message,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),automation.id,bot.id,body.trigger,status,responseCode,errorMessage,new Date().toISOString()).run();
+  }
+}
+
 async function websiteQueueHandler(batch, env) {
   await Promise.all(
     (batch.messages || []).map(async (message) => {
@@ -5375,6 +5621,8 @@ async function websiteQueueHandler(batch, env) {
       try {
         if (body.type === "website_media_index")
           await processMediaIndex(env, body);
+        else if (body.type === "chatbot_automation")
+          await processChatbotAutomation(env, body);
         else await processAiTask(env, body.taskId);
         message.ack();
       } catch (error) {
@@ -5395,19 +5643,18 @@ async function websiteQueueHandler(batch, env) {
   );
 }
 
-return { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, websiteQueueHandler, websiteStudioJavascript };
+return { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript };
 })();
 const { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
-const {
-  handleWidgetApi,
-  serveWidgetScript,
-  serveWidgetTest,
-  tailoredPopularQuestions,
-  widgetTestJavascript,
-} = ChatModule;
+const { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript } = ChatModule;
 const { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript } = WebsiteModule;
-const { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
+const { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 const html = String.raw;
+
+function isFiseStudioAdmin(user, env) {
+  const configured = String(env.FISE_ADMIN_EMAILS || "rianslabbert@gmail.com,sebslabbert1@gmail.com").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  return Boolean(user && configured.includes(String(user.email || "").trim().toLowerCase()));
+}
 
 const SESSION_COOKIE = "fise_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 14;
@@ -6897,8 +7144,7 @@ async function showDashboard(request, env) {
       SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
         CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
         (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
-         FROM messages m
-         JOIN conversations mc ON mc.id=m.conversation_id
+         FROM messages m JOIN conversations mc ON mc.id=m.conversation_id
          WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
         (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
         (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
@@ -6906,24 +7152,11 @@ async function showDashboard(request, env) {
         (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
         (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
       FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
-      WHERE c.user_id = ? ORDER BY c.created_at DESC
-    `,
-    )
-      .bind(monthStartIso(), user.id)
-      .all();
+      WHERE c.user_id = ? ORDER BY c.created_at DESC`,
+    ).bind(monthStartIso(), user.id).all();
   } catch (error) {
     console.error("Dashboard detail query failed; using safe fallback", error);
-    result = await env.DB.prepare(
-      `
-      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
-        CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
-        0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error
-      FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
-      WHERE c.user_id = ? ORDER BY c.created_at DESC
-    `,
-    )
-      .bind(user.id)
-      .all();
+    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
   }
   const url = requestedUrl;
   let message = "";
@@ -8453,17 +8686,25 @@ export default {
       if (url.pathname === "/dashboard/website" && request.method === "GET") {
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
+        if (!isFiseStudioAdmin(user, env)) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
         return showWebsiteEditor(
           env,
           user,
           url.searchParams.get("saved") ? "Your website changes are live." : "",
         );
       }
+      if (url.pathname === "/dashboard/website/preview" && request.method === "GET") {
+        const user = await currentUser(request, env);
+        if (!user) return redirect("/login");
+        if (!isFiseStudioAdmin(user, env)) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
+        return showStudioWebsitePreview(request, env);
+      }
       if (url.pathname.startsWith("/api/website/studio/")) {
         if (!sameOrigin(request))
           return json({ error: "Invalid request origin" }, 403);
         const user = await currentUser(request, env);
         if (!user) return json({ error: "Sign in again" }, 401);
+        if (!isFiseStudioAdmin(user, env)) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
         return handleWebsiteStudioApi(request, env, user);
       }
       if (url.pathname === "/api/website" && request.method === "POST") {
@@ -8580,10 +8821,10 @@ export default {
   },
   async queue(batch, env) {
     const websiteMessages = batch.messages.filter((message) =>
-      String(message.body?.type || "").startsWith("website_"),
+      /^(?:website_|chatbot_)/.test(String(message.body?.type || "")),
     );
     const scanMessages = batch.messages.filter(
-      (message) => !String(message.body?.type || "").startsWith("website_"),
+      (message) => !/^(?:website_|chatbot_)/.test(String(message.body?.type || "")),
     );
     await Promise.all([
       websiteMessages.length
