@@ -2725,7 +2725,7 @@ function shell(title, description, content, c) {
         <meta name="description" content="${escapeWebsiteHtml(description)}" />
         <title>${escapeWebsiteHtml(title)}</title>
         <style>
-          ${styles}:root {
+          ${legacyStyles}:root {
             --blue: ${escapeWebsiteHtml(c.theme_primary)};
             --bright: ${escapeWebsiteHtml(c.theme_primary)};
             --navy: ${escapeWebsiteHtml(c.theme_navy)};
@@ -4378,22 +4378,30 @@ async function submitContactRequest(request, env) {
 async function handlePublicWebsite(request, env) {
   const url = new URL(request.url);
   if (request.method !== "GET" || !PUBLIC_PATHS.has(url.pathname)) return null;
+
+  const legacyPaths = new Set([
+    "/",
+    "/ai-chatbots",
+    "/pricing",
+    "/resources",
+    "/about",
+    "/blog",
+    "/privacy",
+    "/terms",
+    "/contact",
+  ]);
+  if (legacyPaths.has(url.pathname))
+    return handlePublicWebsiteLegacy(request, env);
+
   const { content: c } = await readWebsiteContent(env);
   if (url.pathname === "/") return response(referenceHome(c));
-  if (url.pathname === "/pricing") return go("/#pricing");
-  if (url.pathname === "/ai-chatbots") return go("/#features");
-  if (url.pathname === "/resources") return go("/#how-it-works");
-  if (url.pathname === "/about") return response(referenceSimple(c.about_title,c.about_eyebrow,c.about_text,c));
-  if (url.pathname === "/blog") return response(referenceBlog(c));
-  if (url.pathname === "/privacy") return go("/privacy-policy");
-  if (url.pathname === "/terms") return go("/terms-and-conditions");
   if (url.pathname === "/privacy-policy") return response(referenceLegal("privacy", c, url.origin));
   if (url.pathname === "/terms-and-conditions") return response(referenceLegal("terms", c, url.origin));
   if (url.pathname === "/cookies") return response(referenceLegal("cookies", c, url.origin));
   if (url.pathname === "/checkout") {
     const key = String(url.searchParams.get("plan") || "").toLowerCase();
     const plan = checkoutPlans[key];
-    if (!plan) return go("/#pricing");
+    if (!plan) return go("/pricing");
     const configured = validCheckoutUrl(c[plan.field]);
     if (configured) return go(configured);
     return response(referenceCheckout(plan, c));
@@ -5649,7 +5657,7 @@ function documentPage(title, body) {
             <a class="public-logo" href="/"
               ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a
             >
-            <a class="public-cta" href="/?profile=1">My profile</a>
+            <a class="public-cta" href="/dashboard">Dashboard</a>
           </div>
         </header>
         ${body}
@@ -5761,8 +5769,8 @@ function loginPage(message = "", isError = false, embedded = false) {
   );
 }
 
-function verificationPage(success = true, message = "You can close this window and return to the Fise sign-in page.") {
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p></main></body></html>`;
+function verificationPage(success = true, message = "Your email is verified. You can now open your dashboard.") {
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}.open-dashboard{display:inline-flex;min-height:46px;margin-top:22px;padding:0 19px;align-items:center;border-radius:10px;color:#fff;background:#1769e0;text-decoration:none;font-weight:800}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p>${success ? html`<a class="open-dashboard" href="/dashboard">Open dashboard</a>` : ""}</main></body></html>`;
 }
 
 function dashboardPage(
@@ -6172,7 +6180,7 @@ async function createUserSession(userId, env, destination) {
   return redirect(destination, { "set-cookie": cookie });
 }
 
-async function createEmailSession(email, env, destination = "/?signed_in=1") {
+async function createEmailSession(email, env, destination = "/dashboard") {
   await ensureAccountAuthSchema(env);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const nowIso = new Date().toISOString();
@@ -6207,7 +6215,7 @@ async function registerAccount(request, env) {
   const username = normalizeUsername(form.get("username"));
   const password = validPassword(form.get("password"));
   const embedded = String(form.get("embed") || "") === "1";
-  const returnTo = safeReturnPath(form.get("return_to"));
+  const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
   if (!email || !username || !password)
     return htmlResponse(loginPage("Enter a valid email, a 3–40 character username, and a password of at least 8 characters.", true, embedded), 400);
   const existing = await env.DB.prepare(
@@ -6237,7 +6245,7 @@ async function passwordLogin(request, env) {
   const identifier = String(form.get("identifier") || "").trim();
   const password = String(form.get("password") || "");
   const embedded = String(form.get("embed") || "") === "1";
-  const returnTo = safeReturnPath(form.get("return_to"));
+  const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
   const user = await env.DB.prepare(
     "SELECT id,email,username,password_hash,password_salt,password_iterations,status FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
   ).bind(normalizeEmail(identifier), identifier).first();
@@ -6263,7 +6271,7 @@ async function saveAccountCredentials(request, env) {
   const form = await request.formData();
   const username = normalizeUsername(form.get("username"));
   const password = validPassword(form.get("password"));
-  const returnTo = safeReturnPath(form.get("return_to"));
+  const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
   if (!username || !password)
     return htmlResponse(loginPage("Choose a valid 3–40 character username and a password of at least 8 characters.", true), 400);
   const duplicate = await env.DB.prepare(
@@ -6286,7 +6294,7 @@ async function requestMagicLink(request, env) {
   const form = await request.formData();
   const email = normalizeEmail(form.get("email"));
   const embedded = String(form.get("embed") || "") === "1";
-  const returnTo = safeReturnPath(form.get("return_to"));
+  const returnTo = safeReturnPath(form.get("return_to"), "/login");
   if (!email)
     return htmlResponse(
       loginPage("Enter a valid email address.", true, embedded),
@@ -6882,25 +6890,41 @@ async function showDashboard(request, env) {
         ? "/login?embed=1"
         : "/login",
     );
-  const result = await env.DB.prepare(
-    `
-    SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
-      CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
-      (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
-       FROM messages m
-       JOIN conversations mc ON mc.id=m.conversation_id
-       WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
-      (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
-      (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
-      (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
-      (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
-      (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
-    FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
-    WHERE c.user_id = ? ORDER BY c.created_at DESC
-  `,
-  )
-    .bind(monthStartIso(), user.id)
-    .all();
+  let result;
+  try {
+    result = await env.DB.prepare(
+      `
+      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
+        CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
+        (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
+         FROM messages m
+         JOIN conversations mc ON mc.id=m.conversation_id
+         WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
+        (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
+        (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
+        (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
+        (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
+        (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
+      FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
+      WHERE c.user_id = ? ORDER BY c.created_at DESC
+    `,
+    )
+      .bind(monthStartIso(), user.id)
+      .all();
+  } catch (error) {
+    console.error("Dashboard detail query failed; using safe fallback", error);
+    result = await env.DB.prepare(
+      `
+      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
+        CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
+        0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error
+      FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
+      WHERE c.user_id = ? ORDER BY c.created_at DESC
+    `,
+    )
+      .bind(user.id)
+      .all();
+  }
   const url = requestedUrl;
   let message = "";
   let isError = false;
@@ -8358,7 +8382,7 @@ export default {
         const user = await currentUser(request, env);
         if (!user) {
           return embeddedHtmlResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then your chatbot dashboard will open here.</p><a href="/?open_signin=1" target="_top">Sign in</a></section></body></html>`,
+            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in to access the Demo</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f7fafc;font-family:Inter,system-ui,sans-serif}.message{max-width:500px;padding:34px;border:1px solid #dce5eb;border-radius:19px;background:#fff;box-shadow:0 20px 55px rgba(7,17,38,.1);text-align:center}.message h1{margin:0 0 11px;font-size:30px}.message p{margin:0 0 22px;color:#637083;line-height:1.6}.message a{display:inline-flex;min-height:50px;padding:0 22px;align-items:center;border-radius:10px;color:#fff;background:#071126;text-decoration:none;font-weight:800}</style></head><body><section class="message"><h1>Sign in to access the Demo</h1><p>Sign in with your Fise AI account, then your chatbot dashboard will open here.</p><a href="/login" target="_top">Sign in</a></section></body></html>`,
           );
         }
         return redirect("/dashboard?embed=1");
@@ -8386,15 +8410,16 @@ export default {
         const user = await currentUser(request, env);
         const embedded = url.searchParams.get("embed") === "1";
         if (user)
-          return redirect(embedded ? "/dashboard?embed=1" : "/?profile=1");
+          return redirect(embedded ? "/dashboard?embed=1" : "/dashboard");
+        const sent = url.searchParams.get("sent") === "1";
         return embedded
-          ? embeddedHtmlResponse(loginPage("", false, true))
-          : htmlResponse(loginPage("", false, false));
+          ? embeddedHtmlResponse(loginPage(sent ? "Check your email for the one-time sign-in link." : "", false, true))
+          : htmlResponse(loginPage(sent ? "Check your email for the one-time sign-in link." : "", false, false));
       }
-      // The exact public landing page contains the real same-origin platform.
-      // Keep /demo as a convenient address for its embedded demo section.
-      if (url.pathname === "/demo" && request.method === "GET")
-        return redirect("/#demo");
+      if (url.pathname === "/demo" && request.method === "GET") {
+        const user = await currentUser(request, env);
+        return redirect(user ? "/dashboard" : "/login");
+      }
       if (url.pathname === "/api/contact" && request.method === "POST")
         return submitContactRequest(request, env);
       const publicWebsiteResponse = await handlePublicWebsite(request, env);
