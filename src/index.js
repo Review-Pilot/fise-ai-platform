@@ -2301,7 +2301,7 @@ async function handleWidgetApi(request, env) {
   return json({ error: "Not found" }, 404);
 }
 
-return { handleWidgetApi, serveWidgetScript, serveWidgetTest };
+return { handleWidgetApi, serveWidgetScript, serveWidgetTest, widgetTestJavascript };
 })();
 const WebsiteModule = (() => {
 const LEGAL_DOCUMENTS = {
@@ -5382,7 +5382,7 @@ async function websiteQueueHandler(batch, env) {
 return { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, websiteQueueHandler, websiteStudioJavascript };
 })();
 const { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
-const { handleWidgetApi, serveWidgetScript, serveWidgetTest } = ChatModule;
+const { handleWidgetApi, serveWidgetScript, serveWidgetTest, widgetTestJavascript } = ChatModule;
 const { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript } = WebsiteModule;
 const { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 const html = String.raw;
