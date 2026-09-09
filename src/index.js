@@ -782,13 +782,15 @@ async function configResponse(request, env) {
   if (!auth.ok) return json({ error: "This website is not allowed to use the chatbot" }, 403, corsHeaders(auth.origin));
   const questions = parseQuestions(bot.popular_questions_json);
   const ui = parseUiSettings(bot.ui_settings_json);
-  const tailoredQuestions = questions.length ? questions : await tailoredPopularQuestions(env, bot);
+  const fallbackQuestions = ui.widget_version === "2"
+    ? await tailoredPopularQuestions(env, bot)
+    : ["What do you offer?", "Plans and pricing", "How does it work?", "Who is it for?"];
   return json({
     name: bot.name,
     business_name: bot.business_name || "",
     greeting: bot.greeting,
     primary_colour: /^#[0-9a-f]{6}$/i.test(bot.primary_colour || "") ? bot.primary_colour : "#1769e0",
-    popular_questions: tailoredQuestions,
+    popular_questions: questions.length ? questions : fallbackQuestions,
     widget_version: ui.widget_version,
     default_size: ["standard", "large"].includes(bot.default_size) ? bot.default_size : "standard",
     allow_files: Boolean(Number(bot.allow_files)),
@@ -2301,7 +2303,13 @@ async function handleWidgetApi(request, env) {
   return json({ error: "Not found" }, 404);
 }
 
-return { handleWidgetApi, serveWidgetScript, serveWidgetTest, widgetTestJavascript };
+return {
+  handleWidgetApi,
+  serveWidgetScript,
+  serveWidgetTest,
+  tailoredPopularQuestions,
+  widgetTestJavascript,
+};
 })();
 const WebsiteModule = (() => {
 const LEGAL_DOCUMENTS = {
@@ -5382,7 +5390,13 @@ async function websiteQueueHandler(batch, env) {
 return { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, websiteQueueHandler, websiteStudioJavascript };
 })();
 const { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
-const { handleWidgetApi, serveWidgetScript, serveWidgetTest, widgetTestJavascript } = ChatModule;
+const {
+  handleWidgetApi,
+  serveWidgetScript,
+  serveWidgetTest,
+  tailoredPopularQuestions,
+  widgetTestJavascript,
+} = ChatModule;
 const { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript } = WebsiteModule;
 const { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 const html = String.raw;
@@ -7097,6 +7111,7 @@ async function updateChatbotVersion(request, env, chatbotId) {
 }
 
 function settingsPage(user, bot, origin, message = "", isError = false, suggestedQuestions = []) {
+  const ui = uiSettings(bot.ui_settings_json);
   let questions = [];
   try {
     const parsed = JSON.parse(bot.popular_questions_json || "[]");
@@ -7104,13 +7119,9 @@ function settingsPage(user, bot, origin, message = "", isError = false, suggeste
   } catch {
     questions = [];
   }
-  if (!questions.length) questions = suggestedQuestions.length ? suggestedQuestions : [
-    `How can ${bot.business_name || bot.name} help me?`,
-    `What does ${bot.business_name || bot.name} offer?`,
-    "How do I get started?",
-    `How can I contact ${bot.business_name || bot.name}?`,
-  ];
-  const ui = uiSettings(bot.ui_settings_json);
+  if (!questions.length) questions = ui.widget_version === "2" && suggestedQuestions.length
+    ? suggestedQuestions
+    : ["What do you offer?", "Plans and pricing", "How does it work?", "Who is it for?"];
   const growth = planHasLeadCapture(bot);
   const notice = message
     ? html`<div class="alert ${isError ? "error" : "ok"}">
@@ -7590,7 +7601,9 @@ async function showChatbotSettings(request, env, chatbotId) {
   const saved = url.searchParams.get("saved") === "1";
   const versionSaved = url.searchParams.get("version_saved") === "1";
   const error = url.searchParams.get("error") || "";
-  const suggestedQuestions = await tailoredPopularQuestions(env, bot);
+  const suggestedQuestions = uiSettings(bot.ui_settings_json).widget_version === "2"
+    ? await tailoredPopularQuestions(env, bot)
+    : [];
   return htmlResponse(
     settingsPage(
       user,
