@@ -5652,7 +5652,7 @@ const { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudio
 const html = String.raw;
 
 function isFiseStudioAdmin(user, env) {
-  const configured = String(env.FISE_ADMIN_EMAILS || "rianslabbert@gmail.com,sebslabbert1@gmail.com").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  const configured = `${String(env.FISE_ADMIN_EMAILS || "")},rianslabbert@gmail.com,rian@get-found.co.za,sebslabbert1@gmail.com`.split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
   return Boolean(user && configured.includes(String(user.email || "").trim().toLowerCase()));
 }
 
