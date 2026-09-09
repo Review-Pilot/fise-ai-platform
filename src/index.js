@@ -2048,12 +2048,12 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
         .launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:70px;height:70px;display:grid;place-items:center;overflow:hidden;padding:8px;border:3px solid transparent;border-radius:22px;background:linear-gradient(#fff,#fff) padding-box,conic-gradient(from 35deg,#ff42c6,#8448ff,#2a9cff,#ff42c6) border-box;box-shadow:0 17px 40px rgba(17,24,39,.2);cursor:pointer;transition:box-shadow .2s ease}.launcher img{width:48px;height:48px;display:block;object-fit:cover;border-radius:12px;transform:scale(1.14)}.launcher:hover{animation:fiseIconTurn .42s ease both;box-shadow:0 20px 45px rgba(73,71,190,.24)}@keyframes fiseIconTurn{0%{transform:rotate(0) scale(1)}48%{transform:rotate(12deg) scale(1.035)}100%{transform:rotate(0) scale(1)}}
         .panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;border:1px solid #d9dce1;border-radius:22px;color:#111318;background:#fff;box-shadow:0 32px 90px rgba(17,24,39,.25);transition:width .24s ease,height .24s ease,inset .24s ease,transform .24s ease}.panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(480px,calc(100vw - 36px));height:min(740px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}.panel.large{left:50%;top:50%;width:min(960px,calc(100vw - 40px));height:min(790px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}.panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:18px}
         .head{position:relative;min-height:58px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:9px 11px;border-bottom:0;background:#fff}.history-trigger{justify-self:start;min-width:92px;height:38px;display:flex;align-items:center;gap:7px;padding:0 10px;border:0;border-radius:10px;color:#08090b;background:transparent;cursor:pointer;font:900 12px/1 inherit}.history-trigger:hover,.view-control:hover{background:#f0f1f3}.history-trigger svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.identity{min-width:0;text-align:center}.identity strong{display:block;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#08090b;font:900 16px/1.2 inherit;letter-spacing:-.01em}.view-tools{justify-self:end;display:flex;align-items:center;gap:3px}.view-control{width:38px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;color:#17191d;background:#fff;cursor:pointer}.view-control svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.view-control.close svg{stroke-width:2.2}
-        .messages{min-width:0;min-height:0;overflow:auto;padding:22px;background:#fff;scroll-behavior:smooth;scrollbar-color:#b9bec6 transparent}.daily-intro{width:min(100%,680px);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto;padding:32px 8px;text-align:center}.daily-intro-text{max-width:620px;min-height:92px;margin:0;color:#111318;font:750 clamp(18px,2.5vw,22px)/1.5 inherit;letter-spacing:-.015em}.daily-intro-text.typing:after{content:"";display:inline-block;width:2px;height:1.05em;margin-left:4px;vertical-align:-.12em;border-radius:2px;background:#111318;animation:introCursor .7s steps(1,end) infinite}.intro-continue{min-width:124px;height:44px;margin-top:22px;padding:0 20px;border:1.5px solid #b8bdc5;border-radius:11px;color:#fff;background:#111318;box-shadow:0 7px 16px rgba(17,24,39,.14);cursor:pointer;font:850 13px/1 inherit}.intro-continue.ready{animation:contentReveal .42s cubic-bezier(.22,.8,.32,1) both}.intro-continue:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(17,24,39,.18)}@keyframes introCursor{0%,48%{opacity:1}49%,100%{opacity:0}}@keyframes contentReveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.welcome{width:min(100%,720px);min-height:100%;display:flex;flex-direction:column;justify-content:center;margin:auto;padding:28px 0}.welcome h2{margin:0 0 18px;color:#08090b;text-align:center;font:900 clamp(20px,3vw,30px)/1.18 inherit;letter-spacing:-.025em}.welcome p{margin:0 0 14px;color:#777d87;text-align:center;font:650 12px/1.4 inherit}.welcome.animating .reveal-item{opacity:0;animation:contentReveal .42s cubic-bezier(.22,.8,.32,1) var(--reveal-delay,0ms) both}.question-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.standard .question-grid{grid-template-columns:1fr}.question{min-width:0;min-height:40px;display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid #d3d6db;border-radius:9px;color:#20242b;background:#fff;box-shadow:0 1px 3px rgba(17,24,39,.12);cursor:pointer;text-align:left;font:700 11.5px/1.25 inherit;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}.question:hover{transform:translateY(-1px);border-color:#989da6;box-shadow:0 4px 9px rgba(17,24,39,.11)}.question-icon{width:18px;height:18px;flex:0 0 18px;fill:none;stroke:#4c535e;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.question-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .messages{min-width:0;min-height:0;overflow:auto;padding:22px;background:#fff;scroll-behavior:smooth;scrollbar-color:#b9bec6 transparent}.daily-intro{width:min(100%,680px);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto;padding:24px 8px;text-align:center}.daily-intro-video-shell{width:min(100%,560px);display:flex;align-items:center;justify-content:center;opacity:1;transform:scale(1);transition:opacity .2s ease,transform .2s ease}.daily-intro-video-shell.ending{opacity:0;transform:scale(1.035)}.daily-intro-video{width:100%;max-height:min(560px,65vh);display:block;object-fit:contain;background:#fff}.daily-intro-text{max-width:630px;min-height:106px;margin:0;color:#08090b;font:900 clamp(21px,2.8vw,26px)/1.42 inherit;letter-spacing:-.02em}.daily-intro-text.typing:after{content:"";display:inline-block;width:2px;height:1.05em;margin-left:4px;vertical-align:-.12em;border-radius:2px;background:#08090b;animation:introCursor .7s steps(1,end) infinite}.intro-continue{min-width:124px;height:44px;margin-top:22px;padding:0 20px;border:1.5px solid #b8bdc5;border-radius:11px;color:#fff;background:#111318;box-shadow:0 7px 16px rgba(17,24,39,.14);cursor:pointer;font:850 13px/1 inherit}.intro-continue.ready{animation:contentReveal .42s cubic-bezier(.22,.8,.32,1) both}.intro-continue:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(17,24,39,.18)}@keyframes introCursor{0%,48%{opacity:1}49%,100%{opacity:0}}@keyframes contentReveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.welcome{width:min(100%,720px);min-height:100%;display:flex;flex-direction:column;justify-content:center;margin:auto;padding:28px 0}.welcome h2{margin:0 0 18px;color:#08090b;text-align:center;font:900 clamp(20px,3vw,30px)/1.18 inherit;letter-spacing:-.025em}.welcome.animating .reveal-item{opacity:0;animation:contentReveal .42s cubic-bezier(.22,.8,.32,1) var(--reveal-delay,0ms) both}.question-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.standard .question-grid{grid-template-columns:1fr}.question{min-width:0;min-height:40px;display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid #d3d6db;border-radius:9px;color:#20242b;background:#fff;box-shadow:0 1px 3px rgba(17,24,39,.12);cursor:pointer;text-align:left;font:700 11.5px/1.25 inherit;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}.question:hover{transform:translateY(-1px);border-color:#989da6;box-shadow:0 4px 9px rgba(17,24,39,.11)}.question-icon{width:18px;height:18px;flex:0 0 18px;fill:none;stroke:#4c535e;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.question-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .row{width:min(100%,760px);display:flex;margin:0 auto 16px;animation:messageSlide .26s cubic-bezier(.22,.8,.32,1) both}.row.user{justify-content:flex-end}@keyframes messageSlide{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}.bubble{min-width:0;max-width:88%;padding:13px 15px;border:1px solid #e1e3e7;border-radius:16px 16px 16px 5px;color:#111318;background:#f3f4f5;overflow-wrap:anywhere;word-break:break-word;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:850;color:#050608}.user .bubble{border-color:#111318;border-radius:16px 16px 5px 16px;color:#fff;background:#111318}.user .bubble strong,.user .bubble a{color:#fff}.bubble a{color:#111318;font-weight:800;text-decoration:underline;text-underline-offset:3px}.date-divider{width:min(100%,760px);margin:0 auto 18px;color:#737984;text-align:center;font:750 11px/1.2 inherit}.typing-bubble{min-width:62px}.typing-dots{height:21px;display:flex;align-items:center;justify-content:center;gap:5px}.typing-dots i{width:6px;height:6px;border-radius:50%;background:#111318;animation:fiseBounce .9s infinite ease-in-out}.typing-dots i:nth-child(2){animation-delay:.14s}.typing-dots i:nth-child(3){animation-delay:.28s}@keyframes fiseBounce{0%,60%,100%{transform:translateY(2px);opacity:.3}30%{transform:translateY(-4px);opacity:1}}.sources{margin-top:12px;padding-top:9px;border-top:1px solid #d8dbe0;color:#606671;font:750 10px/1.4 inherit}.sources a{display:block;margin-top:6px;color:#111318}
         .history-view{display:none;min-height:0;overflow:auto;padding:18px 22px;background:#fff}.panel.history .messages,.panel.history .composer-wrap,.panel.intro-active .composer-wrap{display:none}.panel.history .history-view{display:block}.history-title{margin-bottom:8px;color:#111318;font:850 16px/1.2 inherit}.history-item{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 5px;border:0;border-bottom:1px solid #e4e6e9;color:#24272d;background:#fff;cursor:pointer;text-align:left}.history-item:hover{background:#f6f7f8}.history-copy{min-width:0}.history-first{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 12px/1.4 inherit}.history-date{display:block;margin-top:3px;color:#747a84;font:500 10px/1.3 inherit}.history-arrow{font-size:20px}.history-empty{padding:34px 10px;color:#747a84;text-align:center;font:600 12px/1.5 inherit}.history-new{margin:18px auto 0;padding:11px 15px;border:1.5px solid #bfc3ca;border-radius:11px;color:#111318;background:#fff;cursor:pointer;font:800 11px inherit}.history-new:hover{transform:translateY(-1px);box-shadow:0 6px 12px rgba(17,24,39,.09)}
         .composer-wrap{padding:10px 12px 8px;border-top:0;background:#fff}.composer{position:relative;display:flex;flex-direction:column;border:1.5px solid #c9cdd3;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(17,24,39,.07);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}.composer:focus-within{border-color:#8d939c;background:#f3f4f5;box-shadow:0 0 0 4px rgba(17,24,39,.075),0 9px 23px rgba(17,24,39,.08)}.input{width:100%;min-width:0;min-height:58px;max-height:120px;padding:13px 14px 4px;border:0;outline:none;resize:none;color:#111318;background:transparent;font:500 13px/1.45 inherit}.input::placeholder{color:#7a808a}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;align-items:center;gap:3px}.tool{width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;color:#505660;background:transparent;cursor:pointer}.tool:hover{color:#111318;background:#e7e9ec}.tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool.active{color:#fff;background:#111318}.send{width:40px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;color:#fff;background:#111318;box-shadow:0 5px 12px rgba(17,24,39,.18);cursor:pointer}.send svg{width:18px;height:18px;fill:currentColor}.send:disabled{opacity:.5;cursor:wait}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #d6d9de;border-radius:9px;background:#fff;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#555b65;background:transparent;cursor:pointer;font:800 11px inherit}
         .powered{padding:7px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:6px 13px;border:2px solid #b8bdc5;border-radius:999px;color:#08090b;background:#fff;text-decoration:none;font:850 10px/1 inherit;transition:transform .18s ease,box-shadow .18s ease}.powered a:hover{transform:translateY(-2px);box-shadow:0 7px 14px rgba(17,24,39,.12)}.lead-card{width:min(100%,560px);padding:17px;border:1.5px solid #c7cbd1;border-radius:16px;background:#fff;box-shadow:0 9px 24px rgba(17,24,39,.09)}.lead-card h3{margin:0 0 5px;font:850 16px inherit}.lead-card p{margin:0 0 12px;color:#676d77;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:5px;font:750 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:10px;border:1px solid #cbd0d7;border-radius:9px;outline:none}.lead-card input:focus,.lead-card textarea:focus{border-color:#8d939c;box-shadow:0 0 0 3px rgba(17,24,39,.07)}.lead-card textarea{min-height:70px;resize:vertical}.lead-submit{margin-top:10px;padding:11px 14px;border:0;border-radius:9px;color:#fff;background:#111318;cursor:pointer;font:800 11px inherit}.hidden{display:none!important}
-        @media(max-width:700px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:17px}.head{grid-template-columns:auto 1fr auto;gap:5px;padding:8px}.history-trigger{min-width:0;padding:0 7px}.history-trigger span{display:none}.identity strong{max-width:150px;font-size:14px}.view-tools{gap:0}.view-control{width:34px}.messages{padding:14px}.daily-intro{padding:24px 6px}.daily-intro-text{font-size:18px}.question-grid,.standard .question-grid{grid-template-columns:1fr}.welcome{padding:14px 0}.bubble{max-width:94%}.tool span{display:none}.tool{width:36px;padding:0;justify-content:center}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}}@media(prefers-reduced-motion:reduce){.launcher:hover,.row,.daily-intro-text.typing:after,.intro-continue.ready,.welcome.animating .reveal-item{animation:none}.panel,.question,.powered a{transition:none}.welcome.animating .reveal-item{opacity:1}}
+        @media(max-width:700px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:17px}.head{grid-template-columns:auto 1fr auto;gap:5px;padding:8px}.history-trigger{min-width:0;padding:0 7px}.history-trigger span{display:none}.identity strong{max-width:150px;font-size:14px}.view-tools{gap:0}.view-control{width:34px}.messages{padding:14px}.daily-intro{padding:18px 6px}.daily-intro-video-shell{width:min(100%,470px)}.daily-intro-text{font-size:21px}.question-grid,.standard .question-grid{grid-template-columns:1fr}.welcome{padding:14px 0}.bubble{max-width:94%}.tool span{display:none}.tool{width:36px;padding:0;justify-content:center}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}}@media(prefers-reduced-motion:reduce){.launcher:hover,.row,.daily-intro-text.typing:after,.intro-continue.ready,.welcome.animating .reveal-item{animation:none}.panel,.question,.powered a{transition:none}.welcome.animating .reveal-item{opacity:1}.daily-intro-video-shell{transition:none}}
         ${String(config.widget_css || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "")}
       </style>
       <div class="callout">Ask ${name} for help</div>
@@ -2079,17 +2079,17 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
     const form = root.querySelector(".composer"), input = root.querySelector(".input"), send = root.querySelector(".send"), messages = root.querySelector(".messages");
     const attach = root.querySelector(".attach"), fileInput = root.querySelector(".file-input"), attachmentBar = root.querySelector(".attachment-bar"), attachmentName = root.querySelector(".attachment-name"), removeFile = root.querySelector(".remove-file"), mic = root.querySelector(".mic");
     const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-    const introDateStorageKey = storageKey + "-v2-intro-date";
+    const introDateStorageKey = storageKey + "-v2-video-intro-date";
     const businessName = String(config.business_name || "Get Found").trim();
     const introMessage = `Hello im ${String(config.name || "Stanz").trim()}, ${businessName}'s AI Assistant. I can help you with any query you might have.`;
-    let conversation = saved.conversation || "", pendingFile = null, recorder = null, recordingStream = null, chunks = [], introTimer = null, introTypingStarted = false;
+    let conversation = saved.conversation || "", pendingFile = null, recorder = null, recordingStream = null, chunks = [], introTimer = null, introVideoFallbackTimer = null, introSequenceStarted = false, introTypingStarted = false;
 
     if (needsDailyIntro()) renderDailyIntro(); else renderWelcome(false);
     launcher.onclick = () => {
       panel.classList.add("open"); callout.style.display = "none"; launcher.style.display = "none";
       if (needsDailyIntro()) {
         if (!messages.querySelector(".daily-intro")) renderDailyIntro();
-        requestAnimationFrame(startDailyIntro);
+        requestAnimationFrame(startDailySequence);
       } else if (messages.querySelector(".daily-intro") || messages.querySelector(".welcome")) renderWelcome(true);
       input.focus();
     };
@@ -2112,18 +2112,19 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
       messages.innerHTML = "";
       const welcome = document.createElement("section");
       welcome.className = "welcome" + (animate ? " animating" : "");
-      welcome.innerHTML = `<h2 class="reveal-item" style="--reveal-delay:60ms">Ask ${name} for help with…</h2><p class="reveal-item" style="--reveal-delay:180ms">Choose a popular question or type your own below.</p><div class="question-grid"></div>`;
+      welcome.innerHTML = `<h2 class="reveal-item" style="--reveal-delay:60ms">Ask ${name} for help with…</h2><div class="question-grid"></div>`;
       const grid = welcome.querySelector(".question-grid");
       const questions = (config.popular_questions || []).slice(0, 6);
+      const usedQuestionIcons = new Set();
       for (const [index, question] of questions.entries()) {
         const button = document.createElement("button");
-        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 300 + index * 90 + "ms"); button.innerHTML = questionIcon(question) + `<span class="question-label">${safe(question)}</span>`;
+        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 190 + index * 90 + "ms"); button.innerHTML = questionIcon(question, usedQuestionIcons) + `<span class="question-label">${safe(question)}</span>`;
         button.onclick = () => submitMessage(question); grid.appendChild(button);
       }
       if (config.lead_capture) {
         const button = document.createElement("button");
         const label = config.lead_cta_label || "Talk to us";
-        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 300 + questions.length * 90 + "ms"); button.innerHTML = questionIcon(label) + `<span class="question-label">${safe(label)}</span>`;
+        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 190 + questions.length * 90 + "ms"); button.innerHTML = questionIcon(label, usedQuestionIcons) + `<span class="question-label">${safe(label)}</span>`;
         button.onclick = () => showLeadForm(true); grid.appendChild(button);
       }
       messages.appendChild(welcome);
@@ -2134,18 +2135,42 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
       return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
     }
     function needsDailyIntro() { return localStorage.getItem(introDateStorageKey) !== localDayKey(); }
-    function clearIntroTimer() { if (introTimer) clearInterval(introTimer); introTimer = null; introTypingStarted = false; }
+    function clearIntroTimer() {
+      if (introTimer) clearInterval(introTimer);
+      if (introVideoFallbackTimer) clearTimeout(introVideoFallbackTimer);
+      introTimer = null; introVideoFallbackTimer = null; introSequenceStarted = false; introTypingStarted = false;
+    }
     function renderDailyIntro() {
       clearIntroTimer();
       panel.classList.add("intro-active");
-      messages.innerHTML = `<section class="daily-intro"><p class="daily-intro-text" aria-live="polite"></p><button class="intro-continue hidden" type="button">Continue</button></section>`;
+      messages.innerHTML = `<section class="daily-intro"><div class="daily-intro-video-shell"><video class="daily-intro-video" muted playsinline preload="auto" aria-hidden="true" src="${api}/stanz-opening.mp4"></video></div><p class="daily-intro-text hidden" aria-live="polite"></p><button class="intro-continue hidden" type="button">Continue</button></section>`;
       messages.querySelector(".intro-continue").onclick = completeDailyIntro;
+    }
+    function startDailySequence() {
+      if (introSequenceStarted || !needsDailyIntro()) return;
+      const video = messages.querySelector(".daily-intro-video"), shell = messages.querySelector(".daily-intro-video-shell");
+      if (!video || !shell) { startDailyIntro(); return; }
+      introSequenceStarted = true;
+      let finished = false;
+      const finishVideo = () => {
+        if (finished) return;
+        finished = true;
+        if (introVideoFallbackTimer) clearTimeout(introVideoFallbackTimer);
+        introVideoFallbackTimer = null; shell.classList.add("ending");
+        setTimeout(() => { shell.classList.add("hidden"); startDailyIntro(); }, 210);
+      };
+      video.addEventListener("ended", finishVideo, { once: true });
+      video.addEventListener("error", finishVideo, { once: true });
+      introVideoFallbackTimer = setTimeout(finishVideo, 2600);
+      video.currentTime = 0;
+      const playing = video.play();
+      if (playing && typeof playing.catch === "function") playing.catch(finishVideo);
     }
     function startDailyIntro() {
       if (introTypingStarted || !needsDailyIntro()) return;
       const text = messages.querySelector(".daily-intro-text"), button = messages.querySelector(".intro-continue");
       if (!text || !button) return;
-      introTypingStarted = true; text.textContent = ""; text.classList.add("typing");
+      introTypingStarted = true; text.textContent = ""; text.classList.remove("hidden"); text.classList.add("typing");
       let index = 0;
       introTimer = setInterval(() => {
         index += 1; text.textContent = introMessage.slice(0, index);
@@ -2159,13 +2184,34 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
       renderWelcome(true); input.focus();
     }
 
-    function questionIcon(value) {
+    function questionIcon(value, usedIcons) {
       const question = String(value || "").toLowerCase();
-      if (/price|pricing|plan|cost|package|subscription/.test(question)) return '<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13 11 22l-9-9V4h9l9 9Z"/><circle cx="7" cy="9" r="1.2"/></svg>';
-      if (/how|work|process|start|begin|setup/.test(question)) return '<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="m10 8 6 4-6 4V8Z"/></svg>';
-      if (/contact|talk|support|help|book|demo|call/.test(question)) return '<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.5 3.5 21v-5A8 8 0 1 1 7 19.3"/><path d="M8 11h8M8 14h5"/></svg>';
-      if (/where|location|area|address/.test(question)) return '<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
-      return '<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3ZM18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></svg>';
+      const icons = {
+        tag:'<path d="M20 13 11 22l-9-9V4h9l9 9Z"/><circle cx="7" cy="9" r="1.2"/>',
+        card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+        coins:'<ellipse cx="9" cy="7" rx="5" ry="2.5"/><path d="M4 7v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V7M7 14v3c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4"/>',
+        play:'<circle cx="12" cy="12" r="8"/><path d="m10 8 6 4-6 4V8Z"/>',
+        gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>',
+        route:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 0 0 3-3v-6a3 3 0 0 1 3-3"/>',
+        chat:'<path d="M5 18.5 3.5 21v-5A8 8 0 1 1 7 19.3"/><path d="M8 11h8M8 14h5"/>',
+        phone:'<path d="M7 3h3l1.3 4-2 1.5a15 15 0 0 0 6.2 6.2l1.5-2L21 14v3c0 2.2-1.8 4-4 4A14 14 0 0 1 3 7c0-2.2 1.8-4 4-4Z"/>',
+        calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M13 14h3M8 17h3"/>',
+        pin:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+        globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.5 5.5 3.5 9S14.4 18.5 12 21M12 3C9.6 5.5 8.5 8.5 8.5 12S9.6 18.5 12 21"/>',
+        compass:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
+        spark:'<path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3ZM18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/>',
+        box:'<path d="m4 7 8-4 8 4-8 4-8-4Z M4 7v10l8 4 8-4V7M12 11v10"/>',
+        briefcase:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18M10 12v2h4v-2"/>',
+        shield:'<path d="M12 3 20 6v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/><path d="m9 12 2 2 4-5"/>'
+      };
+      let preferred = ["spark","box","briefcase"];
+      if (/price|pricing|plan|cost|package|subscription/.test(question)) preferred = ["tag","card","coins"];
+      else if (/how|work|process|start|begin|setup/.test(question)) preferred = ["play","gear","route"];
+      else if (/contact|talk|support|help|book|demo|call/.test(question)) preferred = ["chat","phone","calendar"];
+      else if (/where|location|area|address/.test(question)) preferred = ["pin","globe","compass"];
+      const iconName = [...preferred,...Object.keys(icons)].find((candidate) => !usedIcons.has(candidate)) || "shield";
+      usedIcons.add(iconName);
+      return `<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true">${icons[iconName]}</svg>`;
     }
 
     async function uploadVisitorFile(file) {
