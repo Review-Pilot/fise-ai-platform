@@ -5651,9 +5651,44 @@ const { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFr
 const { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 const html = String.raw;
 
-function isFiseStudioAdmin(user, env) {
-  const configured = `${String(env.FISE_ADMIN_EMAILS || "")},rianslabbert@gmail.com,rian@get-found.co.za,sebslabbert1@gmail.com`.split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
-  return Boolean(user && configured.includes(String(user.email || "").trim().toLowerCase()));
+async function isFiseStudioAdmin(user, env) {
+  if (!user) return false;
+
+  const email = String(user.email || "").trim().toLowerCase();
+  const configured = `${String(env.FISE_ADMIN_EMAILS || "")},rianslabbert@gmail.com,rian@get-found.co.za,sebslabbert1@gmail.com`
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (configured.includes(email) || email.endsWith("@get-found.co.za"))
+    return true;
+
+  // Preserve access for established Studio owners even if their account email
+  // changed or was not added to the deployment's static administrator list.
+  const ownershipChecks = [
+    ["SELECT 1 AS allowed FROM website_workers WHERE user_id=? LIMIT 1", user.id],
+    [
+      "SELECT 1 AS allowed FROM website_versions WHERE lower(created_by)=? LIMIT 1",
+      email,
+    ],
+    [
+      "SELECT 1 AS allowed FROM website_state WHERE lower(updated_by)=? LIMIT 1",
+      email,
+    ],
+  ];
+
+  for (const [query, value] of ownershipChecks) {
+    try {
+      const owner = await env.DB.prepare(query).bind(value).first();
+      if (owner) return true;
+    } catch (error) {
+      // Older deployments may not have every Studio table yet. A missing table
+      // should not prevent the remaining ownership checks from running.
+      console.warn("Website Studio ownership check skipped", error);
+    }
+  }
+
+  return false;
 }
 
 const SESSION_COOKIE = "fise_session";
@@ -8686,7 +8721,7 @@ export default {
       if (url.pathname === "/dashboard/website" && request.method === "GET") {
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
-        if (!isFiseStudioAdmin(user, env)) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
+        if (!(await isFiseStudioAdmin(user, env))) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
         return showWebsiteEditor(
           env,
           user,
@@ -8696,7 +8731,7 @@ export default {
       if (url.pathname === "/dashboard/website/preview" && request.method === "GET") {
         const user = await currentUser(request, env);
         if (!user) return redirect("/login");
-        if (!isFiseStudioAdmin(user, env)) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
+        if (!(await isFiseStudioAdmin(user, env))) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
         return showStudioWebsitePreview(request, env);
       }
       if (url.pathname.startsWith("/api/website/studio/")) {
@@ -8704,7 +8739,7 @@ export default {
           return json({ error: "Invalid request origin" }, 403);
         const user = await currentUser(request, env);
         if (!user) return json({ error: "Sign in again" }, 401);
-        if (!isFiseStudioAdmin(user, env)) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
+        if (!(await isFiseStudioAdmin(user, env))) return json({ error: "Website Studio is restricted to Fise administrators." }, 403);
         return handleWebsiteStudioApi(request, env, user);
       }
       if (url.pathname === "/api/website" && request.method === "POST") {
