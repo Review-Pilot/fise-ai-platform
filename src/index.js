@@ -745,6 +745,7 @@ function parseUiSettings(value) {
     widget_version: parsed.widget_version === "2" ? "2" : "1",
     helpful_pages_enabled: parsed.helpful_pages_enabled === true,
     popular_questions_bold: parsed.popular_questions_bold !== false,
+    popular_question_icons_enabled: parsed.popular_question_icons_enabled !== false,
     popular_question_border: parsed.popular_question_border === "normal" ? "normal" : "bold",
     header_pattern: ["none", "circles", "pluses", "crosses", "lines"].includes(parsed.header_pattern) ? parsed.header_pattern : "circles",
     pattern_intensity: Math.max(0, Math.min(100, Number(parsed.pattern_intensity ?? 55))),
@@ -803,6 +804,7 @@ async function configResponse(request, env) {
     allow_emoji: ui.allow_emoji,
     helpful_pages_enabled: ui.helpful_pages_enabled,
     popular_questions_bold: ui.popular_questions_bold,
+    popular_question_icons_enabled: ui.popular_question_icons_enabled,
     popular_question_border: ui.popular_question_border,
     header_pattern: ui.header_pattern,
     pattern_intensity: ui.pattern_intensity,
@@ -2118,13 +2120,13 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
       const usedQuestionIcons = new Set();
       for (const [index, question] of questions.entries()) {
         const button = document.createElement("button");
-        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 190 + index * 90 + "ms"); button.innerHTML = questionIcon(question, usedQuestionIcons) + `<span class="question-label">${safe(question)}</span>`;
+        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 190 + index * 90 + "ms"); const icon = config.popular_question_icons_enabled === false ? "" : questionIcon(question, usedQuestionIcons); button.innerHTML = icon + `<span class="question-label">${safe(question)}</span>`;
         button.onclick = () => submitMessage(question); grid.appendChild(button);
       }
       if (config.lead_capture) {
         const button = document.createElement("button");
         const label = config.lead_cta_label || "Talk to us";
-        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 190 + questions.length * 90 + "ms"); button.innerHTML = questionIcon(label, usedQuestionIcons) + `<span class="question-label">${safe(label)}</span>`;
+        button.type = "button"; button.className = "question reveal-item"; button.style.setProperty("--reveal-delay", 190 + questions.length * 90 + "ms"); const icon = config.popular_question_icons_enabled === false ? "" : questionIcon(label, usedQuestionIcons); button.innerHTML = icon + `<span class="question-label">${safe(label)}</span>`;
         button.onclick = () => showLeadForm(true); grid.appendChild(button);
       }
       messages.appendChild(welcome);
@@ -2199,26 +2201,45 @@ function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
         tag:'<path d="M20 13 11 22l-9-9V4h9l9 9Z"/><circle cx="7" cy="9" r="1.2"/>',
         card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
         coins:'<ellipse cx="9" cy="7" rx="5" ry="2.5"/><path d="M4 7v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V7M7 14v3c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4"/>',
-        play:'<circle cx="12" cy="12" r="8"/><path d="m10 8 6 4-6 4V8Z"/>',
+        briefcase:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18M10 12v2h4v-2"/>',
+        box:'<path d="m4 7 8-4 8 4-8 4-8-4Z M4 7v10l8 4 8-4V7M12 11v10"/>',
+        list:'<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+        users:'<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.6V20"/>',
+        person:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+        target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
         gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>',
         route:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 0 0 3-3v-6a3 3 0 0 1 3-3"/>',
+        play:'<circle cx="12" cy="12" r="8"/><path d="m10 8 6 4-6 4V8Z"/>',
         chat:'<path d="M5 18.5 3.5 21v-5A8 8 0 1 1 7 19.3"/><path d="M8 11h8M8 14h5"/>',
         phone:'<path d="M7 3h3l1.3 4-2 1.5a15 15 0 0 0 6.2 6.2l1.5-2L21 14v3c0 2.2-1.8 4-4 4A14 14 0 0 1 3 7c0-2.2 1.8-4 4-4Z"/>',
+        lifebuoy:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="m5.6 5.6 4.3 4.3M14.1 14.1l4.3 4.3M18.4 5.6l-4.3 4.3M9.9 14.1l-4.3 4.3"/>',
         calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M13 14h3M8 17h3"/>',
+        clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
         pin:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
         globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.5 5.5 3.5 9S14.4 18.5 12 21M12 3C9.6 5.5 8.5 8.5 8.5 12S9.6 18.5 12 21"/>',
-        compass:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
-        spark:'<path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3ZM18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/>',
-        box:'<path d="m4 7 8-4 8 4-8 4-8-4Z M4 7v10l8 4 8-4V7M12 11v10"/>',
-        briefcase:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18M10 12v2h4v-2"/>',
+        truck:'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+        building:'<path d="M4 21V5l8-3 8 3v16M8 8h1M8 12h1M8 16h1M15 8h1M15 12h1M15 16h1M10 21v-3h4v3"/>',
+        star:'<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>',
         shield:'<path d="M12 3 20 6v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/><path d="m9 12 2 2 4-5"/>'
       };
-      let preferred = ["spark","box","briefcase"];
-      if (/price|pricing|plan|cost|package|subscription/.test(question)) preferred = ["tag","card","coins"];
-      else if (/how|work|process|start|begin|setup/.test(question)) preferred = ["play","gear","route"];
-      else if (/contact|talk|support|help|book|demo|call/.test(question)) preferred = ["chat","phone","calendar"];
-      else if (/where|location|area|address/.test(question)) preferred = ["pin","globe","compass"];
-      const iconName = [...preferred,...Object.keys(icons)].find((candidate) => !usedIcons.has(candidate)) || "shield";
+      const categories = [
+        [/price|pricing|plan|cost|package|subscription|payment|fee|rate/, ["tag", "card", "coins"]],
+        [/offer|service|product|solution|feature|provide|what (?:can|do) (?:you|we)|what you do/, ["briefcase", "box", "list"]],
+        [/who.*for|audience|customer|client|ideal|suitable|target/, ["users", "person", "target"]],
+        [/how.*work|process|setup|start|begin|steps|getting started/, ["gear", "route", "play"]],
+        [/contact|support|talk|help|call|speak|message|enquir/, ["chat", "phone", "lifebuoy"]],
+        [/book|appointment|schedule|availability|available/, ["calendar", "clock"]],
+        [/where|location|area|address|branch|office|visit/, ["pin", "globe"]],
+        [/deliver|shipping|collection|pickup/, ["truck", "pin"]],
+        [/about|company|business|team|who are you|your story/, ["building", "users"]],
+        [/review|rating|testimonial|recommend/, ["star"]],
+        [/safe|secure|security|privacy|protect|guarantee/, ["shield"]],
+        [/online|website|international|country|countries/, ["globe"]]
+      ];
+      const match = categories.find(([pattern]) => pattern.test(question));
+      if (!match) return "";
+      const iconName = match[1].find((candidate) => !usedIcons.has(candidate));
+      if (!iconName) return "";
       usedIcons.add(iconName);
       return `<svg class="question-icon" viewBox="0 0 24 24" aria-hidden="true">${icons[iconName]}</svg>`;
     }
@@ -7456,6 +7477,7 @@ function uiSettings(value) {
     widget_version: parsed.widget_version === "2" ? "2" : "1",
     helpful_pages_enabled: parsed.helpful_pages_enabled === true,
     popular_questions_bold: parsed.popular_questions_bold !== false,
+    popular_question_icons_enabled: parsed.popular_question_icons_enabled !== false,
     popular_question_border:
       parsed.popular_question_border === "normal" ? "normal" : "bold",
     header_pattern: ["none", "circles", "pluses", "crosses", "lines"].includes(
@@ -7791,6 +7813,16 @@ ${escapeHtml(bot.instructions || "")}</textarea>
                     style="min-height:190px"
                   >
 ${escapeHtml(questions.slice(0, 6).join("\n"))}</textarea>
+                  <label class="check"
+                    ><input
+                      type="checkbox"
+                      name="popular_question_icons_enabled"
+                      value="1"
+                      ${checked(ui.popular_question_icons_enabled)}
+                    />
+                    Show relevant icons beside popular questions
+                    ${info("Turn this off to remove every popular-question icon.")}</label
+                  >
                   <label class="check"
                     ><input
                       type="checkbox"
@@ -8266,6 +8298,7 @@ async function updateChatbotSettings(request, env, chatbotId) {
     widget_version: widgetVersion,
     helpful_pages_enabled: form.get("helpful_pages_enabled") === "1",
     popular_questions_bold: form.get("popular_questions_bold") === "1",
+    popular_question_icons_enabled: form.get("popular_question_icons_enabled") === "1",
     popular_question_border:
       form.get("popular_question_border") === "normal" ? "normal" : "bold",
     header_pattern: ["none", "circles", "pluses", "crosses", "lines"].includes(
