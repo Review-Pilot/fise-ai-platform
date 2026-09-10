@@ -6349,6 +6349,25 @@ const sharedStyles = html`
   .dashboard-account-tab:hover,.dashboard-account-tab.active{color:#111!important;background:#c5c8cd!important}
   .dashboard-workspace-state{border-top-color:#c2c5c9!important;color:#555b62!important}
 
+  .dashboard-account-layout{grid-template-columns:266px minmax(0,1fr);background:#f4f4f2}
+  .dashboard-account-side{position:sticky;top:0;height:100vh;padding:28px 20px 22px;border-right:1px solid #dedee1!important;color:#111!important;background:#f7f7f8!important}
+  .dashboard-account-brand{display:flex;align-items:center;gap:12px;margin:0 0 33px;color:#111!important;text-decoration:none;font-size:17px;font-weight:850}
+  .dashboard-account-mark{width:34px;height:34px;display:grid;place-items:center;border:0!important;border-radius:9px;color:#111!important;background:#fff!important;font-size:18px;font-weight:900;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .dashboard-account-title{display:grid;gap:7px;margin:0 0 28px}
+  .dashboard-account-title small{color:#111!important;font-size:14px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+  .dashboard-account-title strong{color:#111!important;font-size:17px;font-weight:850}
+  .dashboard-account-tabs{display:grid;grid-template-columns:1fr;gap:7px}
+  .dashboard-account-tab{display:flex!important;min-height:43px;padding:0 13px!important;align-items:center;gap:12px;border:1px solid transparent!important;border-radius:8px;color:#111!important;background:transparent!important;font-size:16px;font-weight:700;text-align:left;text-decoration:none}
+  .dashboard-account-tab:hover{border-color:#dddde0!important;background:#ededee!important}
+  .dashboard-account-tab.active{border-color:#d2d2d5!important;color:#111!important;background:#e7e7e9!important}
+  .dashboard-account-tab-icon{width:18px;height:18px;display:grid!important;place-items:center;flex:0 0 18px;color:#111!important}
+  .dashboard-account-tab-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .dashboard-workspace-state{margin-top:auto;padding:11px 3px 0;border-top:1px solid #dedee1!important;color:#666b71!important;font-size:9px}
+  @media(max-width:720px){
+    .dashboard-account-layout{grid-template-columns:minmax(250px,266px) minmax(0,1fr)!important}
+    .dashboard-account-side{position:sticky;height:100vh;padding:28px 20px 22px}
+  }
+
 `;
 
 function escapeHtml(value = "") {
@@ -6455,10 +6474,10 @@ function dashboardAccountSidebar() {
     </a>
     <div class="dashboard-account-title"><small>Customer portal</small><strong>Account centre</strong></div>
     <nav class="dashboard-account-tabs" aria-label="Account sections">
-      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span>Profile</span></a>
-      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span>Chatbot</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span>Subscription</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span>Affiliate</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg></span><span>Profile</span></a>
+      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="11" rx="2"/><path d="M9 7V5h6v2M9 12h6M12 10v4"/></svg></span><span>Chatbot</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg></span><span>Subscription</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span class="dashboard-account-tab-icon" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg></span><span>Affiliate</span></a>
     </nav>
     <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
   </aside>`;
