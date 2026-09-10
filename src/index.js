@@ -3764,7 +3764,30 @@ const requestedStyles = html`
   .profile-tab:hover,.profile-tab.active{border-color:transparent!important;color:#111!important;background:#c5c8cd!important}
   .profile-signout button{border-color:#b7bbc0!important;color:#111!important;background:#cdd0d4!important}
   .profile-tab-icon{display:none!important}
+
   }
+
+  .profile-drawer{grid-template-columns:266px minmax(0,1fr);background:#f7f7f8}
+  .profile-side{padding:28px 20px 22px;border-right:1px solid #dedee1;color:#111;background:#f7f7f8!important}
+  .profile-brand{display:flex;align-items:center;gap:12px;margin:0 0 33px;color:#111!important;text-decoration:none;font-size:17px;font-weight:850}
+  .profile-sidebar-mark{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:9px;color:#111;background:#fff;font-size:18px;font-weight:900;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .profile-side-title{display:grid;gap:7px;margin:0 0 28px}
+  .profile-side-title small{color:#111!important;font-size:14px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+  .profile-side-title strong{color:#111!important;font-size:17px;font-weight:850}
+  .profile-tabs{display:grid!important;grid-template-columns:1fr!important;gap:7px}
+  .profile-tab{display:flex!important;min-height:43px;padding:0 13px!important;align-items:center;gap:12px;border:1px solid transparent!important;border-radius:8px;color:#111!important;background:transparent!important;font-size:16px;font-weight:700;text-align:left;text-decoration:none}
+  .profile-tab:hover{border-color:#dddde0!important;background:#ededee!important}
+  .profile-tab.active{border-color:#d2d2d5!important;color:#111!important;background:#e7e7e9!important}
+  .profile-tab-icon{width:18px;height:18px;display:grid!important;place-items:center;flex:0 0 18px;color:#111!important}
+  .profile-tab-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .profile-signout{margin-top:auto}
+  .profile-signout button{min-height:42px;border-color:#d2d2d5!important;border-radius:8px;color:#111!important;background:#ededee!important;font-size:14px}
+  @media(max-width:720px){
+    .profile-drawer{grid-template-columns:minmax(250px,266px) minmax(0,1fr)!important;grid-template-rows:1fr!important}
+    .profile-side{padding:28px 20px 22px}
+    .profile-main{padding:25px 20px 40px}
+  }
+
 `;
 
 const tidioInspiredStyles = html`
@@ -3982,10 +4005,10 @@ function profileDrawer() {
         <a class="profile-brand" href="/"><span class="profile-sidebar-mark" aria-hidden="true">✣</span><span>Fise AI</span></a>
         <div class="profile-side-title"><small>Customer portal</small><strong>Account centre</strong></div>
         <nav class="profile-tabs" aria-label="Profile sections">
-          <button class="profile-tab active" type="button" data-profile-tab="account"><span>Profile</span></button>
-          <a class="profile-tab" href="/dashboard"><span>Chatbot</span></a>
-          <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span></button>
-          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span></button>
+          <button class="profile-tab active" type="button" data-profile-tab="account"><span class="profile-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg></span><span>Profile</span></button>
+          <a class="profile-tab" href="/dashboard"><span class="profile-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="11" rx="2"/><path d="M9 7V5h6v2M9 12h6M12 10v4"/></svg></span><span>Chatbot</span></a>
+          <button class="profile-tab" type="button" data-profile-tab="subscription"><span class="profile-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg></span><span>Subscription</span></button>
+          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span class="profile-tab-icon" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg></span><span>Affiliate</span></button>
         </nav>
         <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
       </div>
