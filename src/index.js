@@ -3519,7 +3519,7 @@ const requestedStyles = html`
   .profile-tabs { display:grid; gap:7px; }
   .profile-tab { width:100%; padding:13px 14px; border:0; border-radius:10px;
     color:#c8d7ef; background:transparent; cursor:pointer; font-weight:750;
-    text-align:left; }
+    text-align:left; text-decoration:none; }
   .profile-tab:hover,.profile-tab.active { color:#fff; background:#173967; }
   .profile-signout { margin-top:auto; }
   .profile-signout button { width:100%; min-height:46px; border:1px solid
@@ -3913,7 +3913,7 @@ function profileDrawer() {
         <div class="profile-side-title"><small>Customer portal</small><strong>Account centre</strong></div>
         <nav class="profile-tabs" aria-label="Profile sections">
           <button class="profile-tab active" type="button" data-profile-tab="account"><span>Profile</span><small>Personal and security details</small></button>
-          <button class="profile-tab" type="button" data-profile-tab="chatbots"><span>Chatbot</span><small>Setup, scan and manage</small></button>
+          <a class="profile-tab" href="/dashboard"><span>Chatbot</span><small>Setup, scan and manage</small></a>
           <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span><small>Plan and billing status</small></button>
           <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span><small>Programme information</small></button>
         </nav>
@@ -3924,10 +3924,6 @@ function profileDrawer() {
         <section class="profile-panel active" data-profile-panel="account">
           <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div><span class="profile-security-badge">Secure account</span></div>
           <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-password-eye" id="profile-password-eye" type="button" aria-label="Show password information" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></button></div><span class="profile-password-message" id="profile-password-message">For security, saved passwords cannot be revealed. Use your password manager, or sign in with an email link if forgotten.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
-        </section>
-        <section class="profile-panel profile-chatbot-panel" data-profile-panel="chatbots">
-          <div class="profile-panel-heading"><div><h3>Chatbot workspace</h3><p class="profile-intro">Scan your website, customise your assistant and manage leads.</p></div></div>
-          <div class="profile-frame-shell"><div class="profile-bots" id="profile-chatbots"><div class="profile-empty">Loading your chatbot workspace…</div></div></div>
         </section>
         <section class="profile-panel" data-profile-panel="subscription">
           <div class="profile-panel-heading"><div><h3>Subscription</h3><p class="profile-intro">Your current plan, billing status and testing controls.</p></div></div>
