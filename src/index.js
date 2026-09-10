@@ -6214,6 +6214,8 @@ const sharedStyles = html`
   .dash-secondary-button{border-color:#cfd3d7;color:#111;background:#f5f6f7}
   .dash-action-grid a>span{color:#3f454c;background:#eceeef}
   .dash-delete-card button{border-color:#cfd3d7;color:#111;background:#f5f6f7}
+  .dash-scan-summary button{border-color:#858b93}
+  .embed-code{background:#707780}
   .install-locked .btn{background:#707780}
   @media(max-width:720px){.dashboard-account-tab{justify-content:flex-start}.dashboard-account-tab-icon{display:grid}}
 
