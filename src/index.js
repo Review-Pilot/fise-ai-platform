@@ -3754,6 +3754,16 @@ const requestedStyles = html`
   .profile-tab:hover,.profile-tab.active{border:0;color:#111;background:#e8e8e5}
   .profile-tab-icon{width:13px;color:#555a60;font-size:9px}
   .profile-signout button{min-height:32px;border-color:#d9d9d6;color:#333;background:#f0f0ee;font-size:9px}
+
+  .profile-side{background:#d8dadd!important;border-right-color:#c7cacf!important;color:#111!important}
+  .profile-brand{color:#111!important}
+  .profile-sidebar-mark{width:25px;height:25px;display:grid;place-items:center;border:1px solid #c2c5ca;border-radius:6px;color:#4c5157;background:#eef0f2;font-size:11px}
+  .profile-side-title small{color:#5f646a!important}
+  .profile-side-title strong{color:#111!important}
+  .profile-tab{padding-left:12px!important;color:#111!important;font-weight:750}
+  .profile-tab:hover,.profile-tab.active{border-color:transparent!important;color:#111!important;background:#c5c8cd!important}
+  .profile-signout button{border-color:#b7bbc0!important;color:#111!important;background:#cdd0d4!important}
+  .profile-tab-icon{display:none!important}
   }
 `;
 
@@ -3969,13 +3979,13 @@ function profileDrawer() {
     <button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button>
     <aside class="profile-drawer" aria-labelledby="profile-title">
       <div class="profile-side">
-        <a class="profile-brand" href="/">${referenceLogo()}</a>
+        <a class="profile-brand" href="/"><span class="profile-sidebar-mark" aria-hidden="true">✣</span><span>Fise AI</span></a>
         <div class="profile-side-title"><small>Customer portal</small><strong>Account centre</strong></div>
         <nav class="profile-tabs" aria-label="Profile sections">
-          <button class="profile-tab active" type="button" data-profile-tab="account"><span class="profile-tab-icon">♙</span><span>Profile</span></button>
-          <a class="profile-tab" href="/dashboard"><span class="profile-tab-icon">▣</span><span>Chatbot</span></a>
-          <button class="profile-tab" type="button" data-profile-tab="subscription"><span class="profile-tab-icon">▭</span><span>Subscription</span></button>
-          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span class="profile-tab-icon">◇</span><span>Affiliate</span></button>
+          <button class="profile-tab active" type="button" data-profile-tab="account"><span>Profile</span></button>
+          <a class="profile-tab" href="/dashboard"><span>Chatbot</span></a>
+          <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span></button>
+          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span></button>
         </nav>
         <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
       </div>
@@ -6307,6 +6317,15 @@ const sharedStyles = html`
   @media(max-width:900px){.dash-knowledge-body{grid-template-columns:1fr}.dash-management-grid{grid-template-columns:1fr}.dash-action-search{display:none}}
   @media(max-width:720px){.dashboard-account-layout{grid-template-columns:1fr}.dashboard-account-side{position:relative;height:auto}.dashboard-workspace-state{margin-top:12px}.dash-account-topbar{padding:12px 16px}.dashboard-account-main .dashboard-main{width:min(100% - 24px,1040px)}}
 
+  .dashboard-account-side{background:#d8dadd!important;border-right-color:#c7cacf!important}
+  .dashboard-account-brand{color:#111!important}
+  .dashboard-account-mark{border-color:#c2c5ca!important;color:#4c5157!important;background:#eef0f2!important}
+  .dashboard-account-title small{color:#5f646a!important}
+  .dashboard-account-title strong{color:#111!important}
+  .dashboard-account-tab{padding-left:12px!important;color:#111!important;font-weight:750}
+  .dashboard-account-tab:hover,.dashboard-account-tab.active{color:#111!important;background:#c5c8cd!important}
+  .dashboard-workspace-state{border-top-color:#c2c5c9!important;color:#555b62!important}
+
 `;
 
 function escapeHtml(value = "") {
@@ -6413,10 +6432,10 @@ function dashboardAccountSidebar() {
     </a>
     <div class="dashboard-account-title"><small>Customer portal</small><strong>Account centre</strong></div>
     <nav class="dashboard-account-tabs" aria-label="Account sections">
-      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span class="dashboard-account-tab-icon">♙</span><span>Profile</span></a>
-      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span class="dashboard-account-tab-icon">▣</span><span>Chatbot</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span class="dashboard-account-tab-icon">▭</span><span>Subscription</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span class="dashboard-account-tab-icon">●</span><span>Affiliate</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span>Profile</span></a>
+      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span>Chatbot</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span>Subscription</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span>Affiliate</span></a>
     </nav>
     <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
   </aside>`;
