@@ -6075,6 +6075,71 @@ const sharedStyles = html`
     .dashboard-account-signout{margin-top:14px}
     .dashboard-account-main .dashboard-main{width:min(100% - 24px,1080px)}
   }
+  .dashboard-account-layout{background:#f3f4f2}
+  .dashboard-account-side{background:#171717}
+  .dashboard-account-main .dashboard-main{width:min(1220px,calc(100% - 56px));padding:38px 0 48px}
+  .dash-chatbot-stack{display:grid;gap:18px}
+  .dash-active-card,.dash-usage-card,.dash-leads-card,.dash-knowledge-card,.dash-private-card,.dash-management-card,.dash-technical-card,.dash-delete-card{border:1px solid #dedfdd;border-radius:12px;background:#fff;box-shadow:none}
+  .dash-active-card{display:flex;min-height:130px;padding:25px 28px;align-items:center;justify-content:space-between;gap:20px}
+  .dash-chatbot-identity{display:flex;min-width:0;align-items:flex-start;gap:15px}
+  .dash-chatbot-icon,.dash-icon{display:grid;place-items:center;flex:0 0 auto;color:#fff;background:#080808}
+  .dash-chatbot-icon{width:44px;height:44px;border-radius:11px;font-size:17px}
+  .dash-icon{width:29px;height:29px;border-radius:8px;font-size:12px}
+  .dash-chatbot-identity small,.dash-kicker,.dash-section-heading small{display:block;color:#777b78;font-size:10px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+  .dash-chatbot-identity h2{margin:3px 0 5px;color:#090909;font-size:23px;letter-spacing:-.025em}
+  .dash-chatbot-identity p{margin:0 0 3px;color:#333;font-size:14px}
+  .dash-chatbot-identity a{display:block;max-width:700px;overflow:hidden;color:#777b78;text-decoration:none;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .dash-plan-state{display:flex;align-items:center;gap:11px}
+  .dash-plan-state>span{width:9px;height:9px;border-radius:50%;background:#18b764;box-shadow:0 0 0 7px #eaf8ef}
+  .dash-plan-state strong{padding:7px 12px;border-radius:999px;color:#262626;background:#f0f0ef;font-size:12px}
+  .dash-stats-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(230px,.7fr);gap:18px}
+  .dash-usage-card,.dash-leads-card{padding:22px 24px}
+  .dash-stat-heading,.dash-stat-foot{display:flex;align-items:center;justify-content:space-between;gap:15px}
+  .dash-stat-heading{font-size:13px}.dash-stat-heading>span{width:28px;height:28px;display:grid;place-items:center;border-radius:7px;background:#f4f4f3}
+  .dash-usage-card h3,.dash-leads-card h3{margin:10px 0 14px;color:#070707;font-size:21px;letter-spacing:-.02em}
+  .dash-leads-card h3{margin-bottom:5px}
+  .dash-leads-card p{margin:0;color:#857563;font-size:12px}
+  .dash-usage-track,.dash-progress-track{height:6px;overflow:hidden;border-radius:999px;background:#e5e5e3}
+  .dash-usage-track span,.dash-progress-track span{display:block;height:100%;border-radius:inherit;background:#111}
+  .dash-stat-foot{margin-top:9px;color:#777b78;font-size:11px}
+  .dash-knowledge-card{overflow:hidden}
+  .dash-knowledge-head{display:flex;padding:23px 25px;align-items:flex-start;justify-content:space-between;gap:22px;border-bottom:1px solid #e7e7e5}
+  .dash-kicker{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .dash-kicker .dash-icon{width:28px;height:28px;color:#fff}
+  .dash-knowledge-head h2,.dash-private-card h2,.dash-management-card h2,.dash-delete-card h2{margin:0 0 6px;color:#090909;font-size:19px;letter-spacing:-.02em}
+  .dash-knowledge-head p,.dash-private-card p,.dash-delete-card p{max-width:610px;margin:0;color:#7b6d5e;font-size:12px;line-height:1.5}
+  .dash-knowledge-head form{display:grid;gap:8px;flex:0 0 auto}
+  .dash-primary-button,.dash-secondary-button{display:inline-flex;min-height:36px;padding:0 14px;align-items:center;justify-content:center;border:1px solid #d8d8d5;border-radius:7px;color:#111;background:#fff;cursor:pointer;text-decoration:none;font-size:11px;font-weight:800}
+  .dash-primary-button{border-color:#111;color:#fff;background:#111}
+  .dash-knowledge-body{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:24px;padding:24px 25px}
+  .dash-progress-title{display:flex;align-items:center;justify-content:space-between;gap:15px}
+  .dash-progress-title strong{display:block;font-size:13px}.dash-progress-title small{display:block;margin-top:4px;color:#858985;font-size:10px}
+  .dash-state-pill{padding:5px 8px;border-radius:999px;background:#f1f1ef;font-size:9px;font-weight:800}
+  .dash-progress-track{margin:16px 0 18px}
+  .dash-progress-metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .dash-progress-metrics>div{padding:12px;border:1px solid #e5e5e2;border-radius:7px;background:#fafafa}
+  .dash-progress-metrics small,.dash-scan-summary>small{display:block;color:#858985;font-size:9px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+  .dash-progress-metrics strong{display:block;margin-top:5px;font-size:11px}
+  .dash-scan-summary{padding:15px;border:1px solid #e3e3e0;border-radius:9px;background:#fafafa}
+  .dash-scan-summary>strong{display:block;margin-bottom:12px;font-size:12px}.dash-scan-summary p{margin:7px 0 14px;color:#7b6d5e;font-size:10px;line-height:1.45}
+  .dash-scan-summary>div{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:9px}.dash-scan-summary button{padding:0;border:0;border-bottom:1px solid #111;background:transparent;cursor:pointer;font-size:9px;font-weight:800}
+  .dash-knowledge-body>form{display:none}
+  .dash-management-grid{display:grid;grid-template-columns:minmax(230px,.7fr) minmax(0,1.6fr);gap:18px}
+  .dash-private-card,.dash-management-card{padding:22px}
+  .dash-private-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .dash-connected{padding:5px 9px;border-radius:999px;color:#13763b;background:#eaf8ef;font-size:9px;font-weight:850}
+  .dash-private-card .dash-secondary-button{margin-top:16px}
+  .dash-section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:15px}
+  .dash-section-heading small{margin-bottom:4px}
+  .dash-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dash-action-grid a{position:relative;display:grid;grid-template-columns:1fr;padding:14px;border:1px solid #e3e3e0;border-radius:9px;color:#111;text-decoration:none}
+  .dash-action-grid a>span{width:27px;height:27px;display:grid;place-items:center;margin-bottom:15px;border-radius:7px;background:#f3f3f2;font-size:11px}
+  .dash-action-grid strong{font-size:11px}.dash-action-grid small{margin-top:4px;color:#8a7865;font-size:10px}.dash-action-grid b{position:absolute;top:12px;right:12px;color:#999;font-size:10px}
+  .dash-technical-card{overflow:hidden}.dash-technical-card summary{display:flex;min-height:52px;padding:0 20px;align-items:center;justify-content:space-between;cursor:pointer;font-size:12px;font-weight:800}
+  .dash-delete-card{display:flex;padding:18px 22px;align-items:center;justify-content:space-between;gap:18px}
+  .dash-delete-card h2{font-size:17px}.dash-delete-card form{flex:0 0 auto}.dash-delete-card button{min-height:34px;padding:0 13px;border:1px solid #d8d8d5;border-radius:7px;background:#fff;cursor:pointer;font-size:10px;font-weight:800}
+  @media(max-width:900px){.dash-stats-grid,.dash-management-grid,.dash-knowledge-body{grid-template-columns:1fr}.dash-scan-summary{max-width:none}}
+  @media(max-width:560px){.dashboard-account-main .dashboard-main{padding-top:24px}.dash-active-card,.dash-knowledge-head,.dash-delete-card{align-items:flex-start;flex-direction:column}.dash-plan-state{align-self:flex-start}.dash-stats-grid{grid-template-columns:1fr}.dash-action-grid,.dash-progress-metrics{grid-template-columns:1fr}.dash-knowledge-head form{width:100%}.dash-primary-button,.dash-secondary-button{width:100%}}
 `;
 
 function escapeHtml(value = "") {
@@ -6258,6 +6323,64 @@ function verificationPage(success = true, message = "Your email is verified. You
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#102033;background:#f3f6fa;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #dfe6ef;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(7,17,38,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#167044" : "#637083"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#637083;line-height:1.6}.open-dashboard{display:inline-flex;min-height:46px;margin-top:22px;padding:0 19px;align-items:center;border-radius:10px;color:#fff;background:#1769e0;text-decoration:none;font-weight:800}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "✓" : "–"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p>${success ? html`<a class="open-dashboard" href="/dashboard">Open dashboard</a>` : ""}</main></body></html>`;
 }
 
+
+function renderDashboardKnowledge(bot, embedded = false) {
+  const scanAction = embedded ? "/api/scans/start?embed=1" : "/api/scans/start";
+  const status = bot.scan_status || (bot.status === "scanning" ? "running" : "not_started");
+  const found = Number(bot.pages_found || 0);
+  const processed = Number(bot.pages_processed || 0);
+  const active = ["queued", "discovering", "running", "indexing"].includes(status);
+  const complete = ["completed", "completed_with_errors"].includes(status);
+  const failed = status === "failed";
+  const percent = complete ? 100 : found ? Math.min(100, Math.round((processed / found) * 100)) : active ? 5 : 0;
+  const actionLabel = active ? "Restart scan" : complete ? "Rescan website" : "Start website scan";
+  const stateLabel = active ? "Scan in progress" : complete ? "Knowledge ready" : failed ? "Needs attention" : "Ready to scan";
+  const detail = failed
+    ? escapeHtml(bot.scan_error || "Fise could not read usable website pages.")
+    : active
+      ? "New pages are added to the queue as they are found."
+      : complete
+        ? "Your website knowledge is current and ready for your chatbot."
+        : "Start a scan to prepare your website information.";
+  return html`<section class="dash-knowledge-card" id="website-knowledge">
+    <div class="dash-knowledge-head">
+      <div>
+        <div class="dash-kicker"><span class="dash-icon">◎</span> Knowledge source</div>
+        <h2>Website Knowledge</h2>
+        <p>Your assistant can scan up to 100 website pages to keep answers accurate, current, and aligned with your public site.</p>
+      </div>
+      <form method="post" action="${scanAction}">
+        <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
+        <button class="dash-secondary-button" type="submit">Update knowledge</button>
+        <button class="dash-primary-button" type="submit">${actionLabel}</button>
+      </form>
+    </div>
+    <div class="dash-knowledge-body">
+      <div class="dash-progress-area">
+        <div class="dash-progress-title">
+          <div><strong>${processed} / ${Math.max(found, processed, 100)} pages processed</strong><small>${percent}% complete</small></div>
+          <span class="dash-state-pill">${stateLabel}</span>
+        </div>
+        <div class="dash-progress-track" role="progressbar" aria-label="Website scan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
+        <div class="dash-progress-metrics">
+          <div><small>Discovery</small><strong>${found} pages found</strong></div>
+          <div><small>Processing</small><strong>${processed} processed</strong></div>
+        </div>
+      </div>
+      <aside class="dash-scan-summary">
+        <strong>Scan completion</strong>
+        <small>Automatic progress updates</small>
+        <p>${detail}</p>
+        <div><span>${failed ? "Issue detected" : "No errors detected"}</span><button type="submit" form="dash-retry-${escapeHtml(bot.id)}">Retry scan</button></div>
+        <small>Last updated just now</small>
+      </aside>
+      <form id="dash-retry-${escapeHtml(bot.id)}" method="post" action="${scanAction}">
+        <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
+      </form>
+    </div>
+  </section>`;
+}
+
 function dashboardPage(
   user,
   chatbots,
@@ -6281,54 +6404,56 @@ function dashboardPage(
             const conversationsRemaining = Math.max(0, conversationLimit - conversationUsed);
             const usagePercent = Math.min(100, Math.round((conversationUsed / conversationLimit) * 100));
             const isFree = planCode === "free";
-            return html` <article class="bot-card workspace-card">
-              <div class="bot-top">
-                <div class="bot-identity">
-                  <span class="bot-avatar" aria-hidden="true">${escapeHtml(String(bot.name || "F").charAt(0).toUpperCase())}</span>
+            return html`<div class="dash-chatbot-stack">
+              <section class="dash-active-card">
+                <div class="dash-chatbot-identity">
+                  <span class="dash-chatbot-icon" aria-hidden="true">▤</span>
                   <div>
-                    <div class="bot-name-row"><h2>${escapeHtml(bot.name)}</h2><span class="plan-badge">${escapeHtml(planCode)}</span></div>
+                    <small>Active chatbot</small>
+                    <h2>${escapeHtml(bot.name)}</h2>
                     <p>${escapeHtml(bot.business_name || "Your business")}</p>
-                    <a class="bot-website" href="${escapeHtml(bot.website_url || "#")}" target="_blank" rel="noopener">${escapeHtml(bot.website_url || "Website not set")}</a>
+                    <a href="${escapeHtml(bot.website_url || "#")}" target="_blank" rel="noopener">Connected website · ${escapeHtml(String(bot.website_url || "Website not set").replace(/^https?:\\/\\//,"").replace(/\\/$/,""))}</a>
                   </div>
                 </div>
-                <span class="badge">${escapeHtml(bot.status)}</span>
+                <div class="dash-plan-state"><span></span><strong>${escapeHtml(planCode === "free" ? "Free Plan" : titleCase(planCode) + " Plan")}</strong></div>
+              </section>
+
+              <div class="dash-stats-grid">
+                <section class="dash-usage-card">
+                  <div class="dash-stat-heading"><strong>Monthly conversation usage</strong><span aria-hidden="true">▱</span></div>
+                  <h3>${conversationUsed.toLocaleString()} / ${conversationLimit.toLocaleString()} conversations</h3>
+                  <div class="dash-usage-track"><span style="width:${usagePercent}%"></span></div>
+                  <div class="dash-stat-foot"><span>${conversationsRemaining.toLocaleString()} remaining</span><span>${usagePercent}% used</span></div>
+                </section>
+                <section class="dash-leads-card">
+                  <div class="dash-stat-heading"><strong>Captured leads</strong><span aria-hidden="true">♙</span></div>
+                  <h3>${Number(bot.lead_count || 0).toLocaleString()} leads</h3>
+                  <p>Qualified conversations this month</p>
+                </section>
               </div>
-              <div class="usage-strip">
-                <div><small>Monthly usage</small><strong>${conversationsRemaining.toLocaleString()} conversations remaining</strong></div>
-                <div class="usage-meter" role="progressbar" aria-label="Monthly conversations used" aria-valuemin="0" aria-valuemax="${conversationLimit}" aria-valuenow="${Math.min(conversationUsed, conversationLimit)}"><span style="width:${usagePercent}%"></span></div>
-                <span class="usage-count">${Math.min(conversationUsed, conversationLimit).toLocaleString()} of ${conversationLimit.toLocaleString()} used</span>
+
+              ${renderDashboardKnowledge(bot, embedded)}
+
+              <div class="dash-management-grid">
+                <section class="dash-private-card" id="private-ai-knowledge">
+                  <div class="dash-private-head"><span class="dash-icon">▤</span><span class="dash-connected">${bot.vector_store_id ? "Connected" : "Preparing"}</span></div>
+                  <h2>Private AI Knowledge</h2>
+                  <p>Your secure vector store is connected and ready to supply private context to your chatbot.</p>
+                  <a class="dash-secondary-button" href="#website-knowledge">Manage knowledge</a>
+                </section>
+                <section class="dash-management-card" id="chatbot-management">
+                  <div class="dash-section-heading"><div><small>Operations</small><h2>Chatbot Management</h2></div><span aria-hidden="true">☷</span></div>
+                  <div class="dash-action-grid">
+                    <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"><span>◉</span><strong>Customise chatbot</strong><small>Voice, appearance and behaviour</small><b>↗</b></a>
+                    <a href="/widget/test?key=${encodeURIComponent(bot.public_key)}"><span>▷</span><strong>Open live preview</strong><small>Test the current experience</small><b>↗</b></a>
+                    <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"><span>♙</span><strong>View captured leads</strong><small>Review your latest enquiries</small><b>↗</b></a>
+                    <a href="#technical-info-${escapeHtml(bot.id)}"><span>{ }</span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>↗</b></a>
+                  </div>
+                </section>
               </div>
-              <div class="workspace-grid">
-                ${renderScanControls(bot, embedded)}
-                ${
-          bot.status === "ready"
-            ? html` <div class="widget-tools">
-                <div class="scan-label">Chatbot tools</div>
-                <h3>Ready to customise</h3>
-                <p>Update the design and answers, test the experience, or review captured leads.</p>
-                <div class="button-row">
-                  <a
-                    class="btn"
-                    href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"
-                    >Customise chatbot</a
-                  >
-                  <a
-                    class="btn ghost"
-                    href="/widget/test?key=${encodeURIComponent(bot.public_key)}"
-                    >Preview</a
-                  >
-                  <a
-                    class="btn ghost"
-                    href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"
-                    >Leads <span class="action-count">${Number(bot.lead_count || 0)}</span></a
-                  >
-                </div>
-              </div>`
-            : html`<div class="widget-tools pending-tools"><div class="scan-label">Next step</div><h3>Complete the website scan</h3><p>Once your website knowledge is ready, you can customise and preview your chatbot here.</p><div class="locked-step">Chatbot tools unlock after scanning</div></div>`
-        }
-              </div>
-              <details class="advanced-details">
-                <summary>Installation and technical details</summary>
+
+              <details class="dash-technical-card" id="technical-info-${escapeHtml(bot.id)}">
+                <summary>Installation and technical information</summary>
                 <div class="advanced-body">
                   <div class="details">
                     <div><small>Model</small><code>${escapeHtml(bot.model)}</code></div>
@@ -6338,15 +6463,16 @@ function dashboardPage(
                   ${bot.status === "ready" ? (isFree
                     ? html`<div class="install-block install-locked"><small>Website installation code</small><strong>Upgrade to add this chatbot to your website</strong><p>The Free plan includes dashboard previews only. Choose a paid plan to unlock the installation code.</p><a class="btn" href="/#pricing">View plans</a></div>`
                     : html`<div class="install-block"><small>Website installation code</small><code class="embed-code">&lt;script src=&quot;${escapeHtml(platformOrigin)}/widget.js?v=20260830-free-plan-1&quot; data-chatbot-key=&quot;${escapeHtml(bot.public_key)}&quot;&gt;&lt;/script&gt;</code></div>`) : ""}
-                  <div class="delete-tools">
-                    <div><strong>Delete chatbot</strong><p>Fise will email ${escapeHtml(user.email)} a secure confirmation link before anything is deleted.</p></div>
-                    <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}">
-                      <button class="btn danger" type="submit">Request deletion</button>
-                    </form>
-                  </div>
                 </div>
               </details>
-            </article>`;
+
+              <section class="dash-delete-card">
+                <div><h2>Delete chatbot</h2><p>Secure email confirmation is required before this chatbot can be deleted.</p></div>
+                <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}">
+                  <button type="submit">Delete chatbot</button>
+                </form>
+              </section>
+            </div>`;
           },
         )
         .join("")
@@ -6379,14 +6505,6 @@ function dashboardPage(
   return page(
     "Dashboard",
     html` <main class="wrap dashboard-main">
-      <div class="dashboard-head dashboard-hero">
-        <div>
-          <div class="eyebrow">Fise workspace</div>
-          <h1>Chatbot dashboard</h1>
-          <p class="muted">Manage your website knowledge, chatbot experience and leads in one place.</p>
-        </div>
-        <span class="workspace-user">${escapeHtml(user.email)}</span>
-      </div>
       ${notice}
       <div class="dashboard-shell">${botList}${createPanel}</div>
       <script src="/dashboard-progress.js" defer></script>
