@@ -6412,7 +6412,7 @@ function dashboardPage(
                     <small>Active chatbot</small>
                     <h2>${escapeHtml(bot.name)}</h2>
                     <p>${escapeHtml(bot.business_name || "Your business")}</p>
-                    <a href="${escapeHtml(bot.website_url || "#")}" target="_blank" rel="noopener">Connected website · ${escapeHtml(String(bot.website_url || "Website not set").replace(/^https?:\\/\\//,"").replace(/\\/$/,""))}</a>
+                    <a href="${escapeHtml(bot.website_url || "#")}" target="_blank" rel="noopener">Connected website · ${escapeHtml(String(bot.website_url || "Website not set").replace(/^https?:\/\//,"").replace(/\/$/,""))}</a>
                   </div>
                 </div>
                 <div class="dash-plan-state"><span></span><strong>${escapeHtml(planCode === "free" ? "Free Plan" : titleCase(planCode) + " Plan")}</strong></div>
