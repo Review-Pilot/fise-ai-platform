@@ -4277,7 +4277,11 @@ function referenceJavascript() {
               showAccountView('setup');
             }else{
               closeAccount();
-              if(params.get('signed_in')==='1'||params.get('profile')==='1')openProfile();
+              if(params.get('signed_in')==='1'||params.get('profile')==='1'){
+                openProfile();
+                const requestedTab=params.get('tab');
+                if(['account','subscription','affiliate'].includes(requestedTab))selectProfileTab(requestedTab);
+              }
             }
           }else{
             demoLink?.classList.add('requires-signin');
@@ -4290,7 +4294,7 @@ function referenceJavascript() {
           }
           if([...params.keys()].some((key)=>['sent','signed_in','profile','open_signin'].includes(key))){
             const cleanParams=new URLSearchParams(location.search);
-            ['sent','signed_in','profile','open_signin'].forEach((key)=>cleanParams.delete(key));
+            ['sent','signed_in','profile','tab','open_signin'].forEach((key)=>cleanParams.delete(key));
             const cleanQuery=cleanParams.toString();
             history.replaceState({},'',location.pathname+(cleanQuery?'?'+cleanQuery:'')+location.hash);
           }
@@ -6040,6 +6044,37 @@ const sharedStyles = html`
   .grid,.settings-grid,.workspace-grid,.onboarding-card{grid-template-columns:1fr}.usage-strip{grid-template-columns:1fr}.usage-count{white-space:normal}.setting-section.full{grid-column:auto}.dashboard-head{align-items:flex-start;flex-direction:column}.details{grid-template-columns:1fr}.public-links{display:none}.public-foot-grid{grid-template-columns:1fr
   1fr} } @media (max-width:560px) { main{padding:38px 0
   56px}.shell,.card{padding:21px}.wrap,.dashboard-main{width:min(100% - 24px,1080px)}.workspace-card{padding:0}.workspace-card .bot-top,.workspace-grid,.advanced-body{padding-left:18px;padding-right:18px}.workspace-card .bot-top{align-items:flex-start}.bot-identity{align-items:flex-start}.bot-avatar{width:42px;height:42px}.workspace-user{max-width:100%}.advanced-details summary{padding:0 18px}.advanced-body .delete-tools{align-items:stretch;flex-direction:column}.advanced-body .delete-tools .btn{width:100%}.form-grid{grid-template-columns:1fr}.full-field,.colour-field{grid-column:auto} }
+  .dashboard-account-layout{display:grid;grid-template-columns:282px minmax(0,1fr);min-height:100vh;background:#f5f7fa}
+  .dashboard-account-side{position:sticky;top:0;height:100vh;display:flex;min-height:0;padding:26px 20px 22px;flex-direction:column;color:#dce9ff;background:linear-gradient(180deg,#071a3b 0%,#0a2349 100%)}
+  .dashboard-account-brand{display:flex;align-items:center;gap:10px;margin:0 8px 34px;color:#fff;text-decoration:none;font-size:19px;font-weight:900}
+  .dashboard-account-mark{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;color:#fff;background:linear-gradient(145deg,#29b9e6,#20d6cf)}
+  .dashboard-account-mark svg{width:22px;height:22px}
+  .dashboard-account-brand-accent{color:#169cb9}
+  .dashboard-account-title{display:grid;gap:3px;margin:0 10px 17px}
+  .dashboard-account-title small{color:#7f9abd;font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+  .dashboard-account-title strong{color:#fff;font-size:20px}
+  .dashboard-account-tabs{display:grid;gap:6px}
+  .dashboard-account-tab{display:grid;gap:3px;width:100%;padding:12px 13px;border:1px solid transparent;border-radius:11px;color:#c8d7ef;background:transparent;text-align:left;text-decoration:none}
+  .dashboard-account-tab span{font-size:13px;font-weight:850}
+  .dashboard-account-tab small{color:#7891b3;font-size:10px;font-weight:650;line-height:1.35}
+  .dashboard-account-tab:hover,.dashboard-account-tab.active{border-color:rgba(255,255,255,.08);color:#fff;background:rgba(255,255,255,.09)}
+  .dashboard-account-tab:hover small,.dashboard-account-tab.active small{color:#b9c9df}
+  .dashboard-account-signout{margin-top:auto}
+  .dashboard-account-signout button{width:100%;min-height:46px;border:1px solid rgba(255,255,255,.16);border-radius:10px;color:#dce7f7;background:rgba(255,255,255,.04);cursor:pointer;font-weight:800}
+  .dashboard-account-signout button:hover{background:rgba(255,255,255,.09)}
+  .dashboard-account-main{min-width:0}
+  .dashboard-account-main .dashboard-main{width:min(1320px,calc(100% - 56px))}
+  @media(max-width:720px){
+    .dashboard-account-layout{grid-template-columns:1fr}
+    .dashboard-account-side{position:relative;height:auto;padding:18px}
+    .dashboard-account-brand{margin-bottom:18px}
+    .dashboard-account-title{margin:0 4px 13px}
+    .dashboard-account-tabs{grid-template-columns:1fr 1fr}
+    .dashboard-account-tab{min-height:57px}
+    .dashboard-account-tab small{display:none}
+    .dashboard-account-signout{margin-top:14px}
+    .dashboard-account-main .dashboard-main{width:min(100% - 24px,1080px)}
+  }
 `;
 
 function escapeHtml(value = "") {
@@ -6134,6 +6169,44 @@ function embeddedDocumentPage(title, body) {
         </style>
       </head>
       <body>${body}<script src="/website-frame.js" defer></script></body>
+    </html>`;
+}
+
+
+function dashboardAccountSidebar() {
+  return html`<aside class="dashboard-account-side">
+    <a class="dashboard-account-brand" href="/">
+      <span class="dashboard-account-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span>
+      <span>Fise <span class="dashboard-account-brand-accent">AI</span></span>
+    </a>
+    <div class="dashboard-account-title"><small>Customer portal</small><strong>Account centre</strong></div>
+    <nav class="dashboard-account-tabs" aria-label="Account sections">
+      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span>Profile</span><small>Personal and security details</small></a>
+      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span>Chatbot</span><small>Setup, scan and manage</small></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span>Subscription</span><small>Plan and billing status</small></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span>Affiliate</span><small>Programme information</small></a>
+    </nav>
+    <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
+  </aside>`;
+}
+
+function dashboardDocumentPage(title, body) {
+  return html`<!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="robots" content="noindex,nofollow" />
+        <title>${escapeHtml(title)} · Fise AI</title>
+        <style>${sharedStyles}</style>
+      </head>
+      <body class="dashboard-account-page">
+        <div class="dashboard-account-layout">
+          ${dashboardAccountSidebar()}
+          <div class="dashboard-account-main">${body}</div>
+        </div>
+        <script src="/website-frame.js" defer></script>
+      </body>
     </html>`;
 }
 
@@ -6302,7 +6375,7 @@ function dashboardPage(
         </form>
       </section>`;
 
-  const page = embedded ? embeddedDocumentPage : documentPage;
+  const page = embedded ? embeddedDocumentPage : dashboardDocumentPage;
   return page(
     "Dashboard",
     html` <main class="wrap dashboard-main">
