@@ -26,7 +26,7 @@ function redirect(location) {
 
 function renderScanControls(bot, embedded = false) {
   const scanAction = embedded ? "/api/scans/start?embed=1" : "/api/scans/start";
-  const status = bot.scan_status || "not_started";
+  const status = bot.scan_status || (bot.status === "scanning" ? "running" : "not_started");
   const found = Number(bot.pages_found || 0);
   const processed = Number(bot.pages_processed || 0);
   const active = ["queued", "discovering", "running", "indexing"].includes(status);
@@ -6357,6 +6357,21 @@ function embeddedHtmlResponse(content, status = 200, extraHeaders = {}) {
   return response;
 }
 
+function isEmbeddedRequest(request) {
+  const url = new URL(request.url);
+  return (
+    url.searchParams.get("embed") === "1" ||
+    String(request.headers.get("sec-fetch-dest") || "").toLowerCase() === "iframe"
+  );
+}
+
+function loginPageResponse(message = "", isError = false, embedded = false, status = 200) {
+  const content = loginPage(message, isError, embedded);
+  return embedded
+    ? embeddedHtmlResponse(content, status)
+    : htmlResponse(content, status);
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -6628,18 +6643,19 @@ async function registerAccount(request, env) {
   const embedded = String(form.get("embed") || "") === "1";
   const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
   if (!email || !username || !password)
-    return htmlResponse(loginPage("Enter a valid email, a 3–40 character username, and a password of at least 8 characters.", true, embedded), 400);
+    return loginPageResponse("Enter a valid email, a 3–40 character username, and a password of at least 8 characters.", true, embedded, 400);
   const existing = await env.DB.prepare(
     "SELECT id,email,username,password_hash FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1",
   ).bind(email, username).first();
   if (existing)
-    return htmlResponse(loginPage(
+    return loginPageResponse(
       existing.email === email
         ? "An account already uses this email. Sign in with your password or one-time email link."
         : "That username is already in use. Choose another username.",
       true,
       embedded,
-    ), 409);
+      409,
+    );
   const record = await makePasswordRecord(password);
   const userId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -6662,13 +6678,14 @@ async function passwordLogin(request, env) {
   ).bind(normalizeEmail(identifier), identifier).first();
   if (!user || user.status !== "active" || !(await passwordMatches(password, user))) {
     const legacy = user && !user.password_hash;
-    return htmlResponse(loginPage(
+    return loginPageResponse(
       legacy
         ? "Use the one-time email link once, then Fise will ask you to create a username and password."
         : "The email or username and password do not match.",
       true,
       embedded,
-    ), 401);
+      401,
+    );
   }
   await env.DB.prepare("UPDATE users SET updated_at=? WHERE id=?")
     .bind(new Date().toISOString(), user.id).run();
@@ -6707,10 +6724,7 @@ async function requestMagicLink(request, env) {
   const embedded = String(form.get("embed") || "") === "1";
   const returnTo = safeReturnPath(form.get("return_to"), "/login");
   if (!email)
-    return htmlResponse(
-      loginPage("Enter a valid email address.", true, embedded),
-      400,
-    );
+    return loginPageResponse("Enter a valid email address.", true, embedded, 400);
   if (DIRECT_EMAIL_LOGIN)
     return createEmailSession(
       email,
@@ -6718,10 +6732,7 @@ async function requestMagicLink(request, env) {
       embedded ? "/dashboard?embed=1" : returnTo,
     );
   if (!env.RESEND_API_KEY)
-    return htmlResponse(
-      loginPage("Email service is not configured.", true),
-      503,
-    );
+    return loginPageResponse("Email service is not configured.", true, embedded, 503);
 
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const recent = await env.DB.prepare(
@@ -6730,11 +6741,10 @@ async function requestMagicLink(request, env) {
     .bind(email, tenMinutesAgo)
     .first();
   if (Number(recent?.total || 0) >= 4) {
-    return htmlResponse(
-      loginPage(
-        "Too many sign-in requests. Please wait 10 minutes and try again.",
-        true,
-      ),
+    return loginPageResponse(
+      "Too many sign-in requests. Please wait 10 minutes and try again.",
+      true,
+      embedded,
       429,
     );
   }
@@ -6798,11 +6808,10 @@ async function requestMagicLink(request, env) {
     await env.DB.prepare("DELETE FROM magic_links WHERE token_hash = ?")
       .bind(tokenHash)
       .run();
-    return htmlResponse(
-      loginPage(
-        "The sign-in email could not be sent. Check the address and try again in a moment.",
-        true,
-      ),
+    return loginPageResponse(
+      "The sign-in email could not be sent. Check the address and try again in a moment.",
+      true,
+      embedded,
       502,
     );
   }
@@ -7295,9 +7304,10 @@ async function accountProfile(request, env) {
 async function showDashboard(request, env) {
   const user = await currentUser(request, env);
   const requestedUrl = new URL(request.url);
+  const embeddedRequest = isEmbeddedRequest(request);
   if (!user)
     return redirect(
-      requestedUrl.searchParams.get("embed") === "1"
+      embeddedRequest
         ? "/login?embed=1"
         : "/login",
     );
@@ -7341,11 +7351,26 @@ async function showDashboard(request, env) {
     message = url.searchParams.get("error");
     isError = true;
   }
-  const embedded = url.searchParams.get("embed") === "1";
-  const dashboardBots = (result.results || []).map((bot) => ({
-    ...bot,
-    plan_code: normalizedPlanCode(bot.plan_code),
-    conversation_limit: planConversationLimit(bot.plan_code),
+  const embedded = embeddedRequest;
+  const dashboardBots = await Promise.all((result.results || []).map(async (bot) => {
+    let latestScan = null;
+    if (!bot.scan_status && bot.id) {
+      try {
+        latestScan = await env.DB.prepare(
+          "SELECT status,pages_found,pages_processed FROM crawl_jobs WHERE chatbot_id=? ORDER BY created_at DESC LIMIT 1",
+        ).bind(bot.id).first();
+      } catch (error) {
+        console.error("Could not enrich dashboard scan progress", error);
+      }
+    }
+    return {
+      ...bot,
+      scan_status: bot.scan_status || latestScan?.status || (bot.status === "scanning" ? "running" : null),
+      pages_found: bot.pages_found ?? latestScan?.pages_found ?? 0,
+      pages_processed: bot.pages_processed ?? latestScan?.pages_processed ?? 0,
+      plan_code: normalizedPlanCode(bot.plan_code),
+      conversation_limit: planConversationLimit(bot.plan_code),
+    };
   }));
   const content = dashboardPage(
     user,
@@ -7390,22 +7415,32 @@ async function scanStatus(request, env) {
   const chatbotId = String(
     new URL(request.url).searchParams.get("chatbot_id") || "",
   ).slice(0, 80);
-  const row = await env.DB.prepare(
-    `
-    SELECT j.status,j.pages_found,j.pages_processed,j.error_message,j.updated_at
-    FROM crawl_jobs j JOIN chatbots c ON c.id=j.chatbot_id
-    WHERE j.chatbot_id=? AND c.user_id=? ORDER BY j.created_at DESC LIMIT 1
-  `,
-  )
-    .bind(chatbotId, user.id)
-    .first();
-  if (!row)
+  let row = null;
+  try {
+    row = await env.DB.prepare(
+      `
+      SELECT j.status,j.pages_found,j.pages_processed,j.updated_at
+      FROM crawl_jobs j JOIN chatbots c ON c.id=j.chatbot_id
+      WHERE j.chatbot_id=? AND c.user_id=? ORDER BY j.created_at DESC LIMIT 1
+    `,
+    )
+      .bind(chatbotId, user.id)
+      .first();
+  } catch (error) {
+    console.error("Could not read detailed scan progress", error);
+  }
+  if (!row) {
+    const bot = await env.DB.prepare(
+      "SELECT status FROM chatbots WHERE id=? AND user_id=? LIMIT 1",
+    ).bind(chatbotId, user.id).first();
+    const scanning = bot?.status === "scanning";
     return json({
-      status: "not_started",
-      percent: 0,
+      status: scanning ? "running" : "not_started",
+      percent: scanning ? 5 : 0,
       pages_found: 0,
       pages_processed: 0,
     });
+  }
   const found = Number(row.pages_found || 0);
   const processed = Number(row.pages_processed || 0);
   const percent = found
@@ -8798,7 +8833,8 @@ export default {
       }
       if (url.pathname === "/widget/test" && request.method === "GET") {
         const user = await currentUser(request, env);
-        if (!user) return redirect("/login");
+        if (!user)
+          return redirect(isEmbeddedRequest(request) ? "/login?embed=1" : "/login");
         const key = String(url.searchParams.get("key") || "").slice(0, 180);
         const owned = await env.DB.prepare(`
           SELECT c.id,COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json
@@ -8817,13 +8853,15 @@ export default {
 
       if (url.pathname === "/login" && request.method === "GET") {
         const user = await currentUser(request, env);
-        const embedded = url.searchParams.get("embed") === "1";
+        const embedded = isEmbeddedRequest(request);
         if (user)
           return redirect(embedded ? "/dashboard?embed=1" : "/dashboard");
         const sent = url.searchParams.get("sent") === "1";
-        return embedded
-          ? embeddedHtmlResponse(loginPage(sent ? "Check your email for the one-time sign-in link." : "", false, true))
-          : htmlResponse(loginPage(sent ? "Check your email for the one-time sign-in link." : "", false, false));
+        return loginPageResponse(
+          sent ? "Check your email for the one-time sign-in link." : "",
+          false,
+          embedded,
+        );
       }
       if (url.pathname === "/demo" && request.method === "GET") {
         const user = await currentUser(request, env);
