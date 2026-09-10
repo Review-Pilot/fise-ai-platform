@@ -3694,6 +3694,52 @@ const requestedStyles = html`
     .legal-document { padding:34px 23px; border-radius:17px; }
     .legal-document-header { margin-bottom:32px; }
     .legal-copy h2 { margin-top:37px; font-size:24px; }
+
+  .profile-drawer{grid-template-columns:250px minmax(0,1fr);background:#f3f4f5}
+  .profile-side{padding:24px 18px 20px;background:#666d76}
+  .profile-brand{margin:0 7px 30px}
+  .profile-brand .video-logo-mark{color:#666d76;background:#f6f7f8}
+  .profile-side-title{margin:0 8px 18px}
+  .profile-side-title small{color:#d5d9dd}
+  .profile-tabs{gap:6px}
+  .profile-tab{display:flex;min-height:44px;padding:0 11px;align-items:center;gap:10px;border:1px solid transparent;border-radius:7px;color:#f1f3f4}
+  .profile-tab:hover,.profile-tab.active{border-color:rgba(255,255,255,.28);color:#fff;background:rgba(255,255,255,.17)}
+  .profile-tab-icon{width:18px;display:grid;place-items:center;color:#eef0f2;font-size:12px}
+  .profile-signout button{border-color:rgba(255,255,255,.32);color:#fff;background:rgba(255,255,255,.08)}
+  .profile-main{padding:28px clamp(24px,3vw,44px) 44px;background:#f3f4f5}
+  .profile-head{max-width:none;margin:0 0 34px;padding-bottom:24px;border-bottom:1px solid #e0e2e4}
+  .profile-head-actions{display:flex;align-items:center;gap:12px}
+  .profile-security-badge{min-height:32px;border-color:#c8ead6;color:#0f7a42;background:#ecf9f1}
+  .profile-close{box-shadow:none}
+  .profile-panel{max-width:none}
+  .profile-panel-heading{margin-bottom:16px}
+  .profile-panel h3{font-size:22px}
+  .profile-panel-surface,.profile-detail,.profile-testing-plan,.profile-plan-summary-card,.profile-subscription-summary{box-shadow:none}
+  .profile-panel-surface{padding:20px;border-color:#dde0e3;border-radius:13px}
+  .profile-detail{min-height:76px;border-color:#dfe2e5;border-radius:8px;background:#f8f9fa}
+  .profile-security-note{border-radius:7px;background:#e9ecef}
+  .profile-subscription-stack{display:grid;gap:14px}
+  .profile-subscription-summary{display:flex;min-height:94px;padding:15px 18px;align-items:center;justify-content:space-between;border:1px solid #dde0e3;border-radius:12px;color:#111;background:#eceeef}
+  .profile-subscription-summary small{display:block;margin-bottom:6px;color:#737981;font-size:10px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+  .profile-subscription-summary>div>strong{font-size:22px}
+  .profile-subscription-summary .subscription-status{padding:7px 11px;border-radius:999px;color:#0f7a42;background:#e6f7ed}
+  .profile-subscription-summary .subscription-status.active{color:#0f7a42;background:#e6f7ed}
+  .profile-subscription-summary .subscription-status::before{background:#21a85a}
+  .profile-detail-grid.compact{gap:14px}
+  .profile-testing-plan{margin:0;padding:16px 18px;border-color:#dde0e3;border-radius:11px;background:#f8f8f7}
+  .profile-testing-title{display:flex;align-items:center;gap:11px;padding-bottom:15px;border-bottom:1px solid #e3e4e4}
+  .profile-testing-title>span{width:28px;height:28px;display:grid;place-items:center;border:1px solid #d8dbde;border-radius:7px;background:#fff}
+  .profile-testing-title strong{display:block;font-size:14px}
+  .profile-testing-title small{display:block;margin-top:3px;color:#747a82;font-size:11px}
+  .profile-plan-form{margin-top:14px}
+  .profile-plan-button{border:1px solid #6b727b;color:#fff;background:#6b727b}
+  .profile-plan-summary-card{padding:17px 18px;border:1px solid #dde0e3;border-radius:11px;background:#fff}
+  .profile-plan-summary-head{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-bottom:13px;border-bottom:1px solid #e5e6e7;font-size:12px}
+  .profile-plan-summary-head span{font-size:10px;font-weight:800}
+  .profile-plan-summary-grid{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:18px;padding-top:14px}
+  .profile-plan-summary-grid small{display:block;margin-bottom:5px;color:#737981;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+  .profile-plan-summary-grid strong,.profile-plan-summary-grid span{font-size:10px;line-height:1.45}
+  @media(max-width:720px){.profile-head-actions{align-items:flex-end;flex-direction:column}.profile-plan-summary-grid{grid-template-columns:1fr}.profile-tab{justify-content:flex-start}.profile-tab-icon{display:grid}}
   }
 `;
 
@@ -3912,22 +3958,27 @@ function profileDrawer() {
         <a class="profile-brand" href="/">${referenceLogo()}</a>
         <div class="profile-side-title"><small>Customer portal</small><strong>Account centre</strong></div>
         <nav class="profile-tabs" aria-label="Profile sections">
-          <button class="profile-tab active" type="button" data-profile-tab="account"><span>Profile</span><small>Personal and security details</small></button>
-          <a class="profile-tab" href="/dashboard"><span>Chatbot</span><small>Setup, scan and manage</small></a>
-          <button class="profile-tab" type="button" data-profile-tab="subscription"><span>Subscription</span><small>Plan and billing status</small></button>
-          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span>Affiliate</span><small>Programme information</small></button>
+          <button class="profile-tab active" type="button" data-profile-tab="account"><span class="profile-tab-icon">♙</span><span>Profile</span></button>
+          <a class="profile-tab" href="/dashboard"><span class="profile-tab-icon">▣</span><span>Chatbot</span></a>
+          <button class="profile-tab" type="button" data-profile-tab="subscription"><span class="profile-tab-icon">▭</span><span>Subscription</span></button>
+          <button class="profile-tab" type="button" data-profile-tab="affiliate"><span class="profile-tab-icon">◇</span><span>Affiliate</span></button>
         </nav>
         <form class="profile-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
       </div>
       <div class="profile-main">
-        <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div>
+        <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><div class="profile-head-actions"><span class="profile-security-badge">Secure account</span><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div></div>
         <section class="profile-panel active" data-profile-panel="account">
-          <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div><span class="profile-security-badge">Secure account</span></div>
+          <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div></div>
           <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-password-eye" id="profile-password-eye" type="button" aria-label="Show password information" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></button></div><span class="profile-password-message" id="profile-password-message">For security, saved passwords cannot be revealed. Use your password manager, or sign in with an email link if forgotten.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
         </section>
         <section class="profile-panel" data-profile-panel="subscription">
           <div class="profile-panel-heading"><div><h3>Subscription</h3><p class="profile-intro">Your current plan, billing status and testing controls.</p></div></div>
-          <div class="profile-panel-surface"><div class="profile-subscription-summary"><div><small>Current plan</small><strong id="profile-plan">—</strong></div><strong class="subscription-status none" id="profile-subscription-status">None</strong></div><div class="profile-detail-grid compact"><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Chatbot workspace</small><strong><a href="/dashboard">Open dashboard</a></strong></div></div><div class="profile-testing-plan"><strong>Testing plan access</strong><span>During testing, switch plans freely without payment.</span><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Choose a plan<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div></div>
+          <div class="profile-subscription-stack">
+            <div class="profile-subscription-summary"><div><small>Current plan</small><strong id="profile-plan">—</strong></div><strong class="subscription-status none" id="profile-subscription-status">None</strong></div>
+            <div class="profile-detail-grid compact"><div class="profile-detail"><small>Billing provider</small><strong id="profile-provider">—</strong></div><div class="profile-detail"><small>Chatbot workspace</small><strong><a href="/dashboard">Open dashboard ↗</a></strong></div></div>
+            <div class="profile-testing-plan"><div class="profile-testing-title"><span>♙</span><div><strong>Testing plan access</strong><small>During testing, plan fees apply without payment.</small></div></div><form class="profile-plan-form" id="profile-plan-form"><label for="profile-plan-select">Choose a plan<select id="profile-plan-select" name="plan"><option value="free">Free</option><option value="essential">Essential</option><option value="grow">Grow</option><option value="enterprise">Enterprise</option></select></label><button class="profile-plan-button" id="profile-plan-save" type="submit">Apply plan</button></form><p class="profile-plan-message" id="profile-plan-message" role="status" aria-live="polite"></p></div>
+            <div class="profile-plan-summary-card"><div class="profile-plan-summary-head"><strong>Plan summary</strong><span id="profile-plan-summary-line">—</span></div><div class="profile-plan-summary-grid"><div><small>Current plan</small><strong id="profile-plan-summary">—</strong></div><div><small>Billing state</small><strong id="profile-billing-state-summary">—</strong></div><div><small>When applied</small><span>Your selection updates without triggering payment.</span></div></div></div>
+          </div>
         </section>
         <section class="profile-panel" data-profile-panel="affiliate">
           <div class="profile-panel-heading"><div><h3>Affiliate programme</h3><p class="profile-intro">View your programme status or contact the Fise AI team.</p></div></div>
@@ -4175,6 +4226,10 @@ function referenceJavascript() {
       profileText('profile-subscription-status',titleCase(displayStatus));
       subscriptionStatus?.classList.remove('active','none','inactive');
       subscriptionStatus?.classList.add(displayStatus==='active'?'active':displayStatus==='inactive'?'inactive':'none');
+      const currentPlanLabel=data.subscription?.plan_code?titleCase(data.subscription.plan_code):'None';
+      profileText('profile-plan-summary',currentPlanLabel);
+      profileText('profile-billing-state-summary',displayStatus==='active'?'Testing active':titleCase(displayStatus));
+      profileText('profile-plan-summary-line',currentPlanLabel+' · '+titleCase(displayStatus));
       profileText('profile-provider',data.subscription?.provider?titleCase(data.subscription.provider):'None');
       const planSelect=document.getElementById('profile-plan-select');
       if(planSelect){
@@ -4246,6 +4301,10 @@ function referenceJavascript() {
         const statusNode=document.getElementById('profile-subscription-status');
         statusNode?.classList.remove('none','inactive');
         statusNode?.classList.add('active');
+        const savedPlanLabel=titleCase(data.subscription?.plan_code||select.value);
+        profileText('profile-plan-summary',savedPlanLabel);
+        profileText('profile-billing-state-summary','Testing active');
+        profileText('profile-plan-summary-line',savedPlanLabel+' · Active');
         profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
         message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||select.value)+'. No payment was charged.';
       }catch(error){
@@ -6140,6 +6199,24 @@ const sharedStyles = html`
   .dash-delete-card h2{font-size:17px}.dash-delete-card form{flex:0 0 auto}.dash-delete-card button{min-height:34px;padding:0 13px;border:1px solid #d8d8d5;border-radius:7px;background:#fff;cursor:pointer;font-size:10px;font-weight:800}
   @media(max-width:900px){.dash-stats-grid,.dash-management-grid,.dash-knowledge-body{grid-template-columns:1fr}.dash-scan-summary{max-width:none}}
   @media(max-width:560px){.dashboard-account-main .dashboard-main{padding-top:24px}.dash-active-card,.dash-knowledge-head,.dash-delete-card{align-items:flex-start;flex-direction:column}.dash-plan-state{align-self:flex-start}.dash-stats-grid{grid-template-columns:1fr}.dash-action-grid,.dash-progress-metrics{grid-template-columns:1fr}.dash-knowledge-head form{width:100%}.dash-primary-button,.dash-secondary-button{width:100%}}
+  .dashboard-account-layout{background:#f3f4f5}
+  .dashboard-account-side{background:#666d76}
+  .dashboard-account-mark{color:#666d76;background:#f6f7f8}
+  .dashboard-account-title small{color:#d5d9dd}
+  .dashboard-account-tab{display:flex;min-height:44px;padding:0 11px;align-items:center;gap:10px;border-radius:7px;color:#f1f3f4}
+  .dashboard-account-tab:hover,.dashboard-account-tab.active{border-color:rgba(255,255,255,.28);color:#fff;background:rgba(255,255,255,.17)}
+  .dashboard-account-tab-icon{width:18px;display:grid;place-items:center;color:#eef0f2;font-size:12px}
+  .dashboard-account-signout button{border-color:rgba(255,255,255,.32);color:#fff;background:rgba(255,255,255,.08)}
+  .dash-chatbot-icon,.dash-icon{color:#fff;background:#737a83}
+  .dash-plan-state strong,.dash-state-pill{background:#eceeef}
+  .dash-usage-track span,.dash-progress-track span{background:#747b84}
+  .dash-primary-button{border-color:#68707a;color:#fff;background:#68707a}
+  .dash-secondary-button{border-color:#cfd3d7;color:#111;background:#f5f6f7}
+  .dash-action-grid a>span{color:#3f454c;background:#eceeef}
+  .dash-delete-card button{border-color:#cfd3d7;color:#111;background:#f5f6f7}
+  .install-locked .btn{background:#707780}
+  @media(max-width:720px){.dashboard-account-tab{justify-content:flex-start}.dashboard-account-tab-icon{display:grid}}
+
 `;
 
 function escapeHtml(value = "") {
@@ -6246,10 +6323,10 @@ function dashboardAccountSidebar() {
     </a>
     <div class="dashboard-account-title"><small>Customer portal</small><strong>Account centre</strong></div>
     <nav class="dashboard-account-tabs" aria-label="Account sections">
-      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span>Profile</span><small>Personal and security details</small></a>
-      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span>Chatbot</span><small>Setup, scan and manage</small></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span>Subscription</span><small>Plan and billing status</small></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span>Affiliate</span><small>Programme information</small></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span class="dashboard-account-tab-icon">♙</span><span>Profile</span></a>
+      <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span class="dashboard-account-tab-icon">▣</span><span>Chatbot</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span class="dashboard-account-tab-icon">▭</span><span>Subscription</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span class="dashboard-account-tab-icon">◇</span><span>Affiliate</span></a>
     </nav>
     <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
   </aside>`;
@@ -6358,7 +6435,7 @@ function renderDashboardKnowledge(bot, embedded = false) {
     <div class="dash-knowledge-body">
       <div class="dash-progress-area">
         <div class="dash-progress-title">
-          <div><strong>${processed} / ${Math.max(found, processed, 100)} pages processed</strong><small>${percent}% complete</small></div>
+          <div><strong>${Math.max(found, processed) ? `${processed} / ${Math.max(found, processed)} pages processed` : "0 pages processed"}</strong><small>${percent}% complete</small></div>
           <span class="dash-state-pill">${stateLabel}</span>
         </div>
         <div class="dash-progress-track" role="progressbar" aria-label="Website scan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
