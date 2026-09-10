@@ -3740,6 +3740,20 @@ const requestedStyles = html`
   .profile-plan-summary-grid small{display:block;margin-bottom:5px;color:#737981;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
   .profile-plan-summary-grid strong,.profile-plan-summary-grid span{font-size:10px;line-height:1.45}
   @media(max-width:720px){.profile-head-actions{align-items:flex-end;flex-direction:column}.profile-plan-summary-grid{grid-template-columns:1fr}.profile-tab{justify-content:flex-start}.profile-tab-icon{display:grid}}
+
+  .profile-drawer{grid-template-columns:205px minmax(0,1fr)}
+  .profile-side{padding:17px 12px 16px;border-right:1px solid #e2e2df;color:#111;background:#f8f8f7}
+  .profile-brand{gap:7px;margin:0 2px 28px;color:#111;font-size:12px}
+  .profile-brand .video-logo-mark{width:25px;height:25px;border:1px solid #dededb;border-radius:6px;color:#50545a;background:#fff}
+  .profile-brand .video-logo span[style]{color:#111!important}
+  .profile-side-title{gap:4px;margin:0 2px 17px}
+  .profile-side-title small{color:#777b80;font-size:8px}
+  .profile-side-title strong{color:#111;font-size:13px}
+  .profile-tabs{gap:3px}
+  .profile-tab{min-height:34px;padding:0 9px;gap:8px;border:0;border-radius:5px;color:#2b2e32;font-size:10px}
+  .profile-tab:hover,.profile-tab.active{border:0;color:#111;background:#e8e8e5}
+  .profile-tab-icon{width:13px;color:#555a60;font-size:9px}
+  .profile-signout button{min-height:32px;border-color:#d9d9d6;color:#333;background:#f0f0ee;font-size:9px}
   }
 `;
 
@@ -6219,6 +6233,80 @@ const sharedStyles = html`
   .install-locked .btn{background:#707780}
   @media(max-width:720px){.dashboard-account-tab{justify-content:flex-start}.dashboard-account-tab-icon{display:grid}}
 
+  .dashboard-account-layout{grid-template-columns:205px minmax(0,1fr);background:#f4f4f2}
+  .dashboard-account-side{position:sticky;top:0;height:100vh;padding:17px 12px 16px;border-right:1px solid #e2e2df;color:#111;background:#f8f8f7}
+  .dashboard-account-brand{gap:7px;margin:0 2px 28px;color:#111;font-size:12px;font-weight:850}
+  .dashboard-account-mark{width:25px;height:25px;border:1px solid #dededb;border-radius:6px;color:#50545a;background:#fff;font-size:11px}
+  .dashboard-account-brand-accent{color:inherit}
+  .dashboard-account-title{gap:4px;margin:0 2px 17px}
+  .dashboard-account-title small{color:#777b80;font-size:8px;letter-spacing:.13em}
+  .dashboard-account-title strong{color:#111;font-size:13px}
+  .dashboard-account-tabs{gap:3px}
+  .dashboard-account-tab{min-height:34px;padding:0 9px;gap:8px;border:0;border-radius:5px;color:#2b2e32;font-size:10px}
+  .dashboard-account-tab:hover,.dashboard-account-tab.active{border:0;color:#111;background:#e8e8e5}
+  .dashboard-account-tab-icon{width:13px;color:#555a60;font-size:9px}
+  .dashboard-workspace-state{margin-top:auto;padding:11px 3px 0;border-top:1px solid #dfdfdc;color:#767b80;font-size:8px}
+  .dashboard-account-main{background:#f4f4f2}
+  .dash-account-topbar{min-height:77px;display:flex;padding:13px 24px;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #e1e1de;background:#fff}
+  .dash-account-topbar>div:first-child small{display:block;color:#73787e;font-size:8px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+  .dash-account-topbar h1{margin:2px 0 1px;color:#111;font-size:18px;line-height:1.1;letter-spacing:-.02em}
+  .dash-account-topbar>div:first-child span{display:block;color:#9a9da1;font-size:8px}
+  .dash-topbar-actions{display:flex;align-items:center;gap:9px}
+  .dash-action-search{width:170px;height:30px;display:flex;margin:0;padding:0 10px;align-items:center;gap:6px;border:1px solid #e0e0dd;border-radius:6px;background:#f8f8f7}
+  .dash-action-search input{height:auto;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:9px}
+  .dash-topbar-actions>button,.dash-user-avatar{width:27px;height:27px;display:grid;place-items:center;border:1px solid #e0e0dd;border-radius:50%;color:#4d5257;background:#fff;font-size:9px}
+  .dash-user-avatar{color:#fff;background:#747a82;font-weight:850}
+  .dashboard-account-main .dashboard-main{width:min(1040px,calc(100% - 46px));padding:24px 0 36px}
+  .dash-chatbot-stack{gap:12px}
+  .dash-active-card,.dash-usage-card,.dash-leads-card,.dash-knowledge-card,.dash-private-card,.dash-management-card,.dash-technical-card,.dash-delete-card{border-color:#dfdfdc;border-radius:8px}
+  .dash-active-card{min-height:98px;padding:18px 20px}
+  .dash-chatbot-icon{width:35px;height:35px;border-radius:8px;color:#fff;background:#767c84;font-size:12px}
+  .dash-chatbot-identity{gap:11px}
+  .dash-chatbot-identity small,.dash-kicker,.dash-section-heading small{font-size:8px}
+  .dash-chatbot-identity h2{margin:2px 0 3px;font-size:17px}
+  .dash-chatbot-identity p{font-size:10px}
+  .dash-chatbot-identity a{font-size:9px}
+  .dash-plan-state{gap:8px}.dash-plan-state>span{width:6px;height:6px;box-shadow:0 0 0 5px #eaf8ef}
+  .dash-plan-state strong{padding:5px 9px;font-size:9px}
+  .dash-stats-grid{gap:12px}
+  .dash-usage-card,.dash-leads-card{padding:15px 17px}
+  .dash-stat-heading{font-size:10px}.dash-stat-heading>span{width:24px;height:24px}
+  .dash-usage-card h3,.dash-leads-card h3{margin:7px 0 10px;font-size:16px}
+  .dash-leads-card h3{margin-bottom:3px}.dash-leads-card p{font-size:9px}
+  .dash-usage-track span{background:#111}
+  .dash-progress-track span{background:#b7bbc0}
+  .dash-stat-foot{margin-top:7px;font-size:8px}
+  .dash-knowledge-head{padding:16px 18px;gap:16px}
+  .dash-kicker{margin-bottom:8px}.dash-kicker .dash-icon,.dash-icon{width:24px;height:24px;border-radius:6px;color:#fff;background:#777d85}
+  .dash-knowledge-head h2,.dash-private-card h2,.dash-management-card h2,.dash-delete-card h2{margin-bottom:4px;font-size:14px}
+  .dash-knowledge-head p,.dash-private-card p,.dash-delete-card p{font-size:9px}
+  .dash-primary-button,.dash-secondary-button{min-height:29px;padding:0 10px;border-radius:5px;font-size:8px}
+  .dash-primary-button{border-color:#a9adb2;color:#fff;background:#8a9097}
+  .dash-knowledge-body{grid-template-columns:minmax(0,1fr) 215px;gap:16px;padding:16px 18px}
+  .dash-progress-title strong{font-size:10px}.dash-progress-title small{font-size:8px}
+  .dash-state-pill{padding:4px 7px;color:#168044;background:#edf8f1;font-size:7px}
+  .dash-progress-track{height:5px;margin:11px 0 12px}
+  .dash-progress-metrics{gap:7px}.dash-progress-metrics>div{padding:9px;border-radius:5px}
+  .dash-progress-metrics small,.dash-scan-summary>small{font-size:7px}.dash-progress-metrics strong{margin-top:3px;font-size:9px}
+  .dash-scan-summary{padding:11px;border-radius:6px}.dash-scan-summary>strong{margin-bottom:8px;font-size:9px}.dash-scan-summary p{margin:5px 0 9px;font-size:8px}.dash-scan-summary>div,.dash-scan-summary button{font-size:7px}
+  .dash-management-grid{grid-template-columns:minmax(190px,.68fr) minmax(0,1.6fr);gap:12px}
+  .dash-private-card,.dash-management-card{padding:15px}
+  .dash-private-head{margin-bottom:11px}.dash-connected{padding:4px 7px;font-size:7px}
+  .dash-private-card .dash-secondary-button{margin-top:11px}
+  .dash-section-heading{margin-bottom:10px}
+  .dash-action-grid{gap:7px}.dash-action-grid a{padding:10px;border-radius:6px}
+  .dash-action-grid a>span{width:22px;height:22px;margin-bottom:10px;border-radius:5px;font-size:8px}
+  .dash-action-grid strong{font-size:9px}.dash-action-grid small{margin-top:2px;font-size:8px}.dash-action-grid b{top:8px;right:8px;font-size:8px}
+  .dash-technical-card{scroll-margin-top:88px}
+  .dash-technical-card summary{min-height:42px;padding:0 15px}
+  .dash-technical-card summary>span{font-size:10px}
+  .dash-technical-card summary>small{color:#85898e;font-size:8px;font-weight:600}
+  .dash-technical-card[open] summary{border-bottom:1px solid #e2e2df}
+  .dash-technical-card .advanced-body{padding:14px 15px}
+  .dash-delete-card{padding:12px 16px}.dash-delete-card h2{font-size:12px}.dash-delete-card p{font-size:8px}.dash-delete-card button{min-height:28px;font-size:8px}
+  @media(max-width:900px){.dash-knowledge-body{grid-template-columns:1fr}.dash-management-grid{grid-template-columns:1fr}.dash-action-search{display:none}}
+  @media(max-width:720px){.dashboard-account-layout{grid-template-columns:1fr}.dashboard-account-side{position:relative;height:auto}.dashboard-workspace-state{margin-top:12px}.dash-account-topbar{padding:12px 16px}.dashboard-account-main .dashboard-main{width:min(100% - 24px,1040px)}}
+
 `;
 
 function escapeHtml(value = "") {
@@ -6320,17 +6408,17 @@ function embeddedDocumentPage(title, body) {
 function dashboardAccountSidebar() {
   return html`<aside class="dashboard-account-side">
     <a class="dashboard-account-brand" href="/">
-      <span class="dashboard-account-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span>
-      <span>Fise <span class="dashboard-account-brand-accent">AI</span></span>
+      <span class="dashboard-account-mark" aria-hidden="true">✣</span>
+      <span>Fise AI</span>
     </a>
     <div class="dashboard-account-title"><small>Customer portal</small><strong>Account centre</strong></div>
     <nav class="dashboard-account-tabs" aria-label="Account sections">
       <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span class="dashboard-account-tab-icon">♙</span><span>Profile</span></a>
       <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span class="dashboard-account-tab-icon">▣</span><span>Chatbot</span></a>
       <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span class="dashboard-account-tab-icon">▭</span><span>Subscription</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span class="dashboard-account-tab-icon">◇</span><span>Affiliate</span></a>
+      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span class="dashboard-account-tab-icon">●</span><span>Affiliate</span></a>
     </nav>
-    <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">Sign out</button></form>
+    <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
   </aside>`;
 }
 
@@ -6526,13 +6614,13 @@ function dashboardPage(
                     <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"><span>◉</span><strong>Customise chatbot</strong><small>Voice, appearance and behaviour</small><b>↗</b></a>
                     <a href="/widget/test?key=${encodeURIComponent(bot.public_key)}"><span>▷</span><strong>Open live preview</strong><small>Test the current experience</small><b>↗</b></a>
                     <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"><span>♙</span><strong>View captured leads</strong><small>Review your latest enquiries</small><b>↗</b></a>
-                    <a href="#technical-info-${escapeHtml(bot.id)}"><span>{ }</span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>↗</b></a>
+                    <a href="#technical-info-${escapeHtml(bot.id)}" data-technical-toggle="technical-info-${escapeHtml(bot.id)}"><span>{ }</span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>⌄</b></a>
                   </div>
                 </section>
               </div>
 
               <details class="dash-technical-card" id="technical-info-${escapeHtml(bot.id)}">
-                <summary>Installation and technical information</summary>
+                <summary><span>Installation and technical information</span><small>Click to expand or close</small></summary>
                 <div class="advanced-body">
                   <div class="details">
                     <div><small>Model</small><code>${escapeHtml(bot.model)}</code></div>
@@ -6583,7 +6671,15 @@ function dashboardPage(
   const page = embedded ? embeddedDocumentPage : dashboardDocumentPage;
   return page(
     "Dashboard",
-    html` <main class="wrap dashboard-main">
+    html` <div class="dash-account-topbar">
+      <div><small>Account centre</small><h1>Chatbot Dashboard</h1><span>Profile</span></div>
+      <div class="dash-topbar-actions">
+        <label class="dash-action-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search actions" aria-label="Search dashboard actions"></label>
+        <button type="button" aria-label="Notifications">◌</button>
+        <span class="dash-user-avatar" aria-label="${escapeHtml(user.email)}">${escapeHtml(String(user.email || "F").charAt(0).toUpperCase())}</span>
+      </div>
+    </div>
+    <main class="wrap dashboard-main">
       ${notice}
       <div class="dashboard-shell">${botList}${createPanel}</div>
       <script src="/dashboard-progress.js" defer></script>
@@ -7656,6 +7752,22 @@ async function showDashboard(request, env) {
 
 function dashboardProgressJavascript() {
   return String.raw`(() => {
+    document.querySelectorAll('[data-technical-toggle]').forEach((trigger) => {
+      trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        const panel = document.getElementById(trigger.dataset.technicalToggle || '');
+        if (!panel) return;
+        panel.open = !panel.open;
+        if (panel.open) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+    const search = document.querySelector('.dash-action-search input');
+    if (search) search.addEventListener('input', () => {
+      const query = search.value.trim().toLowerCase();
+      document.querySelectorAll('.dash-action-grid a').forEach((action) => {
+        action.style.opacity = !query || action.textContent.toLowerCase().includes(query) ? '1' : '.28';
+      });
+    });
     const boxes = [...document.querySelectorAll('[data-scan-progress]')];
     if (!boxes.length) return;
     const active = new Set(['queued','discovering','running','indexing']);
