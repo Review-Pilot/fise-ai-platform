@@ -2618,6 +2618,7 @@ const PUBLIC_PATHS = new Set([
   "/cookies",
   "/checkout",
   "/contact",
+  "/profile",
 ]);
 
 function escapeWebsiteHtml(value = "") {
@@ -2687,7 +2688,6 @@ async function ensureTable(env) {
 
 async function readWebsiteContent(env) {
   try {
-    await ensureTable(env);
     const row = await env.DB.prepare(
       "SELECT content_json,revision,updated_at,updated_by FROM website_state WHERE id=1",
     ).first();
@@ -4104,8 +4104,21 @@ function prepareReferenceBody(body, c) {
   return value;
 }
 
-function referenceShell(title, description, body, c) {
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}</style></head><body>${referenceHeader()}${body}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}</script></body></html>`;
+function referenceShell(title, description, body, c, bodyClass = "") {
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}</style></head><body class="${escapeWebsiteHtml(bodyClass)}">${referenceHeader()}${body}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}</script></body></html>`;
+}
+
+function referenceProfilePage(c) {
+  return referenceShell(
+    "My profile | Fise AI",
+    "Manage your Fise AI account, chatbot and subscription.",
+    html`<style>
+      body.profile-route > :not(.profile-layer):not(script) { display:none!important; }
+      body.profile-route .profile-layer { display:block; }
+    </style>`,
+    c,
+    "profile-route",
+  );
 }
 function visualOverridesJavascript(c) {
   let overrides = {};
@@ -4177,7 +4190,7 @@ function referenceJavascript() {
       setTimeout(()=>focusTarget?.focus(),30);
     }
     function closeAccount(){modal?.classList.remove('open');modal?.setAttribute('aria-hidden','true')}
-    function closeProfile(){profile?.classList.remove('open');profile?.setAttribute('aria-hidden','true')}
+    function closeProfile(){if(location.pathname==='/profile'){location.assign('/dashboard');return}profile?.classList.remove('open');profile?.setAttribute('aria-hidden','true')}
     function selectProfileTab(name){
       document.querySelectorAll('[data-profile-tab]').forEach((button)=>button.classList.toggle('active',button.dataset.profileTab===name));
       document.querySelectorAll('[data-profile-panel]').forEach((panel)=>panel.classList.toggle('active',panel.dataset.profilePanel===name));
@@ -4383,7 +4396,7 @@ function referenceJavascript() {
               showAccountView('setup');
             }else{
               closeAccount();
-              if(params.get('signed_in')==='1'||params.get('profile')==='1'){
+              if(params.get('signed_in')==='1'||params.get('profile')==='1'||location.pathname==='/profile'){
                 openProfile();
                 const requestedTab=params.get('tab');
                 if(['account','subscription','affiliate'].includes(requestedTab))selectProfileTab(requestedTab);
@@ -4392,6 +4405,7 @@ function referenceJavascript() {
           }else{
             demoLink?.classList.add('requires-signin');
             if(demoLock)demoLock.hidden=false;
+            if(location.pathname==='/profile'){location.replace('/login');return}
             if(params.get('sent')==='1'){
               document.getElementById('account-sent')?.classList.add('show');
               openAccount();
@@ -4651,6 +4665,12 @@ async function handlePublicWebsite(request, env) {
   if (request.method !== "GET" || !PUBLIC_PATHS.has(url.pathname)) return null;
   const legacyPaths = new Set(["/ai-chatbots", "/pricing", "/resources", "/about", "/blog", "/privacy", "/terms", "/contact"]);
   if (legacyPaths.has(url.pathname)) return handlePublicWebsiteLegacy(request, env);
+  if (url.pathname === "/profile") {
+    const user = await currentUser(request, env);
+    if (!user) return go("/login");
+    const { content: c } = await readWebsiteContent(env);
+    return response(referenceProfilePage(c));
+  }
   const { content: c } = await readWebsiteContent(env);
   if (url.pathname === "/") return response(referenceHome(c));
   if (url.pathname === "/privacy-policy") return response(referenceLegal("privacy", c, url.origin));
@@ -6474,10 +6494,10 @@ function dashboardAccountSidebar() {
     </a>
     <div class="dashboard-account-title"><small>Customer portal</small><strong>Account centre</strong></div>
     <nav class="dashboard-account-tabs" aria-label="Account sections">
-      <a class="dashboard-account-tab" href="/?profile=1&tab=account"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg></span><span>Profile</span></a>
+      <a class="dashboard-account-tab" href="/profile?tab=account"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg></span><span>Profile</span></a>
       <a class="dashboard-account-tab active" href="/dashboard" aria-current="page"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="11" rx="2"/><path d="M9 7V5h6v2M9 12h6M12 10v4"/></svg></span><span>Chatbot</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=subscription"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg></span><span>Subscription</span></a>
-      <a class="dashboard-account-tab" href="/?profile=1&tab=affiliate"><span class="dashboard-account-tab-icon" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg></span><span>Affiliate</span></a>
+      <a class="dashboard-account-tab" href="/profile?tab=subscription"><span class="dashboard-account-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg></span><span>Subscription</span></a>
+      <a class="dashboard-account-tab" href="/profile?tab=affiliate"><span class="dashboard-account-tab-icon" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg></span><span>Affiliate</span></a>
     </nav>
     <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
   </aside>`;
@@ -7003,7 +7023,6 @@ function sameOrigin(request) {
 }
 
 async function currentUser(request, env) {
-  await ensureAccountAuthSchema(env);
   const token = cookieValue(request, SESSION_COOKIE);
   if (!token) return null;
   const tokenHash = await hashToken(token);
