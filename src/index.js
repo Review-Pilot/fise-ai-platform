@@ -2858,7 +2858,7 @@ function enabled(value) {
 }
 function publicNav(c) {
   const resourcesTrigger = enabled(c.nav_resources_clickable)
-    ? html`<a href="/resources">${escapeWebsiteHtml(c.nav_resources_label)}</a>`
+    ? html`<a href="/blog">${escapeWebsiteHtml(c.nav_resources_label)}</a>`
     : html`<a role="button" tabindex="0">${escapeWebsiteHtml(c.nav_resources_label)}</a>`;
   const resources = enabled(c.nav_resources_enabled)
     ? enabled(c.nav_resources_dropdown)
@@ -2869,10 +2869,10 @@ function publicNav(c) {
         >`
       : resourcesTrigger
     : "";
-  return html`${enabled(c.nav_chatbots_enabled) ? html`<a href="/ai-chatbots">AI Chatbots</a>` : ""}<a
-      href="/demo"
+  return html`${enabled(c.nav_chatbots_enabled) ? html`<a href="/#features">AI Chatbots</a>` : ""}<a
+      href="/#demo"
       >${escapeWebsiteHtml(c.nav_demo_label)}</a
-    >${enabled(c.nav_pricing_enabled) ? html`<a href="/pricing">Pricing</a>` : ""}${resources}${enabled(c.nav_about_enabled) ? html`<a href="/about">About</a>` : ""}${enabled(c.nav_blog_enabled) ? html`<a href="/blog">Blog</a>` : ""}${enabled(c.nav_signin_enabled) ? html`<a href="/login">Sign in</a>` : ""}`;
+    >${enabled(c.nav_pricing_enabled) ? html`<a href="/#pricing">Pricing</a>` : ""}${resources}${enabled(c.nav_about_enabled) ? html`<a href="/about">About</a>` : ""}${enabled(c.nav_blog_enabled) ? html`<a href="/blog">Blog</a>` : ""}${enabled(c.nav_signin_enabled) ? html`<a href="/login">Sign in</a>` : ""}`;
 }
 function shell(title, description, content, c) {
   return html`<!doctype html>
@@ -2897,7 +2897,7 @@ function shell(title, description, content, c) {
           <div class="container nav">
             <a class="logo" href="/">${logo(c)}</a>
             <nav class="nav-links" id="nav">${publicNav(c)}</nav>
-            <a class="button primary small" href="/demo">Try Fise AI</a
+            <a class="button primary small" href="/login">Try Fise AI</a
             ><button
               class="menu"
               onclick="document.getElementById('nav').classList.toggle('open')"
@@ -2918,21 +2918,21 @@ function shell(title, description, content, c) {
               </div>
               <div>
                 <h3>Product</h3>
-                ${enabled(c.nav_chatbots_enabled) ? html`<a href="/ai-chatbots">AI Chatbots</a>` : ""}<a
-                  href="/demo"
+                ${enabled(c.nav_chatbots_enabled) ? html`<a href="/#features">AI Chatbots</a>` : ""}<a
+                  href="/#demo"
                   >${escapeWebsiteHtml(c.nav_demo_label)}</a
-                >${enabled(c.nav_pricing_enabled) ? html`<a href="/pricing">Pricing</a>` : ""}${enabled(c.nav_signin_enabled) ? html`<a href="/login">Customer sign in</a>` : ""}
+                >${enabled(c.nav_pricing_enabled) ? html`<a href="/#pricing">Pricing</a>` : ""}${enabled(c.nav_signin_enabled) ? html`<a href="/login">Customer sign in</a>` : ""}
               </div>
               <div>
                 <h3>Company</h3>
-                ${enabled(c.nav_about_enabled) || enabled(c.nav_dropdown_about_enabled) ? html`<a href="/about">About</a>` : ""}${enabled(c.nav_resources_enabled) && enabled(c.nav_resources_page_enabled) ? html`<a href="/resources">${escapeWebsiteHtml(c.nav_resources_label)}</a>` : ""}${enabled(c.nav_blog_enabled) || enabled(c.nav_dropdown_blog_enabled) ? html`<a href="/blog">Blog</a>` : ""}<a
+                ${enabled(c.nav_about_enabled) || enabled(c.nav_dropdown_about_enabled) ? html`<a href="/about">About</a>` : ""}${enabled(c.nav_resources_enabled) && enabled(c.nav_resources_page_enabled) ? html`<a href="/blog">${escapeWebsiteHtml(c.nav_resources_label)}</a>` : ""}${enabled(c.nav_blog_enabled) || enabled(c.nav_dropdown_blog_enabled) ? html`<a href="/blog">Blog</a>` : ""}<a
                   href="/contact"
                   >Contact</a
                 >
               </div>
               <div>
                 <h3>Legal</h3>
-                <a href="/privacy">Privacy</a><a href="/terms">Terms</a
+                <a href="/privacy-policy">Privacy</a><a href="/terms-and-conditions">Terms</a
                 ><a href="mailto:${escapeWebsiteHtml(c.contact_email)}"
                   >${escapeWebsiteHtml(c.contact_email)}</a
                 >
@@ -4108,17 +4108,10 @@ function referenceShell(title, description, body, c, bodyClass = "") {
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeWebsiteHtml(description)}"><title>${escapeWebsiteHtml(title)}</title><style>${referenceStyles}${requestedStyles}</style></head><body class="${escapeWebsiteHtml(bodyClass)}">${referenceHeader()}${body}${referenceFooter()}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}${requestedJavascript()}</script></body></html>`;
 }
 
-function referenceProfilePage(c) {
-  return referenceShell(
-    "My profile | Fise AI",
-    "Manage your Fise AI account, chatbot and subscription.",
-    html`<style>
-      body.profile-route > :not(.profile-layer):not(script) { display:none!important; }
-      body.profile-route .profile-layer { display:block; }
-    </style>`,
-    c,
-    "profile-route",
-  );
+function referenceProfilePage() {
+  // The profile is its own route. Rendering the whole marketing homepage behind
+  // the drawer makes the page heavy and can briefly show the homepage on load.
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><style>${referenceStyles}${requestedStyles}body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">${profileDrawer()}<script>${referenceJavascript()}</script></body></html>`;
 }
 function visualOverridesJavascript(c) {
   let overrides = {};
@@ -4208,7 +4201,7 @@ function referenceJavascript() {
       doc.addEventListener('submit',(event)=>{
         const form=event.target.closest('form');
         if(!form)return;
-        const action=new URL(form.getAttribute('action')||location.href,location.href);
+        const action=new URL(form.getAttribute('action')||frame.dataset.currentUrl||location.href,frame.dataset.currentUrl||location.href);
         if(action.origin!==location.origin)return;
         event.preventDefault();
         const method=String(form.method||'GET').toUpperCase();
@@ -4225,7 +4218,19 @@ function referenceJavascript() {
         if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
         const link=event.target.closest('a[href]');
         if(!link||link.hasAttribute('download')||link.target==='_blank')return;
-        const target=new URL(link.getAttribute('href'),location.href);
+        const href=link.getAttribute('href');
+        if(href.startsWith('#')){
+          event.preventDefault();
+          let targetId=href.slice(1);
+          try{targetId=decodeURIComponent(targetId)}catch{}
+          const section=doc.getElementById(targetId);
+          if(section){
+            if(section.tagName==='DETAILS')section.open=true;
+            section.scrollIntoView({behavior:'smooth',block:'nearest'});
+          }
+          return;
+        }
+        const target=new URL(href,frame.dataset.currentUrl||location.href);
         if(target.origin!==location.origin)return;
         event.preventDefault();
         if(target.pathname==='/'||target.pathname==='/demo'){
@@ -4237,9 +4242,12 @@ function referenceJavascript() {
     }
     async function loadDashboardFrame(frame,requestUrl='/dashboard?embed=1',requestOptions={}){
       if(!frame)return;
+      const navigationId=String((Number(frame.dataset.navigationId)||0)+1);
+      frame.dataset.navigationId=navigationId;
       frame.setAttribute('aria-busy','true');
       try{
         const response=await fetch(requestUrl,{credentials:'same-origin',redirect:'follow',...requestOptions});
+        if(frame.dataset.navigationId!==navigationId)return;
         const finalUrl=new URL(response.url,location.href);
         if(finalUrl.pathname==='/login'||response.status===401){
           authenticated=false;
@@ -4250,13 +4258,15 @@ function referenceJavascript() {
         }
         if(!response.ok)throw new Error('Fise returned error '+response.status+'. Please refresh and try again.');
         const markup=await response.text();
+        if(frame.dataset.navigationId!==navigationId)return;
         frame.addEventListener('load',()=>bindDashboardFrame(frame),{once:true});
+        frame.dataset.currentUrl=finalUrl.toString();
         frame.srcdoc=markup;
         frame.dataset.dashboardLoaded='true';
       }catch(error){
         dashboardFrameError(frame,error?.message||'Please refresh and try again.');
       }finally{
-        frame.removeAttribute('aria-busy');
+        if(frame.dataset.navigationId===navigationId)frame.removeAttribute('aria-busy');
       }
     }
     function renderChatbots(){
@@ -4273,7 +4283,7 @@ function referenceJavascript() {
     async function loadProfile(){
       if(profileLoaded)return;
       const response=await fetch('/api/account/profile',{credentials:'same-origin'});
-      if(response.status===401){authenticated=false;closeProfile();openAccount();return}
+      if(response.status===401){authenticated=false;if(location.pathname==='/profile'){location.replace('/login');return}closeProfile();openAccount();return}
       if(!response.ok)throw new Error('Profile unavailable');
       const data=await response.json();
       profileText('profile-email',data.account?.email);
@@ -4421,8 +4431,16 @@ function referenceJavascript() {
         })
         .catch(()=>{});
     }
-    refreshAuthStatus();
-    if(params.get('sent')==='1')authPoll=setInterval(refreshAuthStatus,2500);
+    if(location.pathname==='/profile'){
+      authenticated=true;
+      profile?.classList.add('open');profile?.setAttribute('aria-hidden','false');
+      const requestedTab=params.get('tab');
+      if(['account','subscription','affiliate'].includes(requestedTab))selectProfileTab(requestedTab);
+      loadProfile().catch(()=>profileText('profile-email','Could not load account information'));
+    }else{
+      refreshAuthStatus();
+      if(params.get('sent')==='1')authPoll=setInterval(refreshAuthStatus,2500);
+    }
   })();`;
 }
 
@@ -4663,13 +4681,22 @@ async function submitContactRequest(request, env) {
 async function handlePublicWebsite(request, env) {
   const url = new URL(request.url);
   if (request.method !== "GET" || !PUBLIC_PATHS.has(url.pathname)) return null;
-  const legacyPaths = new Set(["/ai-chatbots", "/pricing", "/resources", "/about", "/blog", "/privacy", "/terms", "/contact"]);
+  // Old links must land on the published pages, without showing empty or
+  // conflicting legacy content. Resolve them before querying the website DB.
+  const canonicalPaths = {
+    "/ai-chatbots": "/#features",
+    "/pricing": "/#pricing",
+    "/resources": "/blog",
+    "/privacy": "/privacy-policy",
+    "/terms": "/terms-and-conditions",
+  };
+  if (canonicalPaths[url.pathname]) return go(canonicalPaths[url.pathname]);
+  const legacyPaths = new Set(["/about", "/blog", "/contact"]);
   if (legacyPaths.has(url.pathname)) return handlePublicWebsiteLegacy(request, env);
   if (url.pathname === "/profile") {
     const user = await currentUser(request, env);
     if (!user) return go("/login");
-    const { content: c } = await readWebsiteContent(env);
-    return response(referenceProfilePage(c));
+    return response(referenceProfilePage());
   }
   const { content: c } = await readWebsiteContent(env);
   if (url.pathname === "/") return response(referenceHome(c));
@@ -4679,7 +4706,7 @@ async function handlePublicWebsite(request, env) {
   if (url.pathname === "/checkout") {
     const key = String(url.searchParams.get("plan") || "").toLowerCase();
     const plan = checkoutPlans[key];
-    if (!plan) return go("/pricing");
+    if (!plan) return go("/#pricing");
     const configured = validCheckoutUrl(c[plan.field]);
     if (configured) return go(configured);
     return response(referenceCheckout(plan, c));

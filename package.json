@@ -2,10 +2,12 @@
   "name": "fise-ai-platform",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
-    "start": "wrangler dev"
+    "start": "wrangler dev",
+    "test": "node --test"
   },
   "devDependencies": {
     "wrangler": "^4.127.1"
