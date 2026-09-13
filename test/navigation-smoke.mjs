@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { Script } from 'node:vm';
 import worker from '../src/index.js';
 
 const origin = 'https://fise-ai-platform.seb-slabbert1.workers.dev';
@@ -68,4 +69,7 @@ test('profile route is private and renders only the account interface', async ()
   assert.doesNotMatch(html, /class="reference-hero"/);
   assert.doesNotMatch(html, /class="demo-browser"/);
   assert.equal(signedIn.queries.filter(sql => sql.includes('FROM website_state')).length, 0);
+  for (const [, javascript] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+    assert.doesNotThrow(() => new Script(javascript));
+  }
 });
