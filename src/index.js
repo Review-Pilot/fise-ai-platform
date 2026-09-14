@@ -1827,6 +1827,10 @@ Date: ${lead.created_at}`
         .powered{padding:7px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:5px 12px;border:1px solid #d7dee7;border-radius:999px;color:#253247;background:#fff;box-shadow:0 3px 9px rgba(15,23,42,.08);text-decoration:none;font:900 10px inherit}.powered a:hover{color:#0b1220;box-shadow:0 6px 14px rgba(15,23,42,.13)}.hidden{display:none!important}
         @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.head{min-height:96px;padding:42px 52px 8px 10px}.generic-chat-icon{width:36px;height:36px}.head-tools{right:7px;gap:1px}.head-control{width:33px}.history-trigger{min-width:124px}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
         @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:8px 10px 10px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr)}.question:nth-child(n+5){display:none}.identity{justify-content:flex-start;gap:7px}.generic-chat-icon{width:34px;height:34px}.head strong{font-size:13px}.head small{max-width:150px}.history-trigger{left:10px;min-width:116px;transform:none}.history-trigger:hover{transform:translateY(-1px)}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}.quick-menu{right:-39px}}
+        .panel{grid-template-rows:auto minmax(0,1fr) auto}
+        .questions{grid-area:2/1;align-self:center;justify-self:center;width:min(100%,680px);border:0;box-shadow:none;background:transparent}
+        .messages,.history-view{grid-area:2/1}.composer-wrap{grid-area:3/1}
+        .panel.started .questions,.panel.history .questions{display:none}
       </style>
       <div class="callout">Need help with anything? 👋</div>
       <button class="launcher" type="button" aria-label="Open chat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg></button>
@@ -2021,11 +2025,13 @@ Date: ${lead.created_at}`
     }
 
     function resetMessages(clearSaved) {
+      panel.classList.remove("started");
       if (clearSaved) { conversation = ""; localStorage.removeItem(storageKey); clearAttachment(); }
       messages.innerHTML = ""; addDate(new Date()); add("assistant", config.greeting || "Hi! How can I help you today?", [], true);
     }
 
     function showLeadForm(autoScroll) {
+      panel.classList.add("started");
       const existing = messages.querySelector(".lead-card");
       if (existing) { if (autoScroll) existing.scrollIntoView({ behavior: "smooth", block: "nearest" }); return; }
       const before = messages.scrollTop; const row = document.createElement("div"); row.className = "row assistant";
@@ -2059,6 +2065,7 @@ Date: ${lead.created_at}`
     }
 
     function add(role, text, sources = [], autoScroll = true) {
+      if (role === "user") panel.classList.add("started");
       const row = document.createElement("div"); row.className = "row " + role;
       const bubble = document.createElement("div"); bubble.className = "bubble"; appendRichText(bubble, text); appendSources(bubble, sources); row.appendChild(bubble); messages.appendChild(row);
       if (autoScroll) messages.scrollTop = messages.scrollHeight; return row;
