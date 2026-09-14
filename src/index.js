@@ -1754,369 +1754,268 @@ Date: ${lead.created_at}`
   }
   __name(leadResponse, "leadResponse");
   function widgetBootstrap(configOverride = null, scriptOverride = null) {
-    const script = scriptOverride || document.currentScript;
-    if (!script || !configOverride && script.dataset.fiseLoaded === "1") return;
-    if (!configOverride) script.dataset.fiseLoaded = "1";
-    const key = script.dataset.chatbotKey || "";
-    if (!key) return;
-    const api = new URL(script.src).origin;
-    const storageKey = "fise-chat-" + key.slice(-16);
-    const visitorKey = "fise-visitor";
-    let visitor = localStorage.getItem(visitorKey);
-    if (!visitor) {
-      visitor = crypto.randomUUID();
-      localStorage.setItem(visitorKey, visitor);
-    }
-    if (configOverride) {
-      mount(configOverride);
-      return;
-    }
-    fetch(api + "/api/widget/config?key=" + encodeURIComponent(key), { mode: "cors" }).then((response2) => response2.ok ? response2.json() : Promise.reject(new Error("Unavailable"))).then((config) => mount(config)).catch((error) => console.warn("Fise widget:", error.message));
-    function mount(config) {
-      const host = document.createElement("div");
-      host.id = "fise-chat-widget";
-      document.body.appendChild(host);
-      const root = host.attachShadow({ mode: "open" });
-      const colour = /^#[0-9a-f]{6}$/i.test(config.primary_colour) ? config.primary_colour : "#1769e0";
-      const initial = safe(config.name || "F").slice(0, 1).toUpperCase();
-      const avatar = config.avatar_url ? `<img src="${safe(config.avatar_url)}" alt="">` : `<span>${initial}</span>`;
-      root.innerHTML = `
+  const script = scriptOverride || document.currentScript;
+  if (!script || (!configOverride && script.dataset.fiseLoaded === "1")) return;
+  if (!configOverride) script.dataset.fiseLoaded = "1";
+  const key = script.dataset.chatbotKey || "";
+  if (!key) return;
+  const api = new URL(script.src).origin;
+  const storageKey = "fise-chat-" + key.slice(-16);
+  const visitorKey = "fise-visitor";
+  let visitor = localStorage.getItem(visitorKey);
+  if (!visitor) { visitor = crypto.randomUUID(); localStorage.setItem(visitorKey, visitor); }
+
+  if (configOverride) { mount(configOverride); return; }
+
+  fetch(api + "/api/widget/config?key=" + encodeURIComponent(key), { mode: "cors" })
+    .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unavailable")))
+    .then((config) => mount(config))
+    .catch((error) => console.warn("Fise widget:", error.message));
+
+  function mount(config) {
+    const host = document.createElement("div");
+    host.id = "fise-chat-widget";
+    document.body.appendChild(host);
+    const root = host.attachShadow({ mode: "open" });
+    const colour = /^#[0-9a-f]{6}$/i.test(config.primary_colour) ? config.primary_colour : "#1769e0";
+    const initial = safe(config.name || "F").slice(0, 1).toUpperCase();
+    const avatar = config.avatar_url ? `<img src="${safe(config.avatar_url)}" alt="">` : `<span>${initial}</span>`;
+    root.innerHTML = `
       <style>
         :host{all:initial;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#102033}
         *{box-sizing:border-box}.callout{position:fixed;right:20px;bottom:94px;z-index:2147483000;padding:11px 14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.16);font:700 13px/1.2 inherit;transition:.2s}.launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:58px;height:58px;border:0;border-radius:18px;color:#fff;background:${colour};box-shadow:0 16px 38px ${colour}55;cursor:pointer;font-size:25px}.panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid rgba(203,213,225,.85);border-radius:24px;background:#fff;box-shadow:0 32px 90px rgba(15,23,42,.28);transition:width .2s,height .2s,inset .2s}.panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(460px,calc(100vw - 36px));height:min(720px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}.panel.large{left:50%;top:50%;width:min(920px,calc(100vw - 40px));height:min(780px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}.panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:20px}.head{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:86px;padding:15px 18px;color:#fff;background:radial-gradient(circle at 15% 0%,rgba(255,255,255,.22),transparent 32%),radial-gradient(circle at 90% 110%,rgba(0,0,0,.16),transparent 42%),${colour};box-shadow:inset 0 -1px rgba(0,0,0,.09),0 10px 25px ${colour}30}.head:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;background-image:radial-gradient(circle,rgba(255,255,255,.75) 1px,transparent 1.5px);background-size:28px 28px}.identity,.head-tools{position:relative;z-index:1}.identity{display:flex;align-items:center;min-width:0;gap:12px}.avatar{width:48px;height:48px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;border:2px solid rgba(255,255,255,.8);border-radius:14px;color:${colour};background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.2);font:900 19px inherit}.avatar img{width:100%;height:100%;object-fit:cover}.head strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:850 17px/1.2 inherit}.head small{display:flex;align-items:center;gap:5px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.96;font:600 11px/1.2 inherit}.status-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#d9ffe5;box-shadow:0 0 0 3px rgba(217,255,229,.18)}.head-tools{display:flex;align-items:center;gap:8px}.head button,.size{height:38px;border:1px solid rgba(255,255,255,.36);border-radius:11px;color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 1px rgba(255,255,255,.1);cursor:pointer;font:750 11px inherit}.head button:hover,.size:hover{background:rgba(255,255,255,.23)}.newchat{padding:0 12px}.size{width:100px;padding:0 8px;outline:none}.size option{color:#102033;background:#fff}.close{width:38px;font-size:19px!important}.questions{position:relative;z-index:2;padding:14px 16px 16px;border-bottom:1px solid #e7edf4;background:#fff;box-shadow:0 9px 24px rgba(15,23,42,.06)}.questions-label{margin-bottom:9px;color:#64748b;font:850 10px/1.2 inherit;letter-spacing:.08em;text-transform:uppercase}.question-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.large .question-grid,.fullscreen .question-grid{grid-template-columns:repeat(3,1fr)}.question{min-height:42px;padding:9px 11px;border:1px solid #dce3ec;border-radius:12px;color:#16243a;background:#fff;box-shadow:0 5px 13px rgba(15,23,42,.07);cursor:pointer;text-align:left;font:750 11px/1.3 inherit;transition:transform .18s,box-shadow .18s,border-color .18s,color .18s}.question:hover{transform:translateY(-2px);border-color:${colour}99;color:${colour};box-shadow:0 9px 20px rgba(15,23,42,.12)}.messages{min-height:0;overflow:auto;padding:18px;background:linear-gradient(180deg,#f7f9fc,#f2f6fa);scrollbar-color:#aeb8c6 transparent}.row{display:flex;margin:0 0 15px}.row.user{justify-content:flex-end}.bubble{max-width:88%;padding:13px 15px;border:1px solid rgba(226,232,240,.8);border-radius:17px 17px 17px 5px;background:#fff;box-shadow:0 7px 20px rgba(15,23,42,.08);overflow-wrap:anywhere;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:850;color:#071426}.user .bubble{border:0;border-radius:17px 17px 5px 17px;color:#fff;background:${colour};box-shadow:0 10px 24px ${colour}33}.user .bubble strong{color:#fff}.bubble a{color:${colour};font-weight:800;text-underline-offset:2px}.user .bubble a{color:#fff}.sources{margin-top:13px;padding-top:10px;border-top:1px solid #e5eaf1;color:#64748b;font:750 10px/1.4 inherit}.sources a{display:block;margin-top:6px;color:#1769e0;text-decoration:none}.sources a:hover{text-decoration:underline}.lead-card{width:min(100%,560px);padding:16px;border:1px solid ${colour}55;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.09)}.lead-card h3{margin:0 0 5px;color:${colour};font:850 16px inherit}.lead-card p{margin:0 0 11px;color:#64748b;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:4px;font:750 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;outline:none;font:500 12px inherit}.lead-card textarea{min-height:65px;resize:vertical}.lead-submit{margin-top:9px;padding:10px 13px;border:0;border-radius:9px;color:#fff;background:${colour};cursor:pointer;font:800 11px inherit}.composer-wrap{padding:11px 12px 8px;border-top:1px solid #e2e8f0;background:#fff}.composer{display:flex;flex-direction:column;gap:0;overflow:hidden;border:1.5px solid #cbd5e1;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08);transition:border-color .18s,box-shadow .18s}.composer:focus-within{border-color:${colour};box-shadow:0 0 0 3px ${colour}18,0 9px 25px rgba(15,23,42,.1)}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #dbe3ec;border-radius:9px;background:#f5f7fa;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#a52b2b;background:transparent;cursor:pointer;font:800 11px inherit}.input{width:100%;min-width:0;max-height:110px;min-height:58px;padding:13px 14px 4px;border:0;outline:none;resize:none;background:transparent;font:500 13px/1.42 inherit}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;gap:2px}.tool{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:9px;color:#667386;background:transparent;cursor:pointer}.tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool:hover{color:${colour};background:${colour}0d}.tool.active{color:#fff;background:#c0392b}.send{width:42px;height:36px;display:grid;place-items:center;border:0;border-radius:11px;color:#fff;background:${colour};box-shadow:0 7px 15px ${colour}35;cursor:pointer}.send svg{width:18px;height:18px;fill:currentColor}.send:disabled{opacity:.55;cursor:wait}.typing{opacity:.65;font-style:italic}.powered{padding:6px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:5px 12px;border:1px solid #e0e6ed;border-radius:999px;color:#536174;background:#fff;box-shadow:0 3px 9px rgba(15,23,42,.07);text-decoration:none;font:750 9px inherit}.powered a:hover{color:${colour};box-shadow:0 5px 12px rgba(15,23,42,.11)}.hidden{display:none!important}
         @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr 1fr}.head{min-height:76px;padding:11px 12px}.avatar{width:42px;height:42px}.head-tools{gap:5px}.size{width:86px}.newchat{padding:0 8px}.callout{right:14px;bottom:86px}.launcher{right:14px;bottom:14px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
         @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:11px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr}.question:nth-child(n+5){display:none}.head strong{font-size:15px}.head small{max-width:145px}.newchat{display:none}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}}
         .composer{border-color:#b8c3d1;background:#f3f4f6}
-        ${String(config.widget_css || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "")}
       </style>
-      <div class="callout">Need help with anything? \u{1F44B}</div>
-      <button class="launcher" aria-label="Open chat">\u{1F4AC}</button>
+      <div class="callout">Need help with anything? 👋</div>
+      <button class="launcher" aria-label="Open chat">💬</button>
       <section class="panel ${safe(config.default_size || "standard")}" aria-label="Chat with ${safe(config.name)}">
         <header class="head">
           <div class="identity"><div class="avatar">${avatar}</div><div><strong>${safe(config.name)}</strong><small><span class="status-dot"></span>${safe(config.subtitle || config.business_name)}</small></div></div>
-          <div class="head-tools"><button class="newchat" type="button">New chat</button><select class="size" aria-label="Chat size"><option value="standard">Standard</option><option value="large">Large</option><option value="fullscreen">Fullscreen</option></select><button class="close" type="button" aria-label="Close chat">\u2212</button></div>
+          <div class="head-tools"><button class="newchat" type="button">New chat</button><select class="size" aria-label="Chat size"><option value="standard">Standard</option><option value="large">Large</option><option value="fullscreen">Fullscreen</option></select><button class="close" type="button" aria-label="Close chat">−</button></div>
         </header>
         <div class="questions"><div class="questions-label">Popular questions</div><div class="question-grid"></div></div>
         <div class="messages" aria-live="polite"></div>
-        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}\u2026" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 3 17 9-17 9 3-9-3-9Zm3 9h14"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
+        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}…" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 3 17 9-17 9 3-9-3-9Zm3 9h14"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
       </section>`;
-      const panel = root.querySelector(".panel");
-      const launcher = root.querySelector(".launcher");
-      const callout = root.querySelector(".callout");
-      const close = root.querySelector(".close");
-      const historyTrigger = root.querySelector(".history-trigger");
-      const historyList = root.querySelector(".history-list");
-      const historyNew = root.querySelector(".history-new");
-      const newchat = root.querySelector(".newchat");
-      const size = root.querySelector(".size");
-      const form = root.querySelector(".composer");
-      const input = root.querySelector(".input");
-      const send = root.querySelector(".send");
-      const messages = root.querySelector(".messages");
-      const questionGrid = root.querySelector(".question-grid");
-      const attach = root.querySelector(".attach");
-      const fileInput = root.querySelector(".file-input");
-      const attachmentBar = root.querySelector(".attachment-bar");
-      const attachmentName = root.querySelector(".attachment-name");
-      const removeFile = root.querySelector(".remove-file");
-      const mic = root.querySelector(".mic");
-      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-      let conversation = saved.conversation || "";
-      let pendingFile = null;
-      let recorder = null;
-      let recordingStream = null;
-      let chunks = [];
-      size.value = ["standard", "large"].includes(config.default_size) ? config.default_size : "standard";
-      resetMessages(false);
-      for (const question of (config.popular_questions || []).slice(0, 4)) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "question";
-        button.textContent = question;
-        button.onclick = () => submitMessage(question);
-        questionGrid.appendChild(button);
-      }
-      if (config.lead_capture) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "question";
-        button.textContent = config.lead_cta_label || "Talk to us";
-        button.onclick = showLeadForm;
-        questionGrid.appendChild(button);
-      }
-      launcher.onclick = () => {
-        panel.classList.add("open");
-        callout.style.display = "none";
-        launcher.style.display = "none";
-        input.focus();
-      };
-      close.onclick = () => {
-        panel.classList.remove("open");
-        launcher.style.display = "block";
-      };
-      newchat.onclick = () => resetMessages(true);
-      size.onchange = () => {
-        panel.classList.remove("standard", "large", "fullscreen");
-        panel.classList.add(size.value);
-      };
-      document.addEventListener("pointerdown", (event) => {
-        if (panel.classList.contains("open") && event.target !== host) {
-          panel.classList.remove("open");
-          launcher.style.display = "block";
-        }
-      }, true);
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        submitMessage(input.value.trim());
-      });
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          submitMessage(input.value.trim());
-        }
-      });
-      if (!config.allow_files) attach.classList.add("hidden");
-      if (!config.allow_voice || !navigator.mediaDevices || !window.MediaRecorder) mic.classList.add("hidden");
-      attach.onclick = () => fileInput.click();
-      fileInput.onchange = () => {
-        if (fileInput.files && fileInput.files[0]) uploadVisitorFile(fileInput.files[0]);
-      };
-      removeFile.onclick = clearAttachment;
-      mic.onclick = toggleRecording;
-      async function uploadVisitorFile(file) {
+
+    const panel = root.querySelector(".panel");
+    const launcher = root.querySelector(".launcher");
+    const callout = root.querySelector(".callout");
+    const close = root.querySelector(".close");
+    const historyTrigger = root.querySelector(".history-trigger");
+    const historyList = root.querySelector(".history-list");
+    const historyNew = root.querySelector(".history-new");
+    const newchat = root.querySelector(".newchat");
+    const size = root.querySelector(".size");
+    const form = root.querySelector(".composer");
+    const input = root.querySelector(".input");
+    const send = root.querySelector(".send");
+    const messages = root.querySelector(".messages");
+    const questionGrid = root.querySelector(".question-grid");
+    const attach = root.querySelector(".attach");
+    const fileInput = root.querySelector(".file-input");
+    const attachmentBar = root.querySelector(".attachment-bar");
+    const attachmentName = root.querySelector(".attachment-name");
+    const removeFile = root.querySelector(".remove-file");
+    const mic = root.querySelector(".mic");
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    let conversation = saved.conversation || "";
+    let pendingFile = null;
+    let recorder = null;
+    let recordingStream = null;
+    let chunks = [];
+    size.value = ["standard", "large"].includes(config.default_size) ? config.default_size : "standard";
+    resetMessages(false);
+
+    for (const question of (config.popular_questions || []).slice(0, 6)) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "question";
+      button.textContent = question;
+      button.onclick = () => submitMessage(question);
+      questionGrid.appendChild(button);
+    }
+    if (config.lead_capture) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "question";
+      button.textContent = config.lead_cta_label || "Talk to us";
+      button.onclick = showLeadForm;
+      questionGrid.appendChild(button);
+    }
+
+    launcher.onclick = () => { panel.classList.add("open"); callout.style.display = "none"; launcher.style.display = "none"; input.focus(); };
+    close.onclick = () => { panel.classList.remove("open"); launcher.style.display = "block"; };
+    newchat.onclick = () => resetMessages(true);
+    size.onchange = () => {
+      panel.classList.remove("standard", "large", "fullscreen");
+      panel.classList.add(size.value);
+    };
+    document.addEventListener("pointerdown", (event) => {
+      if (panel.classList.contains("open") && event.target !== host) { panel.classList.remove("open"); launcher.style.display = "block"; }
+    }, true);
+    form.addEventListener("submit", (event) => { event.preventDefault(); submitMessage(input.value.trim()); });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submitMessage(input.value.trim()); }
+    });
+    if (!config.allow_files) attach.classList.add("hidden");
+    if (!config.allow_voice || !navigator.mediaDevices || !window.MediaRecorder) mic.classList.add("hidden");
+    attach.onclick = () => fileInput.click();
+    fileInput.onchange = () => { if (fileInput.files && fileInput.files[0]) uploadVisitorFile(fileInput.files[0]); };
+    removeFile.onclick = clearAttachment;
+    mic.onclick = toggleRecording;
+
+    async function uploadVisitorFile(file) {
+      clearAttachment();
+      if (file.size > 8 * 1024 * 1024) { add("assistant", "Please choose a file smaller than 8 MB."); return; }
+      attach.disabled = true;
+      attachmentBar.classList.add("show");
+      attachmentName.textContent = "Preparing " + file.name + "…";
+      try {
+        const upload = new FormData(); upload.append("file", file, file.name);
+        const response = await fetch(api + "/api/widget/file?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "The file could not be uploaded");
+        pendingFile = data;
+        attachmentName.textContent = "📎 " + data.name;
+      } catch (error) {
+        clearAttachment(); add("assistant", error.message || "The file could not be uploaded.");
+      } finally { attach.disabled = false; fileInput.value = ""; }
+    }
+
+    function clearAttachment() {
+      pendingFile = null;
+      attachmentBar.classList.remove("show");
+      attachmentName.textContent = "";
+      fileInput.value = "";
+    }
+
+    async function toggleRecording() {
+      if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+      try {
+        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
+        recorder = new MediaRecorder(recordingStream);
+        recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+        recorder.onstop = transcribeRecording;
+        recorder.start();
+        mic.classList.add("active"); mic.title = "Stop recording"; mic.setAttribute("aria-label", "Stop recording");
+      } catch { add("assistant", "Microphone access was not allowed."); }
+    }
+
+    async function transcribeRecording() {
+      mic.classList.remove("active"); mic.title = "Record a voice message"; mic.setAttribute("aria-label", "Record a voice message");
+      if (recordingStream) recordingStream.getTracks().forEach((track) => track.stop());
+      const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" });
+      if (!blob.size) return;
+      mic.disabled = true; input.placeholder = "Transcribing voice message…";
+      try {
+        const upload = new FormData(); upload.append("audio", blob, "voice-message.webm");
+        const response = await fetch(api + "/api/widget/transcribe?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Voice transcription failed");
+        input.value = data.text || ""; input.focus();
+      } catch (error) { add("assistant", error.message || "The voice message could not be transcribed."); }
+      finally { mic.disabled = false; input.placeholder = "Ask " + config.name + "…"; }
+    }
+
+    async function submitMessage(text) {
+      if ((!text && !pendingFile) || send.disabled) return;
+      const fileForMessage = pendingFile;
+      const display = text || "Please review the attached file.";
+      input.value = "";
+      add("user", display + (fileForMessage ? "\n📎 " + fileForMessage.name : ""));
+      send.disabled = true;
+      const waiting = add("assistant", "Thinking…", [], true);
+      try {
+        const response = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), {
+          method: "POST", mode: "cors", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href })
+        });
+        const data = await response.json(); waiting.remove();
+        if (!response.ok) throw new Error(data.error || "Could not send message");
+        conversation = data.conversation_id;
+        localStorage.setItem(storageKey, JSON.stringify({ conversation }));
         clearAttachment();
-        if (file.size > 8 * 1024 * 1024) {
-          add("assistant", "Please choose a file smaller than 8 MB.");
-          return;
-        }
-        attach.disabled = true;
-        attachmentBar.classList.add("show");
-        attachmentName.textContent = "Preparing " + file.name + "\u2026";
-        try {
-          const upload = new FormData();
-          upload.append("file", file, file.name);
-          const response2 = await fetch(api + "/api/widget/file?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
-          const data = await response2.json();
-          if (!response2.ok) throw new Error(data.error || "The file could not be uploaded");
-          pendingFile = data;
-          attachmentName.textContent = "\u{1F4CE} " + data.name;
-        } catch (error) {
-          clearAttachment();
-          add("assistant", error.message || "The file could not be uploaded.");
-        } finally {
-          attach.disabled = false;
-          fileInput.value = "";
-        }
-      }
-      __name(uploadVisitorFile, "uploadVisitorFile");
-      function clearAttachment() {
-        pendingFile = null;
-        attachmentBar.classList.remove("show");
-        attachmentName.textContent = "";
-        fileInput.value = "";
-      }
-      __name(clearAttachment, "clearAttachment");
-      async function toggleRecording() {
-        if (recorder && recorder.state === "recording") {
-          recorder.stop();
-          return;
-        }
-        try {
-          recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          chunks = [];
-          recorder = new MediaRecorder(recordingStream);
-          recorder.ondataavailable = (event) => {
-            if (event.data.size) chunks.push(event.data);
-          };
-          recorder.onstop = transcribeRecording;
-          recorder.start();
-          mic.classList.add("active");
-          mic.title = "Stop recording";
-          mic.setAttribute("aria-label", "Stop recording");
-        } catch {
-          add("assistant", "Microphone access was not allowed.");
-        }
-      }
-      __name(toggleRecording, "toggleRecording");
-      async function transcribeRecording() {
-        mic.classList.remove("active");
-        mic.title = "Record a voice message";
-        mic.setAttribute("aria-label", "Record a voice message");
-        if (recordingStream) recordingStream.getTracks().forEach((track) => track.stop());
-        const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" });
-        if (!blob.size) return;
-        mic.disabled = true;
-        input.placeholder = "Transcribing voice message\u2026";
-        try {
-          const upload = new FormData();
-          upload.append("audio", blob, "voice-message.webm");
-          const response2 = await fetch(api + "/api/widget/transcribe?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
-          const data = await response2.json();
-          if (!response2.ok) throw new Error(data.error || "Voice transcription failed");
-          input.value = data.text || "";
-          input.focus();
-        } catch (error) {
-          add("assistant", error.message || "The voice message could not be transcribed.");
-        } finally {
-          mic.disabled = false;
-          input.placeholder = "Ask " + config.name + "\u2026";
-        }
-      }
-      __name(transcribeRecording, "transcribeRecording");
-      async function submitMessage(text) {
-        if (!text && !pendingFile || send.disabled) return;
-        const fileForMessage = pendingFile;
-        const display = text || "Please review the attached file.";
-        input.value = "";
-        add("user", display + (fileForMessage ? "\n\u{1F4CE} " + fileForMessage.name : ""));
-        send.disabled = true;
-        const waiting = add("assistant", "Thinking\u2026", [], true);
-        try {
-          const response2 = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), {
-            method: "POST",
-            mode: "cors",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href })
-          });
-          const data = await response2.json();
-          waiting.remove();
-          if (!response2.ok) throw new Error(data.error || "Could not send message");
-          conversation = data.conversation_id;
-          localStorage.setItem(storageKey, JSON.stringify({ conversation }));
-          clearAttachment();
-          add("assistant", data.reply, data.sources || []);
-        } catch (error) {
-          waiting.remove();
-          add("assistant", error.message || "Please try again.");
-        } finally {
-          send.disabled = false;
-          input.focus();
-        }
-      }
-      __name(submitMessage, "submitMessage");
-      function resetMessages(clearSaved) {
-        if (clearSaved) {
-          conversation = "";
-          localStorage.removeItem(storageKey);
-          clearAttachment();
-        }
-        messages.innerHTML = "";
-        add("assistant", config.greeting || "Hi! How can I help you today?");
-      }
-      __name(resetMessages, "resetMessages");
-      function showLeadForm() {
-        const row = document.createElement("div");
-        row.className = "row assistant";
-        const card = document.createElement("form");
-        card.className = "lead-card";
-        card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Leave your details and the team can respond to your enquiry.</p><div class="lead-grid"><div><label>Name *</label><input name="name" maxlength="100" required></div><div><label>Phone</label><input name="phone" maxlength="50"></div><div class="wide"><label>Email</label><input name="email" type="email" maxlength="254"></div><div class="wide"><label>Business name</label><input name="business_name" maxlength="120"></div><div class="wide"><label>Enquiry</label><textarea name="enquiry" maxlength="1200"></textarea></div></div><button class="lead-submit">Send my details</button>`;
-        card.onsubmit = async (event) => {
-          event.preventDefault();
-          const button = card.querySelector(".lead-submit");
-          button.disabled = true;
-          button.textContent = "Sending\u2026";
-          const values = Object.fromEntries(new FormData(card).entries());
-          values.conversation_id = conversation;
-          try {
-            const response2 = await fetch(api + "/api/widget/lead?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify(values) });
-            const data = await response2.json();
-            if (!response2.ok) throw new Error(data.error || "Could not send your details");
-            card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
-          } catch (error) {
-            button.disabled = false;
-            button.textContent = "Send my details";
-            alert(error.message || "Please try again.");
-          }
-        };
-        row.appendChild(card);
-        messages.appendChild(row);
-        messages.scrollTop = messages.scrollHeight;
-      }
-      __name(showLeadForm, "showLeadForm");
-      function add(role, text, sources = [], typing = false) {
-        const row = document.createElement("div");
-        row.className = "row " + role;
-        const bubble = document.createElement("div");
-        bubble.className = "bubble" + (typing ? " typing" : "");
-        appendRichText(bubble, text);
-        row.appendChild(bubble);
-        if (sources.length) {
-          const box = document.createElement("div");
-          box.className = "sources";
-          box.textContent = "Helpful pages:";
-          for (const source of sources.slice(0, 3)) {
-            if (!/^https?:\/\//i.test(source.url || "")) continue;
-            const link = document.createElement("a");
-            link.href = source.url;
-            link.target = "_blank";
-            link.rel = "noopener";
-            link.textContent = source.title || source.url;
-            box.appendChild(link);
-          }
-          bubble.appendChild(box);
-        }
-        messages.appendChild(row);
-        messages.scrollTop = messages.scrollHeight;
-        return row;
-      }
-      __name(add, "add");
-      function appendRichText(container, text) {
-        const lines = String(text || "").replace(/\r/g, "").split("\n");
-        let list = null;
-        for (const rawLine of lines) {
-          const line = rawLine.trim();
-          if (!line) {
-            list = null;
-            continue;
-          }
-          if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) {
-            if (!list) {
-              list = document.createElement("ul");
-              container.appendChild(list);
-            }
-            const item = document.createElement("li");
-            appendInline(item, line.replace(/^(?:[-*•]|\d+[.)])\s+/, ""));
-            list.appendChild(item);
-          } else {
-            list = null;
-            const paragraph = document.createElement("p");
-            appendInline(paragraph, line);
-            container.appendChild(paragraph);
-          }
-        }
-      }
-      __name(appendRichText, "appendRichText");
-      function appendInline(container, value) {
-        const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
-        let last = 0;
-        let match;
-        while (match = pattern.exec(value)) {
-          if (match.index > last) container.appendChild(document.createTextNode(value.slice(last, match.index)));
-          if (match[1]) {
-            const strong = document.createElement("strong");
-            strong.textContent = match[1];
-            container.appendChild(strong);
-          } else {
-            const link = document.createElement("a");
-            link.href = match[3] || match[4];
-            link.target = "_blank";
-            link.rel = "noopener";
-            link.textContent = match[2] || match[4];
-            container.appendChild(link);
-          }
-          last = pattern.lastIndex;
-        }
-        if (last < value.length) container.appendChild(document.createTextNode(value.slice(last)));
-      }
-      __name(appendInline, "appendInline");
+        add("assistant", data.reply, data.sources || []);
+      } catch (error) { waiting.remove(); add("assistant", error.message || "Please try again."); }
+      finally { send.disabled = false; input.focus(); }
     }
-    __name(mount, "mount");
-    function safe(value) {
-      return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+
+    function resetMessages(clearSaved) {
+      if (clearSaved) { conversation = ""; localStorage.removeItem(storageKey); clearAttachment(); }
+      messages.innerHTML = "";
+      add("assistant", config.greeting || "Hi! How can I help you today?");
     }
-    __name(safe, "safe");
+
+    function showLeadForm() {
+      const row = document.createElement("div"); row.className = "row assistant";
+      const card = document.createElement("form"); card.className = "lead-card";
+      card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Leave your details and the team can respond to your enquiry.</p><div class="lead-grid"><div><label>Name *</label><input name="name" maxlength="100" required></div><div><label>Phone</label><input name="phone" maxlength="50"></div><div class="wide"><label>Email</label><input name="email" type="email" maxlength="254"></div><div class="wide"><label>Business name</label><input name="business_name" maxlength="120"></div><div class="wide"><label>Enquiry</label><textarea name="enquiry" maxlength="1200"></textarea></div></div><button class="lead-submit">Send my details</button>`;
+      card.onsubmit = async (event) => {
+        event.preventDefault();
+        const button = card.querySelector(".lead-submit"); button.disabled = true; button.textContent = "Sending…";
+        const values = Object.fromEntries(new FormData(card).entries()); values.conversation_id = conversation;
+        try {
+          const response = await fetch(api + "/api/widget/lead?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify(values) });
+          const data = await response.json(); if (!response.ok) throw new Error(data.error || "Could not send your details");
+          card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
+        } catch (error) { button.disabled = false; button.textContent = "Send my details"; alert(error.message || "Please try again."); }
+      };
+      row.appendChild(card); messages.appendChild(row); messages.scrollTop = messages.scrollHeight;
+    }
+
+    function add(role, text, sources = [], typing = false) {
+      const row = document.createElement("div"); row.className = "row " + role;
+      const bubble = document.createElement("div"); bubble.className = "bubble" + (typing ? " typing" : "");
+      appendRichText(bubble, text); row.appendChild(bubble);
+      if (sources.length) {
+        const box = document.createElement("div"); box.className = "sources"; box.textContent = "Helpful pages:";
+        for (const source of sources.slice(0, 3)) {
+          if (!/^https?:\/\//i.test(source.url || "")) continue;
+          const link = document.createElement("a"); link.href = source.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = source.title || source.url; box.appendChild(link);
+        }
+        bubble.appendChild(box);
+      }
+      messages.appendChild(row); messages.scrollTop = messages.scrollHeight; return row;
+    }
+
+    function appendRichText(container, text) {
+      const lines = String(text || "").replace(/\r/g, "").split("\n");
+      let list = null;
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) { list = null; continue; }
+        if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) {
+          if (!list) { list = document.createElement("ul"); container.appendChild(list); }
+          const item = document.createElement("li"); appendInline(item, line.replace(/^(?:[-*•]|\d+[.)])\s+/, "")); list.appendChild(item);
+        } else {
+          list = null;
+          const paragraph = document.createElement("p"); appendInline(paragraph, line); container.appendChild(paragraph);
+        }
+      }
+    }
+
+    function appendInline(container, value) {
+      const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
+      let last = 0; let match;
+      while ((match = pattern.exec(value))) {
+        if (match.index > last) container.appendChild(document.createTextNode(value.slice(last, match.index)));
+        if (match[1]) {
+          const strong = document.createElement("strong"); strong.textContent = match[1]; container.appendChild(strong);
+        } else {
+          const link = document.createElement("a"); link.href = match[3] || match[4]; link.target = "_blank"; link.rel = "noopener"; link.textContent = match[2] || match[4]; container.appendChild(link);
+        }
+        last = pattern.lastIndex;
+      }
+      if (last < value.length) container.appendChild(document.createTextNode(value.slice(last)));
+    }
   }
-  __name(widgetBootstrap, "widgetBootstrap");
+  function safe(value) { return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
+}
+    __name(widgetBootstrap, "widgetBootstrap");
   function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
     const script = scriptOverride || document.currentScript;
     if (!script || !configOverride && script.dataset.fiseLoaded === "1") return;
