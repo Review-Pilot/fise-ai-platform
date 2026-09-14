@@ -34,8 +34,9 @@ for (const path of pages) {
   assert.match(html, /<html\b/i, path);
   pageHtml.set(path, html);
   checked.set(path, response.status);
-  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
-  for (const [, fragment] of html.matchAll(/href="#([^"]+)"/g)) {
+  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+  const ids = new Set([...markup.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+  for (const [, fragment] of markup.matchAll(/<a\b[^>]*\bhref="#([^"]+)"/g)) {
     assert.ok(ids.has(decodeURIComponent(fragment)), path + ' has a missing #' + fragment + ' target');
   }
   console.log(path + ': ' + response.status + ', ' + ms + ' ms, ' + html.length + ' chars');
@@ -52,7 +53,8 @@ for (const [path, destination] of redirects) {
 const rootIds = new Set([...pageHtml.get('/').matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
 const localLinks = new Set();
 for (const [page, html] of pageHtml) {
-  for (const [, rawHref] of html.matchAll(/\bhref="([^"]+)"/g)) {
+  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+  for (const [, rawHref] of markup.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)) {
     if (/^(?:mailto:|tel:|javascript:|data:)/i.test(rawHref)) continue;
     const href = rawHref.replaceAll('&amp;', '&');
     const target = new URL(href, new URL(page, origin));
