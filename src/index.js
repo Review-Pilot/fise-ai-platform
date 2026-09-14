@@ -1778,37 +1778,84 @@ Date: ${lead.created_at}`
     document.body.appendChild(host);
     const root = host.attachShadow({ mode: "open" });
     const colour = /^#[0-9a-f]{6}$/i.test(config.primary_colour) ? config.primary_colour : "#1769e0";
+    const rgb = hexRgb(colour);
+    const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
+    const patternIntensity = Math.max(0, Math.min(100, Number(config.pattern_intensity ?? 55)));
+    const patternColour = shade(colour, luminance > 0.58 ? -(8 + patternIntensity * .32) : (10 + patternIntensity * .38));
+    const borderColour = shade(colour, luminance > 0.48 ? -28 : 30);
+    const headerAccentColour = shade(colour, luminance > 0.72 ? -12 : 18);
+    const historyBorderColour = shade(colour, luminance > 0.72 ? -36 : -38);
+    const headerText = luminance > 0.72 ? "#172033" : "#ffffff";
+    const controlBorder = luminance > 0.72 ? "rgba(15,23,42,.34)" : "rgba(255,255,255,.62)";
+    const pattern = patternImage(config.header_pattern || "circles", patternColour);
+    const headerBackground = config.header_gradient === false ? colour : `radial-gradient(circle at 15% 0%,rgba(255,255,255,.18),transparent 32%),radial-gradient(circle at 90% 110%,rgba(0,0,0,.15),transparent 42%),${colour}`;
+    const questionWeight = config.popular_questions_bold === false ? "550" : "850";
+    const questionBorder = config.popular_question_border === "normal" ? "1px" : "2px";
     const initial = safe(config.name || "F").slice(0, 1).toUpperCase();
     const avatar = config.avatar_url ? `<img src="${safe(config.avatar_url)}" alt="">` : `<span>${initial}</span>`;
+    const emojiButtons = ["😀", "😊", "👋", "👍", "🎉", "❤️", "😂", "🤔", "✅", "⭐", "🙏", "📞", "📅", "💡", "🚀", "📎"]
+      .map((emoji) => `<button type="button" data-emoji="${emoji}" aria-label="Add ${emoji}">${emoji}</button>`).join("");
+
     root.innerHTML = `
       <style>
         :host{all:initial;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#102033}
-        *{box-sizing:border-box}.callout{position:fixed;right:20px;bottom:94px;z-index:2147483000;padding:11px 14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.16);font:700 13px/1.2 inherit;transition:.2s}.launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:58px;height:58px;border:0;border-radius:18px;color:#fff;background:${colour};box-shadow:0 16px 38px ${colour}55;cursor:pointer;font-size:25px}.panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid rgba(203,213,225,.85);border-radius:24px;background:#fff;box-shadow:0 32px 90px rgba(15,23,42,.28);transition:width .2s,height .2s,inset .2s}.panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(460px,calc(100vw - 36px));height:min(720px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}.panel.large{left:50%;top:50%;width:min(920px,calc(100vw - 40px));height:min(780px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}.panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:20px}.head{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:86px;padding:15px 18px;color:#fff;background:radial-gradient(circle at 15% 0%,rgba(255,255,255,.22),transparent 32%),radial-gradient(circle at 90% 110%,rgba(0,0,0,.16),transparent 42%),${colour};box-shadow:inset 0 -1px rgba(0,0,0,.09),0 10px 25px ${colour}30}.head:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;background-image:radial-gradient(circle,rgba(255,255,255,.75) 1px,transparent 1.5px);background-size:28px 28px}.identity,.head-tools{position:relative;z-index:1}.identity{display:flex;align-items:center;min-width:0;gap:12px}.avatar{width:48px;height:48px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;border:2px solid rgba(255,255,255,.8);border-radius:14px;color:${colour};background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.2);font:900 19px inherit}.avatar img{width:100%;height:100%;object-fit:cover}.head strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:850 17px/1.2 inherit}.head small{display:flex;align-items:center;gap:5px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.96;font:600 11px/1.2 inherit}.status-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#d9ffe5;box-shadow:0 0 0 3px rgba(217,255,229,.18)}.head-tools{display:flex;align-items:center;gap:8px}.head button,.size{height:38px;border:1px solid rgba(255,255,255,.36);border-radius:11px;color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 1px rgba(255,255,255,.1);cursor:pointer;font:750 11px inherit}.head button:hover,.size:hover{background:rgba(255,255,255,.23)}.newchat{padding:0 12px}.size{width:100px;padding:0 8px;outline:none}.size option{color:#102033;background:#fff}.close{width:38px;font-size:19px!important}.questions{position:relative;z-index:2;padding:14px 16px 16px;border-bottom:1px solid #e7edf4;background:#fff;box-shadow:0 9px 24px rgba(15,23,42,.06)}.questions-label{margin-bottom:9px;color:#64748b;font:850 10px/1.2 inherit;letter-spacing:.08em;text-transform:uppercase}.question-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.large .question-grid,.fullscreen .question-grid{grid-template-columns:repeat(3,1fr)}.question{min-height:42px;padding:9px 11px;border:1px solid #dce3ec;border-radius:12px;color:#16243a;background:#fff;box-shadow:0 5px 13px rgba(15,23,42,.07);cursor:pointer;text-align:left;font:750 11px/1.3 inherit;transition:transform .18s,box-shadow .18s,border-color .18s,color .18s}.question:hover{transform:translateY(-2px);border-color:${colour}99;color:${colour};box-shadow:0 9px 20px rgba(15,23,42,.12)}.messages{min-height:0;overflow:auto;padding:18px;background:linear-gradient(180deg,#f7f9fc,#f2f6fa);scrollbar-color:#aeb8c6 transparent}.row{display:flex;margin:0 0 15px}.row.user{justify-content:flex-end}.bubble{max-width:88%;padding:13px 15px;border:1px solid rgba(226,232,240,.8);border-radius:17px 17px 17px 5px;background:#fff;box-shadow:0 7px 20px rgba(15,23,42,.08);overflow-wrap:anywhere;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:850;color:#071426}.user .bubble{border:0;border-radius:17px 17px 5px 17px;color:#fff;background:${colour};box-shadow:0 10px 24px ${colour}33}.user .bubble strong{color:#fff}.bubble a{color:${colour};font-weight:800;text-underline-offset:2px}.user .bubble a{color:#fff}.sources{margin-top:13px;padding-top:10px;border-top:1px solid #e5eaf1;color:#64748b;font:750 10px/1.4 inherit}.sources a{display:block;margin-top:6px;color:#1769e0;text-decoration:none}.sources a:hover{text-decoration:underline}.lead-card{width:min(100%,560px);padding:16px;border:1px solid ${colour}55;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.09)}.lead-card h3{margin:0 0 5px;color:${colour};font:850 16px inherit}.lead-card p{margin:0 0 11px;color:#64748b;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:4px;font:750 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;outline:none;font:500 12px inherit}.lead-card textarea{min-height:65px;resize:vertical}.lead-submit{margin-top:9px;padding:10px 13px;border:0;border-radius:9px;color:#fff;background:${colour};cursor:pointer;font:800 11px inherit}.composer-wrap{padding:11px 12px 8px;border-top:1px solid #e2e8f0;background:#fff}.composer{display:flex;flex-direction:column;gap:0;overflow:hidden;border:1.5px solid #cbd5e1;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08);transition:border-color .18s,box-shadow .18s}.composer:focus-within{border-color:${colour};box-shadow:0 0 0 3px ${colour}18,0 9px 25px rgba(15,23,42,.1)}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #dbe3ec;border-radius:9px;background:#f5f7fa;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#a52b2b;background:transparent;cursor:pointer;font:800 11px inherit}.input{width:100%;min-width:0;max-height:110px;min-height:58px;padding:13px 14px 4px;border:0;outline:none;resize:none;background:transparent;font:500 13px/1.42 inherit}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;gap:2px}.tool{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:9px;color:#667386;background:transparent;cursor:pointer}.tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool:hover{color:${colour};background:${colour}0d}.tool.active{color:#fff;background:#c0392b}.send{width:42px;height:36px;display:grid;place-items:center;border:0;border-radius:11px;color:#fff;background:${colour};box-shadow:0 7px 15px ${colour}35;cursor:pointer}.send svg{width:18px;height:18px;fill:currentColor}.send:disabled{opacity:.55;cursor:wait}.typing{opacity:.65;font-style:italic}.powered{padding:6px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:5px 12px;border:1px solid #e0e6ed;border-radius:999px;color:#536174;background:#fff;box-shadow:0 3px 9px rgba(15,23,42,.07);text-decoration:none;font:750 9px inherit}.powered a:hover{color:${colour};box-shadow:0 5px 12px rgba(15,23,42,.11)}.hidden{display:none!important}
-        @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr 1fr}.head{min-height:76px;padding:11px 12px}.avatar{width:42px;height:42px}.head-tools{gap:5px}.size{width:86px}.newchat{padding:0 8px}.callout{right:14px;bottom:86px}.launcher{right:14px;bottom:14px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
-        @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:11px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr}.question:nth-child(n+5){display:none}.head strong{font-size:15px}.head small{max-width:145px}.newchat{display:none}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}}
-        .composer{border-color:#b8c3d1;background:#f3f4f6}
+        *{box-sizing:border-box}
+        button,textarea,input{font:inherit}
+        .callout{position:fixed;right:20px;bottom:104px;z-index:2147483000;padding:12px 16px;border:2px solid ${borderColour};border-radius:15px;color:#172033;background:#fff;box-shadow:0 14px 36px rgba(15,23,42,.18);font:800 13px/1.2 inherit;transition:transform .18s,box-shadow .18s}
+        .callout:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(15,23,42,.22)}
+        .launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:68px;height:68px;display:grid;place-items:center;border:3px solid ${borderColour};border-radius:21px;color:#fff;background:${colour};box-shadow:0 18px 42px ${colour}55,0 6px 18px rgba(15,23,42,.18);cursor:pointer;transition:transform .18s,box-shadow .18s}
+        .launcher:hover{transform:translateY(-3px) scale(1.025);box-shadow:0 22px 48px ${colour}65,0 8px 20px rgba(15,23,42,.2)}
+        .launcher svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+        .panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid rgba(203,213,225,.9);border-radius:24px;background:#fff;box-shadow:0 34px 95px rgba(15,23,42,.3);transition:width .2s,height .2s,inset .2s}
+        .panel>*{min-width:0;max-width:100%}
+        .panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(480px,calc(100vw - 36px));height:min(740px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}
+        .panel.large{left:50%;top:50%;width:min(940px,calc(100vw - 40px));height:min(800px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}
+        .panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:20px}
+        .head{position:relative;display:block;min-height:100px;padding:43px 58px 9px 14px;color:${headerText};background:${headerBackground};box-shadow:inset 0 -1px rgba(0,0,0,.1)}
+        .head:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:${patternIntensity / 100};background-image:${pattern};background-size:30px 30px}
+        .identity,.head-tools,.history-trigger{position:relative;z-index:2}.identity{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;gap:9px;overflow:hidden;color:${headerText}}.identity>div:last-child{min-width:0;overflow:hidden}.generic-chat-icon{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;border:1px solid ${controlBorder};border-radius:11px;color:${headerText};background:${headerAccentColour};box-shadow:none}.generic-chat-icon svg,.history-trigger svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.generic-chat-icon svg{width:23px;height:23px}
+        .head strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${headerText};font:1000 15px/1.05 inherit;letter-spacing:-.01em}.head small{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${headerText};opacity:.94;font:850 11px/1.15 inherit}
+        .head-tools{position:absolute;top:6px;right:10px;z-index:3;display:flex;align-items:center;gap:2px}.head-control{position:relative;width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border:0;border-radius:10px;color:${headerText};background:transparent;box-shadow:none;cursor:pointer}.head-control:hover{background:${headerAccentColour}}.action-icon{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:3.1;stroke-linecap:round;stroke-linejoin:round}.quick-trigger .action-icon{fill:currentColor;stroke:none}.history-trigger{position:absolute;top:7px;left:50%;z-index:3;width:auto;min-width:140px;height:35px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 14px;transform:translateX(-50%);border:3px solid ${historyBorderColour};border-radius:999px;color:${headerText};background:${headerAccentColour};box-shadow:0 5px 13px rgba(15,23,42,.16);cursor:pointer;font:1000 12px/1 inherit}.history-trigger:hover{transform:translateX(-50%) translateY(-1px);box-shadow:0 7px 16px rgba(15,23,42,.2)}.history-trigger svg{width:18px;height:18px;flex:0 0 auto}.panel.history .questions,.panel.history .composer-wrap{display:none}.history-view{display:none;min-height:0;overflow:auto;padding:10px 18px 18px;background:#fff}.panel.history .messages{display:none}.panel.history .history-view{display:block}.history-title{padding:9px 4px 12px;color:#172033;font:900 15px/1.2 inherit}.history-item{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 5px;border:0;border-bottom:1px solid #e2e8f0;color:#223149;background:#fff;cursor:pointer;text-align:left}.history-item:hover{background:#f7f9fc}.history-copy{min-width:0}.history-first{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:750 12px/1.4 inherit}.history-date{margin-top:3px;color:#64748b;font:550 10px/1.3 inherit}.history-arrow{font-size:22px}.history-empty{padding:34px 10px;color:#64748b;text-align:center;font:600 12px/1.5 inherit}.history-new{margin:18px auto 0;padding:11px 15px;border:0;border-radius:999px;color:#fff;background:${colour};cursor:pointer;font:850 11px inherit}
+        .quick-actions{position:relative}.quick-actions:after{content:"";position:absolute;top:32px;right:-8px;width:236px;height:16px}.quick-menu{position:absolute;top:36px;right:0;z-index:20;width:220px;display:none;padding:9px;border:1px solid #d9e1eb;border-radius:14px;color:#172033;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.24)}.quick-menu.open,.quick-actions:hover .quick-menu,.quick-actions:focus-within .quick-menu{display:block}.quick-title{padding:7px 9px 9px;color:#667386;font:900 10px/1.2 inherit;letter-spacing:.08em;text-transform:uppercase}.quick-menu button{width:100%;display:flex;align-items:center;gap:9px;padding:10px;border:0;border-radius:9px;color:#172033;background:transparent;cursor:pointer;text-align:left;font:750 12px/1.2 inherit}.quick-menu button:hover{background:#f0f4f8}.quick-menu svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+        .questions{position:relative;z-index:1;min-width:0;padding:9px 14px 11px;border-bottom:1px solid #dbe3ec;background:#fff;box-shadow:none}.questions-label{margin-bottom:6px;color:#172033;font:900 10px/1.2 inherit;letter-spacing:.08em;text-transform:uppercase}.question-grid{display:grid;min-width:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}.large .question-grid,.fullscreen .question-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .question{width:100%;min-width:0;min-height:36px;overflow:hidden;padding:7px 10px;border:${questionBorder} solid #cbd5e1;border-radius:10px;color:#16243a;background:#fff;box-shadow:0 4px 10px rgba(15,23,42,.06);cursor:pointer;text-align:left;text-overflow:ellipsis;white-space:nowrap;font:${questionWeight} 10.5px/1.25 inherit;transition:transform .18s,box-shadow .18s,border-color .18s}.question:hover{transform:translateY(-2px);border-color:${borderColour};color:#16243a;box-shadow:0 8px 17px rgba(15,23,42,.12)}
+        .messages{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overflow-anchor:none;padding:18px;background:#fff;scrollbar-color:#aeb8c6 transparent}.date-divider{margin:0 0 18px;color:#111827;text-align:center;font:900 11px/1.2 inherit}.row{display:flex;min-width:0;margin:0 0 15px}.row.user{justify-content:flex-end}.bubble{min-width:0;max-width:88%;padding:13px 15px;border:1px solid rgba(226,232,240,.85);border-radius:17px 17px 17px 5px;background:#f3f4f6;box-shadow:0 7px 20px rgba(15,23,42,.08);overflow-wrap:anywhere;word-break:break-word;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:900;color:#071426}.user .bubble{border:0;border-radius:17px 17px 5px 17px;color:#fff;background:${colour};box-shadow:0 10px 24px ${colour}33}.user .bubble strong{color:#fff}.bubble a{color:#0b1220;font-weight:900;text-decoration:underline;text-underline-offset:3px}.user .bubble a{color:#fff}.sources{margin-top:13px;padding-top:10px;border-top:1px solid #d9dee6;color:#475569;font:850 10px/1.4 inherit}.sources a{display:block;margin-top:7px;color:#0b1220;font-weight:900;text-decoration:none}.sources a:hover{text-decoration:underline}
+        .panel.history .history-view{grid-row:2/-1}.composer{border-color:#b8c3d1;background:#f3f4f6}.typing-bubble{min-width:62px}.typing-dots{height:22px;display:flex;align-items:center;justify-content:center;gap:5px}.typing-dots i{width:7px;height:7px;border-radius:50%;background:${colour};animation:fiseBounce .9s infinite ease-in-out}.typing-dots i:nth-child(2){animation-delay:.14s}.typing-dots i:nth-child(3){animation-delay:.28s}@keyframes fiseBounce{0%,60%,100%{transform:translateY(2px);opacity:.38}30%{transform:translateY(-5px);opacity:1}}
+        .lead-card{width:min(100%,560px);padding:17px;border:2px solid ${colour}55;border-radius:17px;background:#fff;box-shadow:0 9px 26px rgba(15,23,42,.1)}.lead-card h3{margin:0 0 5px;color:#172033;font:900 16px inherit}.lead-card p{margin:0 0 13px;color:#64748b;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:5px;color:#172033;font:850 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;outline:none;font:500 12px inherit}.lead-card input:focus,.lead-card textarea:focus{border-color:${colour};box-shadow:0 0 0 3px ${colour}18}.lead-card textarea{min-height:72px;resize:vertical}.lead-submit{margin-top:10px;padding:11px 14px;border:0;border-radius:10px;color:#fff;background:${colour};cursor:pointer;font:850 11px inherit}
+        .composer-wrap{padding:11px 12px 8px;border-top:1px solid #e2e8f0;background:#fff}.composer{position:relative;display:flex;flex-direction:column;gap:0;border:1.5px solid #cbd5e1;border-radius:17px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08);transition:border-color .18s,box-shadow .18s}.composer:focus-within{border-color:${colour};box-shadow:0 0 0 3px ${colour}18,0 9px 25px rgba(15,23,42,.1)}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #dbe3ec;border-radius:9px;background:#f5f7fa;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#a52b2b;background:transparent;cursor:pointer;font:800 11px inherit}.input{width:100%;min-width:0;max-height:110px;min-height:58px;padding:13px 14px 4px;border:0;outline:none;resize:none;background:transparent;font:500 13px/1.42 inherit}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;gap:3px}.tool{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;color:#5f6e81;background:transparent;cursor:pointer}.tool svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool:hover{color:${colour};background:${colour}0d}.tool.active{color:#fff;background:#c0392b}.send{width:44px;height:38px;display:grid;place-items:center;border:0;border-radius:11px;color:#fff;background:${colour};box-shadow:0 7px 15px ${colour}35;cursor:pointer}.send svg{width:19px;height:19px;fill:currentColor}.send:disabled{opacity:.55;cursor:wait}
+        .emoji-picker{position:absolute;left:10px;bottom:50px;z-index:12;width:230px;display:none;grid-template-columns:repeat(8,1fr);gap:3px;padding:9px;border:1px solid #d8e0e9;border-radius:13px;background:#fff;box-shadow:0 15px 38px rgba(15,23,42,.2)}.emoji-picker.open{display:grid}.emoji-picker button{width:25px;height:28px;border:0;border-radius:7px;background:transparent;cursor:pointer;font-size:17px}.emoji-picker button:hover{background:#eef2f7;transform:scale(1.12)}
+        .powered{padding:7px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:5px 12px;border:1px solid #d7dee7;border-radius:999px;color:#253247;background:#fff;box-shadow:0 3px 9px rgba(15,23,42,.08);text-decoration:none;font:900 10px inherit}.powered a:hover{color:#0b1220;box-shadow:0 6px 14px rgba(15,23,42,.13)}.hidden{display:none!important}
+        @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.head{min-height:96px;padding:42px 52px 8px 10px}.generic-chat-icon{width:36px;height:36px}.head-tools{right:7px;gap:1px}.head-control{width:33px}.history-trigger{min-width:124px}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
+        @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:8px 10px 10px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr)}.question:nth-child(n+5){display:none}.identity{justify-content:flex-start;gap:7px}.generic-chat-icon{width:34px;height:34px}.head strong{font-size:13px}.head small{max-width:150px}.history-trigger{left:10px;min-width:116px;transform:none}.history-trigger:hover{transform:translateY(-1px)}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}.quick-menu{right:-39px}}
       </style>
       <div class="callout">Need help with anything? 👋</div>
-      <button class="launcher" aria-label="Open chat">💬</button>
+      <button class="launcher" type="button" aria-label="Open chat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg></button>
       <section class="panel ${safe(config.default_size || "standard")}" aria-label="Chat with ${safe(config.name)}">
         <header class="head">
-          <div class="identity"><div class="avatar">${avatar}</div><div><strong>${safe(config.name)}</strong><small><span class="status-dot"></span>${safe(config.subtitle || config.business_name)}</small></div></div>
-          <div class="head-tools"><button class="newchat" type="button">New chat</button><select class="size" aria-label="Chat size"><option value="standard">Standard</option><option value="large">Large</option><option value="fullscreen">Fullscreen</option></select><button class="close" type="button" aria-label="Close chat">−</button></div>
+          <button class="history-trigger" type="button" title="Chat History" aria-label="Chat History"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg><span class="history-label">Chat History</span></button>
+          <div class="identity"><div class="generic-chat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg></div><div><strong>Questions?</strong><small>Chat with ${safe(config.name)}</small></div></div>
+          <div class="head-tools">
+            <div class="quick-actions"><button class="head-control quick-trigger" type="button" aria-label="Quick actions" aria-expanded="false"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg></button><div class="quick-menu"><div class="quick-title">Quick actions</div><button type="button" data-size="standard"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Standard view</button><button type="button" data-size="large"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>Large view</button><button type="button" data-size="fullscreen"><svg viewBox="0 0 24 24"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6"/></svg>Fullscreen</button><button type="button" class="new-conversation"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New conversation</button></div></div>
+            <button class="head-control close" type="button" aria-label="Close chat"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          </div>
         </header>
         <div class="questions"><div class="questions-label">Popular questions</div><div class="question-grid"></div></div>
         <div class="messages" aria-live="polite"></div>
-        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}…" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 3 17 9-17 9 3-9-3-9Zm3 9h14"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
+        <div class="history-view"><div class="history-title">All your conversations</div><div class="history-list"></div><button class="history-new" type="button">＋ Start new conversation</button></div>
+        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}…" aria-label="Your message"></textarea><div class="emoji-picker">${emojiButtons}</div><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button><button class="tool emoji-toggle" type="button" title="Add an emoji" aria-label="Add an emoji"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 3 17 9-17 9 3-9-3-9Zm3 9h14"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
       </section>`;
 
     const panel = root.querySelector(".panel");
     const launcher = root.querySelector(".launcher");
     const callout = root.querySelector(".callout");
     const close = root.querySelector(".close");
+    const quickActions = root.querySelector(".quick-actions");
+    const quickTrigger = root.querySelector(".quick-trigger");
+    const quickMenu = root.querySelector(".quick-menu");
+    const newConversation = root.querySelector(".new-conversation");
     const historyTrigger = root.querySelector(".history-trigger");
     const historyList = root.querySelector(".history-list");
     const historyNew = root.querySelector(".history-new");
-    const newchat = root.querySelector(".newchat");
-    const size = root.querySelector(".size");
     const form = root.querySelector(".composer");
     const input = root.querySelector(".input");
     const send = root.querySelector(".send");
@@ -1820,198 +1867,251 @@ Date: ${lead.created_at}`
     const attachmentName = root.querySelector(".attachment-name");
     const removeFile = root.querySelector(".remove-file");
     const mic = root.querySelector(".mic");
+    const emojiToggle = root.querySelector(".emoji-toggle");
+    const emojiPicker = root.querySelector(".emoji-picker");
     const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
     let conversation = saved.conversation || "";
     let pendingFile = null;
     let recorder = null;
     let recordingStream = null;
     let chunks = [];
-    size.value = ["standard", "large"].includes(config.default_size) ? config.default_size : "standard";
+    let quickCloseTimer = null;
     resetMessages(false);
 
     for (const question of (config.popular_questions || []).slice(0, 6)) {
       const button = document.createElement("button");
-      button.type = "button";
-      button.className = "question";
-      button.textContent = question;
-      button.onclick = () => submitMessage(question);
-      questionGrid.appendChild(button);
+      button.type = "button"; button.className = "question"; button.textContent = question;
+      button.onclick = () => submitMessage(question); questionGrid.appendChild(button);
     }
     if (config.lead_capture) {
       const button = document.createElement("button");
-      button.type = "button";
-      button.className = "question";
-      button.textContent = config.lead_cta_label || "Talk to us";
-      button.onclick = showLeadForm;
-      questionGrid.appendChild(button);
+      button.type = "button"; button.className = "question"; button.textContent = config.lead_cta_label || "Talk to us";
+      button.onclick = () => showLeadForm(true); questionGrid.appendChild(button);
     }
 
     launcher.onclick = () => { panel.classList.add("open"); callout.style.display = "none"; launcher.style.display = "none"; input.focus(); };
-    close.onclick = () => { panel.classList.remove("open"); launcher.style.display = "block"; };
-    newchat.onclick = () => resetMessages(true);
-    size.onchange = () => {
-      panel.classList.remove("standard", "large", "fullscreen");
-      panel.classList.add(size.value);
-    };
-    document.addEventListener("pointerdown", (event) => {
-      if (panel.classList.contains("open") && event.target !== host) { panel.classList.remove("open"); launcher.style.display = "block"; }
-    }, true);
-    form.addEventListener("submit", (event) => { event.preventDefault(); submitMessage(input.value.trim()); });
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submitMessage(input.value.trim()); }
+    close.onclick = () => { panel.classList.remove("open"); quickMenu.classList.remove("open"); launcher.style.display = "grid"; };
+    historyTrigger.onclick = () => { panel.classList.add("history"); quickMenu.classList.remove("open"); loadHistory(); };
+    historyNew.onclick = () => { panel.classList.remove("history"); resetMessages(true); input.focus(); };
+    quickTrigger.onclick = () => { const open = quickMenu.classList.toggle("open"); quickTrigger.setAttribute("aria-expanded", open ? "true" : "false"); };
+    quickActions.addEventListener("pointerenter", () => {
+      if (quickCloseTimer) clearTimeout(quickCloseTimer);
+      quickMenu.classList.add("open");
+      quickTrigger.setAttribute("aria-expanded", "true");
     });
+    quickActions.addEventListener("pointerleave", () => {
+      if (quickCloseTimer) clearTimeout(quickCloseTimer);
+      quickCloseTimer = setTimeout(() => {
+        quickMenu.classList.remove("open");
+        quickTrigger.setAttribute("aria-expanded", "false");
+      }, 650);
+    });
+    newConversation.onclick = () => { quickMenu.classList.remove("open"); panel.classList.remove("history"); resetMessages(true); input.focus(); };
+    for (const action of root.querySelectorAll("[data-size]")) {
+      action.onclick = () => { panel.classList.remove("standard", "large", "fullscreen"); panel.classList.add(action.dataset.size); quickMenu.classList.remove("open"); };
+    }
+    root.addEventListener("pointerdown", (event) => {
+      if (!event.target.closest(".quick-actions")) quickMenu.classList.remove("open");
+      if (!event.target.closest(".emoji-picker") && !event.target.closest(".emoji-toggle")) emojiPicker.classList.remove("open");
+    });
+    form.addEventListener("submit", (event) => { event.preventDefault(); submitMessage(input.value.trim()); });
+    input.addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submitMessage(input.value.trim()); } });
     if (!config.allow_files) attach.classList.add("hidden");
     if (!config.allow_voice || !navigator.mediaDevices || !window.MediaRecorder) mic.classList.add("hidden");
+    if (!config.allow_emoji) emojiToggle.classList.add("hidden");
     attach.onclick = () => fileInput.click();
     fileInput.onchange = () => { if (fileInput.files && fileInput.files[0]) uploadVisitorFile(fileInput.files[0]); };
     removeFile.onclick = clearAttachment;
     mic.onclick = toggleRecording;
+    emojiToggle.onclick = () => emojiPicker.classList.toggle("open");
+    for (const button of emojiPicker.querySelectorAll("[data-emoji]")) button.onclick = () => insertEmoji(button.dataset.emoji || "");
+
+    function insertEmoji(emoji) {
+      const start = input.selectionStart || input.value.length; const end = input.selectionEnd || start;
+      input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+      input.setSelectionRange(start + emoji.length, start + emoji.length); emojiPicker.classList.remove("open"); input.focus();
+    }
 
     async function uploadVisitorFile(file) {
       clearAttachment();
-      if (file.size > 8 * 1024 * 1024) { add("assistant", "Please choose a file smaller than 8 MB."); return; }
-      attach.disabled = true;
-      attachmentBar.classList.add("show");
-      attachmentName.textContent = "Preparing " + file.name + "…";
+      if (file.size > 8 * 1024 * 1024) { add("assistant", "Please choose a file smaller than 8 MB.", [], true); return; }
+      attach.disabled = true; attachmentBar.classList.add("show"); attachmentName.textContent = "Preparing " + file.name + "…";
       try {
         const upload = new FormData(); upload.append("file", file, file.name);
         const response = await fetch(api + "/api/widget/file?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "The file could not be uploaded");
-        pendingFile = data;
-        attachmentName.textContent = "📎 " + data.name;
-      } catch (error) {
-        clearAttachment(); add("assistant", error.message || "The file could not be uploaded.");
-      } finally { attach.disabled = false; fileInput.value = ""; }
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "The file could not be uploaded");
+        pendingFile = data; attachmentName.textContent = "📎 " + data.name;
+      } catch (error) { clearAttachment(); add("assistant", error.message || "The file could not be uploaded.", [], true); }
+      finally { attach.disabled = false; fileInput.value = ""; }
     }
 
-    function clearAttachment() {
-      pendingFile = null;
-      attachmentBar.classList.remove("show");
-      attachmentName.textContent = "";
-      fileInput.value = "";
-    }
+    function clearAttachment() { pendingFile = null; attachmentBar.classList.remove("show"); attachmentName.textContent = ""; fileInput.value = ""; }
 
     async function toggleRecording() {
       if (recorder && recorder.state === "recording") { recorder.stop(); return; }
       try {
-        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        chunks = [];
-        recorder = new MediaRecorder(recordingStream);
-        recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-        recorder.onstop = transcribeRecording;
-        recorder.start();
+        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true }); chunks = []; recorder = new MediaRecorder(recordingStream);
+        recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); }; recorder.onstop = transcribeRecording; recorder.start();
         mic.classList.add("active"); mic.title = "Stop recording"; mic.setAttribute("aria-label", "Stop recording");
-      } catch { add("assistant", "Microphone access was not allowed."); }
+      } catch { add("assistant", "Microphone access was not allowed.", [], true); }
     }
 
     async function transcribeRecording() {
       mic.classList.remove("active"); mic.title = "Record a voice message"; mic.setAttribute("aria-label", "Record a voice message");
       if (recordingStream) recordingStream.getTracks().forEach((track) => track.stop());
-      const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" });
-      if (!blob.size) return;
+      const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" }); if (!blob.size) return;
       mic.disabled = true; input.placeholder = "Transcribing voice message…";
       try {
         const upload = new FormData(); upload.append("audio", blob, "voice-message.webm");
         const response = await fetch(api + "/api/widget/transcribe?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Voice transcription failed");
-        input.value = data.text || ""; input.focus();
-      } catch (error) { add("assistant", error.message || "The voice message could not be transcribed."); }
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "Voice transcription failed"); input.value = data.text || ""; input.focus();
+      } catch (error) { add("assistant", error.message || "The voice message could not be transcribed.", [], true); }
       finally { mic.disabled = false; input.placeholder = "Ask " + config.name + "…"; }
     }
 
     async function submitMessage(text) {
       if ((!text && !pendingFile) || send.disabled) return;
-      const fileForMessage = pendingFile;
-      const display = text || "Please review the attached file.";
-      input.value = "";
-      add("user", display + (fileForMessage ? "\n📎 " + fileForMessage.name : ""));
-      send.disabled = true;
-      const waiting = add("assistant", "Thinking…", [], true);
+      const fileForMessage = pendingFile; const display = text || "Please review the attached file."; input.value = "";
+      add("user", display + (fileForMessage ? "\n📎 " + fileForMessage.name : ""), [], true); send.disabled = true;
+      const waiting = addTyping();
       try {
-        const response = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), {
-          method: "POST", mode: "cors", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href })
-        });
-        const data = await response.json(); waiting.remove();
+        const response = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href, stream: false }) });
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "Could not send message");
-        conversation = data.conversation_id;
-        localStorage.setItem(storageKey, JSON.stringify({ conversation }));
-        clearAttachment();
-        add("assistant", data.reply, data.sources || []);
-      } catch (error) { waiting.remove(); add("assistant", error.message || "Please try again."); }
+        conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); clearAttachment();
+        completeAssistant(waiting, data.reply, config.helpful_pages_enabled ? (data.sources || []) : []);
+        if (data.show_lead_form && config.lead_capture) showLeadForm(false);
+      } catch (error) { completeAssistant(waiting, error.message || "Please try again.", []); }
       finally { send.disabled = false; input.focus(); }
+    }
+
+    async function loadHistory() {
+      historyList.innerHTML = '<div class="history-empty">Loading conversations…</div>';
+      try {
+        const response = await fetch(api + "/api/widget/history?key=" + encodeURIComponent(key) + "&visitor_id=" + encodeURIComponent(visitor), { mode: "cors" });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "History unavailable");
+        historyList.innerHTML = "";
+        if (!data.conversations || !data.conversations.length) { historyList.innerHTML = '<div class="history-empty">No saved conversations yet.</div>'; return; }
+        for (const item of data.conversations) {
+          const button = document.createElement("button"); button.type = "button"; button.className = "history-item";
+          const first = item.first_message || "Conversation"; const date = formatDate(item.updated_at);
+          button.innerHTML = `<span class="history-copy"><span class="history-first">${safe(first)}</span><span class="history-date">${safe(date)}</span></span><span class="history-arrow">›</span>`;
+          button.onclick = () => openConversation(item.id); historyList.appendChild(button);
+        }
+      } catch (error) { historyList.innerHTML = `<div class="history-empty">${safe(error.message || "History unavailable")}</div>`; }
+    }
+
+    async function openConversation(id) {
+      try {
+        const response = await fetch(api + "/api/widget/conversation?key=" + encodeURIComponent(key) + "&visitor_id=" + encodeURIComponent(visitor) + "&conversation_id=" + encodeURIComponent(id), { mode: "cors" });
+        const data = await response.json(); if (!response.ok) throw new Error(data.error || "Conversation unavailable");
+        conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); panel.classList.remove("history"); messages.innerHTML = "";
+        const firstDate = data.messages && data.messages[0] ? data.messages[0].created_at : new Date().toISOString(); addDate(firstDate);
+        for (const item of data.messages || []) add(item.role === "user" ? "user" : "assistant", item.content, [], false);
+        messages.scrollTop = messages.scrollHeight; input.focus();
+      } catch (error) { historyList.innerHTML = `<div class="history-empty">${safe(error.message || "Conversation unavailable")}</div>`; }
+    }
+
+    function formatDate(value) {
+      try { return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(value)); } catch { return ""; }
+    }
+
+    function addDate(value) {
+      const date = document.createElement("div"); date.className = "date-divider"; date.textContent = formatDate(value || new Date()); messages.appendChild(date);
     }
 
     function resetMessages(clearSaved) {
       if (clearSaved) { conversation = ""; localStorage.removeItem(storageKey); clearAttachment(); }
-      messages.innerHTML = "";
-      add("assistant", config.greeting || "Hi! How can I help you today?");
+      messages.innerHTML = ""; addDate(new Date()); add("assistant", config.greeting || "Hi! How can I help you today?", [], true);
     }
 
-    function showLeadForm() {
-      const row = document.createElement("div"); row.className = "row assistant";
+    function showLeadForm(autoScroll) {
+      const existing = messages.querySelector(".lead-card");
+      if (existing) { if (autoScroll) existing.scrollIntoView({ behavior: "smooth", block: "nearest" }); return; }
+      const before = messages.scrollTop; const row = document.createElement("div"); row.className = "row assistant";
       const card = document.createElement("form"); card.className = "lead-card";
-      card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Leave your details and the team can respond to your enquiry.</p><div class="lead-grid"><div><label>Name *</label><input name="name" maxlength="100" required></div><div><label>Phone</label><input name="phone" maxlength="50"></div><div class="wide"><label>Email</label><input name="email" type="email" maxlength="254"></div><div class="wide"><label>Business name</label><input name="business_name" maxlength="120"></div><div class="wide"><label>Enquiry</label><textarea name="enquiry" maxlength="1200"></textarea></div></div><button class="lead-submit">Send my details</button>`;
+      card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Answer these four quick questions and the team can respond directly.</p><div class="lead-grid"><div><label>1. Name *</label><input name="name" maxlength="100" required></div><div><label>2. Email *</label><input name="email" type="email" maxlength="254" required></div><div class="wide"><label>3. Phone *</label><input name="phone" maxlength="50" required></div><div class="wide"><label>4. Your query *</label><textarea name="enquiry" maxlength="1200" required></textarea></div></div><button class="lead-submit">Send my details</button>`;
       card.onsubmit = async (event) => {
-        event.preventDefault();
-        const button = card.querySelector(".lead-submit"); button.disabled = true; button.textContent = "Sending…";
+        event.preventDefault(); const button = card.querySelector(".lead-submit"); button.disabled = true; button.textContent = "Sending…";
         const values = Object.fromEntries(new FormData(card).entries()); values.conversation_id = conversation;
         try {
           const response = await fetch(api + "/api/widget/lead?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify(values) });
-          const data = await response.json(); if (!response.ok) throw new Error(data.error || "Could not send your details");
-          card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
+          const data = await response.json(); if (!response.ok) throw new Error(data.error || "Could not send your details"); card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
         } catch (error) { button.disabled = false; button.textContent = "Send my details"; alert(error.message || "Please try again."); }
       };
-      row.appendChild(card); messages.appendChild(row); messages.scrollTop = messages.scrollHeight;
+      row.appendChild(card); messages.appendChild(row);
+      if (autoScroll) messages.scrollTop = messages.scrollHeight; else messages.scrollTop = before;
     }
 
-    function add(role, text, sources = [], typing = false) {
+    function addTyping() {
+      const row = document.createElement("div"); row.className = "row assistant";
+      const bubble = document.createElement("div"); bubble.className = "bubble typing-bubble"; bubble.innerHTML = '<span class="typing-dots" aria-label="Typing"><i></i><i></i><i></i></span>';
+      row.appendChild(bubble); messages.appendChild(row); messages.scrollTop = messages.scrollHeight; return row;
+    }
+
+    function completeAssistant(row, text, sources) {
+      const before = messages.scrollTop; const bubble = row.querySelector(".bubble"); bubble.className = "bubble"; bubble.textContent = "";
+      appendRichText(bubble, text); appendSources(bubble, sources); requestAnimationFrame(() => { messages.scrollTop = before; });
+    }
+
+    function updateStreamingAssistant(row, text) {
+      const bubble = row.querySelector(".bubble"); bubble.className = "bubble"; bubble.textContent = text;
+    }
+
+    function add(role, text, sources = [], autoScroll = true) {
       const row = document.createElement("div"); row.className = "row " + role;
-      const bubble = document.createElement("div"); bubble.className = "bubble" + (typing ? " typing" : "");
-      appendRichText(bubble, text); row.appendChild(bubble);
-      if (sources.length) {
-        const box = document.createElement("div"); box.className = "sources"; box.textContent = "Helpful pages:";
-        for (const source of sources.slice(0, 3)) {
-          if (!/^https?:\/\//i.test(source.url || "")) continue;
-          const link = document.createElement("a"); link.href = source.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = source.title || source.url; box.appendChild(link);
-        }
-        bubble.appendChild(box);
+      const bubble = document.createElement("div"); bubble.className = "bubble"; appendRichText(bubble, text); appendSources(bubble, sources); row.appendChild(bubble); messages.appendChild(row);
+      if (autoScroll) messages.scrollTop = messages.scrollHeight; return row;
+    }
+
+    function appendSources(bubble, sources) {
+      if (!sources || !sources.length) return;
+      const box = document.createElement("div"); box.className = "sources"; box.textContent = "Helpful pages:";
+      for (const source of sources.slice(0, 3)) {
+        if (!/^https?:\/\//i.test(source.url || "")) continue;
+        const link = document.createElement("a"); link.href = source.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = source.title || source.url; box.appendChild(link);
       }
-      messages.appendChild(row); messages.scrollTop = messages.scrollHeight; return row;
+      bubble.appendChild(box);
     }
 
     function appendRichText(container, text) {
-      const lines = String(text || "").replace(/\r/g, "").split("\n");
-      let list = null;
+      const lines = String(text || "").replace(/\r/g, "").split("\n"); let list = null;
       for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) { list = null; continue; }
+        const line = rawLine.trim(); if (!line) { list = null; continue; }
         if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) {
           if (!list) { list = document.createElement("ul"); container.appendChild(list); }
           const item = document.createElement("li"); appendInline(item, line.replace(/^(?:[-*•]|\d+[.)])\s+/, "")); list.appendChild(item);
-        } else {
-          list = null;
-          const paragraph = document.createElement("p"); appendInline(paragraph, line); container.appendChild(paragraph);
-        }
+        } else { list = null; const paragraph = document.createElement("p"); appendInline(paragraph, line); container.appendChild(paragraph); }
       }
     }
 
     function appendInline(container, value) {
-      const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
-      let last = 0; let match;
+      const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi; let last = 0; let match;
       while ((match = pattern.exec(value))) {
         if (match.index > last) container.appendChild(document.createTextNode(value.slice(last, match.index)));
-        if (match[1]) {
-          const strong = document.createElement("strong"); strong.textContent = match[1]; container.appendChild(strong);
-        } else {
-          const link = document.createElement("a"); link.href = match[3] || match[4]; link.target = "_blank"; link.rel = "noopener"; link.textContent = match[2] || match[4]; container.appendChild(link);
-        }
+        if (match[1]) { const strong = document.createElement("strong"); strong.textContent = match[1]; container.appendChild(strong); }
+        else { const link = document.createElement("a"); link.href = match[3] || match[4]; link.target = "_blank"; link.rel = "noopener"; link.textContent = match[2] || match[4]; container.appendChild(link); }
         last = pattern.lastIndex;
       }
       if (last < value.length) container.appendChild(document.createTextNode(value.slice(last)));
     }
+  }
+
+  function hexRgb(hex) { const value = parseInt(String(hex).slice(1), 16); return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }; }
+  function shade(hex, percent) {
+    const rgb = hexRgb(hex); const factor = percent / 100;
+    const adjust = (value) => Math.max(0, Math.min(255, Math.round(percent >= 0 ? value + (255 - value) * factor : value * (1 + factor))));
+    return "#" + [adjust(rgb.r), adjust(rgb.g), adjust(rgb.b)].map((value) => value.toString(16).padStart(2, "0")).join("");
+  }
+  function patternImage(type, colour) {
+    const shape = {
+      circles: `<circle cx="15" cy="15" r="3" fill="none" stroke="${colour}" stroke-width="1.5"/>`,
+      pluses: `<path d="M15 11v8M11 15h8" fill="none" stroke="${colour}" stroke-width="1.8" stroke-linecap="round"/>`,
+      crosses: `<path d="m12 12 6 6m0-6-6 6" fill="none" stroke="${colour}" stroke-width="1.7" stroke-linecap="round"/>`,
+      lines: `<path d="M11 15h8" fill="none" stroke="${colour}" stroke-width="1.9" stroke-linecap="round"/>`
+    }[type] || "";
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">${shape}</svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   }
   function safe(value) { return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
 }
