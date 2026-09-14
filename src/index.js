@@ -1002,6 +1002,7 @@ var ChatModule = (() => {
   __name(corsHeaders, "corsHeaders");
   async function botForKey(env, key) {
     if (!key || key.length > 180) return null;
+    await ensureTestingPlanSchema(env);
     await env.DB.prepare(`CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`).run();
     return env.DB.prepare(`
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,
@@ -1020,12 +1021,13 @@ var ChatModule = (() => {
            COALESCE(cds.system_prompt_append,'') AS system_prompt_append,
            COALESCE(cds.widget_css,'') AS widget_css,
            COALESCE(cds.functions_json,'[]') AS functions_json,
-           COALESCE(s.plan_code,'starter') AS plan_code,
-           COALESCE(s.status,'inactive') AS subscription_status
+           COALESCE(tpo.plan_code,s.plan_code,'starter') AS plan_code,
+           CASE WHEN tpo.user_id IS NOT NULL THEN 'active' ELSE COALESCE(s.status,'inactive') END AS subscription_status
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
     LEFT JOIN chatbot_developer_settings cds ON cds.chatbot_id=c.id
     LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
+    LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
     WHERE c.public_key = ? LIMIT 1
   `).bind(key).first();
   }
@@ -7836,6 +7838,19 @@ async function completeChatbotDeletion(request, env) {
   );
 }
 __name(completeChatbotDeletion, "completeChatbotDeletion");
+var testingPlanSchemaPromise;
+async function ensureTestingPlanSchema(env) {
+  if (!testingPlanSchemaPromise) {
+    testingPlanSchemaPromise = env.DB.prepare(
+      "CREATE TABLE IF NOT EXISTS testing_plan_overrides (user_id TEXT PRIMARY KEY,plan_code TEXT NOT NULL,updated_at TEXT NOT NULL)"
+    ).run().catch((error) => {
+      testingPlanSchemaPromise = null;
+      throw error;
+    });
+  }
+  await testingPlanSchemaPromise;
+}
+__name(ensureTestingPlanSchema, "ensureTestingPlanSchema");
 async function changeTestingPlan(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -7847,26 +7862,31 @@ async function changeTestingPlan(request, env) {
   if (!allowedPlans.has(plan))
     return json({ error: "Choose a valid testing plan" }, 400);
   try {
+    await ensureTestingPlanSchema(env);
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const existing = await env.DB.prepare(
-      "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC,id DESC LIMIT 1"
-    ).bind(user.id).first();
-    const subscriptionId = existing?.id || crypto.randomUUID();
-    if (existing?.id) {
-      await env.DB.prepare(
-        "UPDATE subscriptions SET plan_code=?,status='active',updated_at=? WHERE id=?"
-      ).bind(plan, now, subscriptionId).run();
-    } else {
-      await env.DB.prepare(
-        "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'manual',?,'active',?,?)"
-      ).bind(subscriptionId, user.id, plan, now, now).run();
-    }
-    const saved = await env.DB.prepare(
-      "SELECT plan_code,status,provider,updated_at FROM subscriptions WHERE id = ? AND user_id = ?"
-    ).bind(subscriptionId, user.id).first();
-    if (!saved || saved.plan_code !== plan || saved.status !== "active")
-      throw new Error("Testing plan update did not persist");
-    return json({ subscription: saved });
+    await env.DB.prepare(
+      `INSERT INTO testing_plan_overrides (user_id,plan_code,updated_at)
+       VALUES (?,?,?)
+       ON CONFLICT(user_id) DO UPDATE SET plan_code=excluded.plan_code,updated_at=excluded.updated_at`
+    ).bind(user.id, plan, now).run();
+    const [saved, billing] = await Promise.all([
+      env.DB.prepare(
+        "SELECT plan_code,updated_at FROM testing_plan_overrides WHERE user_id=?"
+      ).bind(user.id).first(),
+      env.DB.prepare(
+        "SELECT provider FROM subscriptions WHERE user_id=? ORDER BY updated_at DESC,id DESC LIMIT 1"
+      ).bind(user.id).first()
+    ]);
+    if (!saved || saved.plan_code !== plan)
+      throw new Error("Testing plan override did not persist");
+    return json({
+      subscription: {
+        plan_code: saved.plan_code,
+        status: "active",
+        provider: billing?.provider || "manual",
+        updated_at: saved.updated_at
+      }
+    });
   } catch (error) {
     console.error("Could not save testing plan", error);
     return json({ error: "Your testing plan could not be saved. Please try again." }, 503);
@@ -7876,11 +7896,16 @@ __name(changeTestingPlan, "changeTestingPlan");
 async function accountProfile(request, env) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: "Sign in again" }, 401);
+  await ensureTestingPlanSchema(env);
   const [subscription, chatbotResult, website] = await Promise.all([
     env.DB.prepare(
-      `SELECT plan_code,status,provider,created_at,updated_at
-       FROM subscriptions WHERE user_id = ?
-       ORDER BY updated_at DESC,id DESC LIMIT 1`
+      `SELECT COALESCE(tpo.plan_code,s.plan_code) AS plan_code,
+              CASE WHEN tpo.user_id IS NOT NULL THEN 'active' ELSE s.status END AS status,
+              s.provider,s.created_at,COALESCE(tpo.updated_at,s.updated_at) AS updated_at
+       FROM subscriptions s
+       LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=s.user_id
+       WHERE s.user_id = ?
+       ORDER BY s.updated_at DESC,s.id DESC LIMIT 1`
     ).bind(user.id).first(),
     env.DB.prepare(
       `SELECT id,name,business_name,status,model
@@ -7917,12 +7942,13 @@ async function showDashboard(request, env) {
     return redirect(
       embeddedRequest ? "/login?embed=1" : "/login"
     );
+  await ensureTestingPlanSchema(env);
   let result;
   try {
     result = await env.DB.prepare(
       `
       SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
-        CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
+        CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
         (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
          FROM messages m JOIN conversations mc ON mc.id=m.conversation_id
          WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
@@ -7932,11 +7958,12 @@ async function showDashboard(request, env) {
         (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
         (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
       FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
+      LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
       WHERE c.user_id = ? ORDER BY c.created_at DESC`
     ).bind(monthStartIso(), user.id).all();
   } catch (error) {
     console.error("Dashboard detail query failed; using safe fallback", error);
-    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
+    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
   }
   const url = requestedUrl;
   let message = "";
@@ -8074,6 +8101,7 @@ function planHasLeadCapture(bot) {
 }
 __name(planHasLeadCapture, "planHasLeadCapture");
 async function ownedChatbot(env, userId, chatbotId) {
+  await ensureTestingPlanSchema(env);
   return env.DB.prepare(
     `
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,
@@ -8088,11 +8116,12 @@ async function ownedChatbot(env, userId, chatbotId) {
       COALESCE(cs.lead_destination_email,'') AS lead_destination_email,
       COALESCE(cs.google_sheets_webhook,'') AS google_sheets_webhook,
       COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,
-      COALESCE(s.plan_code,'starter') AS plan_code,
-      COALESCE(s.status,'inactive') AS subscription_status
+      COALESCE(tpo.plan_code,s.plan_code,'starter') AS plan_code,
+      CASE WHEN tpo.user_id IS NOT NULL THEN 'active' ELSE COALESCE(s.status,'inactive') END AS subscription_status
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
     LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
+    LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
     WHERE c.id=? AND c.user_id=? LIMIT 1
   `
   ).bind(chatbotId, userId).first();
