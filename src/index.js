@@ -1025,7 +1025,7 @@ var ChatModule = (() => {
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
     LEFT JOIN chatbot_developer_settings cds ON cds.chatbot_id=c.id
-    LEFT JOIN subscriptions s ON s.user_id=c.user_id
+    LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
     WHERE c.public_key = ? LIMIT 1
   `).bind(key).first();
   }
@@ -1042,7 +1042,7 @@ var ChatModule = (() => {
   }
   __name(authorizeBrowser, "authorizeBrowser");
   function growthAccess(bot) {
-    return TESTING_LEAD_CAPTURE || ["active", "trialing"].includes(String(bot.subscription_status || "").toLowerCase()) && ["growth", "pro", "professional", "business", "enterprise"].includes(String(bot.plan_code || "").toLowerCase());
+    return TESTING_LEAD_CAPTURE || ["active", "trialing"].includes(String(bot.subscription_status || "").toLowerCase()) && ["grow", "growth", "pro", "professional", "business", "enterprise"].includes(String(bot.plan_code || "").toLowerCase());
   }
   __name(growthAccess, "growthAccess");
   async function sha256(value) {
@@ -4111,8 +4111,15 @@ var WebsiteModule = (() => {
   .profile-panel-surface:hover{box-shadow:0 18px 40px rgba(13,13,14,.08)}
   .profile-close:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,13,14,.12)}
 
-  .demo-dashboard-frame{display:block;width:100%;max-width:1720px;margin:44px auto 0;height:calc(100vh - 190px);min-height:720px;border:0;background:#f5f7fa}
-  @media(max-width:720px){.demo-dashboard-frame{height:calc(100vh - 150px);min-height:560px;margin-top:28px}}
+  .demo-dashboard-frame{display:block;width:100%;max-width:1720px;margin:36px auto 0;min-height:600px;border:0;background:#f4f4f2;overflow:hidden}
+  .demo-dashboard-frame[hidden],.demo-inline-access[hidden]{display:none}
+  .demo-inline-access{width:min(100% - 38px,720px);margin:36px auto 0;padding:42px 28px;border:1px solid #dedee1;border-radius:14px;background:#f8f8f7;text-align:center}
+  .demo-inline-access h3{margin:0 0 12px;color:#111;font-size:24px}
+  .demo-inline-access p{margin:0 0 22px;color:#60666d;line-height:1.5}
+  .demo-inline-access button{cursor:pointer}
+  @media(max-width:720px){.demo-dashboard-frame{margin-top:28px;min-height:520px}.demo-inline-access{padding:28px 20px}}
+  .footer-demo-cta{display:flex;justify-content:center;width:100%}
+  .footer-demo-cta .video-demo-pill{display:grid;place-items:center;min-width:120px;margin:0 auto;text-align:center;line-height:1}
   .profile-tab{border-radius:999px!important}
   .profile-tab.active{background:#171c26!important;color:#fff!important;border-color:#171c26!important}
   .profile-tab.active .profile-tab-icon{color:#fff!important}
@@ -4555,10 +4562,36 @@ var WebsiteModule = (() => {
       const safe=String(message||'The dashboard could not be loaded.').replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
       frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:28px;background:#f3f6fa;color:#102033;font-family:Inter,system-ui,sans-serif}.notice{max-width:520px;padding:28px;border:1px solid #dfe6ef;border-radius:18px;background:#fff;text-align:center}.notice strong{display:block;margin-bottom:9px;font-size:22px}.notice p{margin:0;color:#637083;line-height:1.55}</style></head><body><section class="notice"><strong>Dashboard unavailable</strong><p>'+safe+'</p></section></body></html>';
     }
+    function fitDemoFrame(frame){
+      if(!frame.matches('.demo-dashboard-frame'))return;
+      frame._demoObserver?.disconnect();
+      if(frame._demoResize)window.removeEventListener('resize',frame._demoResize);
+      const doc=frame.contentDocument;
+      if(!doc?.body)return;
+      doc.documentElement.style.overflow='hidden';
+      doc.body.style.minHeight='0';
+      doc.body.style.overflow='visible';
+      frame.style.minHeight='0';
+      const measure=()=>{
+        if(!frame.isConnected||frame.hidden)return;
+        const height=Math.max(520,doc.body.scrollHeight,doc.documentElement.scrollHeight);
+        if(Math.abs(frame.offsetHeight-height)>2)frame.style.height=height+'px';
+      };
+      frame._demoResize=measure;
+      window.addEventListener('resize',measure);
+      if(window.ResizeObserver){
+        frame._demoObserver=new ResizeObserver(()=>requestAnimationFrame(measure));
+        frame._demoObserver.observe(doc.body);
+        frame._demoObserver.observe(doc.documentElement);
+      }
+      requestAnimationFrame(measure);
+      doc.fonts?.ready.then(measure).catch(()=>{});
+    }
     function bindDashboardFrame(frame){
       const doc=frame.contentDocument;
       if(!doc||doc.documentElement.dataset.fiseBound==='true')return;
       doc.documentElement.dataset.fiseBound='true';
+      fitDemoFrame(frame);
       doc.addEventListener('submit',(event)=>{
         const form=event.target.closest('form');
         if(!form)return;
@@ -4613,8 +4646,10 @@ var WebsiteModule = (() => {
         if(finalUrl.pathname==='/login'||response.status===401){
           authenticated=false;
           if(demoLock)demoLock.hidden=false;
+          if(demoFrame)demoFrame.hidden=true;
           closeProfile();
           openAccount();
+          refreshAuthStatus();
           return;
         }
         if(!response.ok)throw new Error('Fise returned error '+response.status+'. Please refresh and try again.');
@@ -4716,7 +4751,9 @@ var WebsiteModule = (() => {
       const button=document.getElementById('profile-plan-save');
       const message=document.getElementById('profile-plan-message');
       if(!select||!button||!message)return;
+      const requestedPlan=select.value;
       button.disabled=true;
+      select.disabled=true;
       message.classList.remove('error');
       message.textContent='Applying test plan…';
       try{
@@ -4724,7 +4761,7 @@ var WebsiteModule = (() => {
           method:'POST',
           credentials:'same-origin',
           headers:{'content-type':'application/json'},
-          body:JSON.stringify({plan:select.value})
+          body:JSON.stringify({plan:requestedPlan})
         });
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||'Could not change the testing plan');
@@ -4738,12 +4775,16 @@ var WebsiteModule = (() => {
         profileText('profile-billing-state-summary','Testing active');
         profileText('profile-plan-summary-line',savedPlanLabel+' · Active');
         profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
-        message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||select.value)+'. No payment was charged.';
+        message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||requestedPlan)+'. No payment was charged.';
+        document.querySelectorAll('.profile-dashboard-frame,[data-dashboard-frame="demo"]').forEach((frame)=>{
+          if(frame.dataset.dashboardLoaded==='true')loadDashboardFrame(frame,frame.dataset.currentUrl||'/dashboard?embed=1');
+        });
       }catch(error){
         message.classList.add('error');
         message.textContent=error.message||'Could not change the testing plan.';
       }finally{
         button.disabled=false;
+        select.disabled=false;
       }
     });
     document.addEventListener('keydown',(event)=>{if(event.key==='Escape'){closeAccount();closeProfile()}});
@@ -4762,7 +4803,7 @@ var WebsiteModule = (() => {
             if(account){account.textContent='My profile';account.href='#profile';account.dataset.authenticated='true'}
             demoLink?.classList.remove('requires-signin');
             if(demoLock)demoLock.hidden=true;
-            if(demoFrame&&demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame);
+            if(demoFrame){demoFrame.hidden=false;if(demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame)}
             if(status.credentials_required){
               closeProfile();
               showAccountView('setup');
@@ -4777,6 +4818,7 @@ var WebsiteModule = (() => {
           }else{
             demoLink?.classList.add('requires-signin');
             if(demoLock)demoLock.hidden=false;
+            if(demoFrame)demoFrame.hidden=true;
             if(location.pathname==='/profile'){location.replace('/login');return}
             if(params.get('sent')==='1'){
               document.getElementById('account-sent')?.classList.add('show');
@@ -4819,7 +4861,7 @@ var WebsiteModule = (() => {
     return referenceShell(
       "Live demo | Fise AI",
       "Try the Fise AI platform yourself. Sign in to open the live assistant dashboard and see how a Fise AI chatbot works.",
-      html2`<main class="demo-page"><section class="demo-section" id="demo"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Live demo</div><h2>Try the Fise AI platform</h2><p>Sign in to open the assistant dashboard right here, without leaving the page.</p></div></div><iframe class="demo-dashboard-frame" src="/login?embed=1" title="Fise AI platform demo" loading="lazy"></iframe></section></main>`,
+      html2`<main class="demo-page"><section class="demo-section" id="demo"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Live demo</div><h2>Try the Fise AI platform</h2><p>Sign in to open the assistant dashboard right here, without leaving the page.</p></div></div><div class="demo-inline-access" id="demo-lock"><h3>Sign in to access the demo</h3><p>Use your Fise AI account to try the working chatbot dashboard.</p><button class="reference-button dark" id="demo-signin" type="button">Sign in</button></div><iframe class="demo-dashboard-frame" src="about:blank" data-dashboard-frame="demo" title="Fise AI platform demo" loading="eager" scrolling="no" hidden></iframe></section></main>`,
       c
     );
   }
@@ -6802,10 +6844,13 @@ var sharedStyles = html`
   .dashboard-account-tab.active{background:#171c26!important;color:#fff!important;border-color:#171c26!important}
   .dashboard-account-tab.active .dashboard-account-tab-icon{color:#fff!important}
   .dashboard-account-tab.active::before{display:none}
-  .dashboard-account-foot{margin-top:auto;display:flex;flex-direction:column;gap:14px}
-  .dashboard-account-signout button{display:flex;width:100%;align-items:center;gap:10px;min-height:44px;padding:0 13px;border:1px solid var(--border-strong,#dededb);border-radius:10px;color:#111;background:#fff;font-size:13px;font-weight:700;cursor:pointer}
-  .dashboard-account-signout button:hover{background:#f2f2f3}
-  .dashboard-account-signout button svg{width:17px;height:17px;flex:0 0 auto}
+  .dashboard-account-foot{margin-top:14px;display:flex;flex:1;flex-direction:column;gap:14px}
+  .dashboard-account-signout{margin-top:0}
+  .dashboard-account-signout button{display:flex;width:100%;align-items:center;gap:10px;min-height:44px;padding:0 13px;border:1px solid transparent;border-radius:999px;color:#2b2e32;background:transparent;font-size:16px;font-weight:700;text-align:left;cursor:pointer}
+  .dashboard-account-signout button:hover{border-color:#dddde0;background:#ededee}
+  .dashboard-account-signout button:focus-visible{outline:2px solid #171c26;outline-offset:2px}
+  .dashboard-account-signout button svg{width:18px;height:18px;flex:0 0 18px}
+  @media(max-width:720px){.dashboard-account-layout{grid-template-columns:1fr!important}.dashboard-account-side{position:relative;height:auto;min-height:0;padding:18px}.dashboard-account-foot{flex:0}.dashboard-workspace-state{margin-top:14px}}
 `;
 function escapeHtml(value = "") {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -6832,8 +6877,8 @@ function dashboardAccountSidebar() {
       ${renderAccountNav({ activeKey: "chatbot", tabClass: "dashboard-account-tab", iconClass: "dashboard-account-tab-icon", linkMode: true })}
     </nav>
     <div class="dashboard-account-foot">
-      <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
       <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
+      <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
     </div>
   </aside>`;
 }
@@ -7791,27 +7836,31 @@ async function changeTestingPlan(request, env) {
   const allowedPlans = /* @__PURE__ */ new Set(["free", "essential", "grow", "enterprise"]);
   if (!allowedPlans.has(plan))
     return json({ error: "Choose a valid testing plan" }, 400);
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  const existing = await env.DB.prepare(
-    "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1"
-  ).bind(user.id).first();
-  if (existing?.id) {
-    await env.DB.prepare(
-      "UPDATE subscriptions SET plan_code=?,status='active',provider='testing',updated_at=? WHERE id=?"
-    ).bind(plan, now, existing.id).run();
-  } else {
-    await env.DB.prepare(
-      "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'testing',?,'active',?,?)"
-    ).bind(crypto.randomUUID(), user.id, plan, now, now).run();
-  }
-  return json({
-    subscription: {
-      plan_code: plan,
-      status: "active",
-      provider: "testing",
-      updated_at: now
+  try {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const existing = await env.DB.prepare(
+      "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC,id DESC LIMIT 1"
+    ).bind(user.id).first();
+    const subscriptionId = existing?.id || crypto.randomUUID();
+    if (existing?.id) {
+      await env.DB.prepare(
+        "UPDATE subscriptions SET plan_code=?,status='active',provider='testing',updated_at=? WHERE id=?"
+      ).bind(plan, now, subscriptionId).run();
+    } else {
+      await env.DB.prepare(
+        "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'testing',?,'active',?,?)"
+      ).bind(subscriptionId, user.id, plan, now, now).run();
     }
-  });
+    const saved = await env.DB.prepare(
+      "SELECT plan_code,status,provider,updated_at FROM subscriptions WHERE id = ? AND user_id = ?"
+    ).bind(subscriptionId, user.id).first();
+    if (!saved || saved.plan_code !== plan || saved.status !== "active")
+      throw new Error("Testing plan update did not persist");
+    return json({ subscription: saved });
+  } catch (error) {
+    console.error("Could not save testing plan", error);
+    return json({ error: "Your testing plan could not be saved. Please try again." }, 503);
+  }
 }
 __name(changeTestingPlan, "changeTestingPlan");
 async function accountProfile(request, env) {
@@ -7821,7 +7870,7 @@ async function accountProfile(request, env) {
     env.DB.prepare(
       `SELECT plan_code,status,provider,created_at,updated_at
        FROM subscriptions WHERE user_id = ?
-       ORDER BY updated_at DESC LIMIT 1`
+       ORDER BY updated_at DESC,id DESC LIMIT 1`
     ).bind(user.id).first(),
     env.DB.prepare(
       `SELECT id,name,business_name,status,model
@@ -7872,12 +7921,12 @@ async function showDashboard(request, env) {
         (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
         (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
         (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
-      FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
+      FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
       WHERE c.user_id = ? ORDER BY c.created_at DESC`
     ).bind(monthStartIso(), user.id).all();
   } catch (error) {
     console.error("Dashboard detail query failed; using safe fallback", error);
-    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
+    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
   }
   const url = requestedUrl;
   let message = "";
@@ -8033,7 +8082,7 @@ async function ownedChatbot(env, userId, chatbotId) {
       COALESCE(s.status,'inactive') AS subscription_status
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
-    LEFT JOIN subscriptions s ON s.user_id=c.user_id
+    LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
     WHERE c.id=? AND c.user_id=? LIMIT 1
   `
   ).bind(chatbotId, userId).first();
