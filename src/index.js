@@ -1984,8 +1984,8 @@ Date: ${lead.created_at}`
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "Could not send message");
         conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); clearAttachment();
-        completeAssistant(waiting, data.reply, config.helpful_pages_enabled ? (data.sources || []) : []);
-        if (data.show_lead_form && config.lead_capture) showLeadForm(false);
+        await animateAssistant(waiting, data.reply, config.helpful_pages_enabled ? (data.sources || []) : []);
+        if (waiting.isConnected && data.show_lead_form && config.lead_capture) showLeadForm(false);
       } catch (error) { completeAssistant(waiting, error.message || "Please try again.", []); }
       finally { send.disabled = false; input.focus(); }
     }
@@ -2067,6 +2067,39 @@ Date: ${lead.created_at}`
 
     function updateStreamingAssistant(row, text) {
       const bubble = row.querySelector(".bubble"); bubble.className = "bubble"; bubble.textContent = text;
+    }
+
+    async function animateAssistant(row, text, sources) {
+      const plain = String(text || "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1");
+      const chars = Array.from(plain);
+      if (!chars.length || document.hidden || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        if (row.isConnected) completeAssistant(row, text, sources);
+        return;
+      }
+      const bubble = row.querySelector(".bubble");
+      bubble.className = "bubble";
+      bubble.setAttribute("aria-live", "off");
+      const duration = Math.min(3800, Math.max(650, chars.length * 24));
+      await new Promise((resolve) => {
+        const start = performance.now();
+        let frameId;
+        let shown = 0;
+        const finish = () => { cancelAnimationFrame(frameId); document.removeEventListener("visibilitychange", onVisibility); resolve(); };
+        const onVisibility = () => { if (document.hidden) finish(); };
+        document.addEventListener("visibilitychange", onVisibility);
+        const frame = (now) => {
+          if (!row.isConnected) { finish(); return; }
+          const count = Math.min(chars.length, Math.max(1, Math.ceil((now - start) * chars.length / duration)));
+          if (count !== shown) {
+            bubble.textContent = chars.slice(0, count).join("");
+            shown = count;
+            if (messages.scrollHeight - messages.scrollTop - messages.clientHeight < 100) messages.scrollTop = messages.scrollHeight;
+          }
+          if (count === chars.length) finish(); else frameId = requestAnimationFrame(frame);
+        };
+        frameId = requestAnimationFrame(frame);
+      });
+      if (row.isConnected) { bubble.removeAttribute("aria-live"); completeAssistant(row, text, sources); }
     }
 
     function add(role, text, sources = [], autoScroll = true) {
@@ -2516,8 +2549,8 @@ Date: ${lead.created_at}`
           conversation = data.conversation_id;
           localStorage.setItem(storageKey, JSON.stringify({ conversation }));
           clearAttachment();
-          completeAssistant(waiting, data.reply, config.helpful_pages_enabled ? data.sources || [] : []);
-          if (data.show_lead_form && config.lead_capture) showLeadForm(false);
+          await animateAssistant(waiting, data.reply, config.helpful_pages_enabled ? data.sources || [] : []);
+          if (waiting.isConnected && data.show_lead_form && config.lead_capture) showLeadForm(false);
         } catch (error) {
           completeAssistant(waiting, error.message || "Please try again.", []);
         } finally {
@@ -2663,6 +2696,41 @@ Date: ${lead.created_at}`
         });
       }
       __name(completeAssistant, "completeAssistant");
+      async function animateAssistant(row, text, sources) {
+        const interval = responseTimers.get(row);
+        if (interval) { clearInterval(interval); responseTimers.delete(row); }
+        const plain = String(text || "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1");
+        const chars = Array.from(plain);
+        if (!chars.length || document.hidden || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+          if (row.isConnected) completeAssistant(row, text, sources);
+          return;
+        }
+        const bubble = row.querySelector(".bubble");
+        bubble.className = "bubble";
+        bubble.setAttribute("aria-live", "off");
+        const duration = Math.min(3800, Math.max(650, chars.length * 24));
+        await new Promise((resolve) => {
+          const start = performance.now();
+          let frameId;
+          let shown = 0;
+          const finish = () => { cancelAnimationFrame(frameId); document.removeEventListener("visibilitychange", onVisibility); resolve(); };
+          const onVisibility = () => { if (document.hidden) finish(); };
+          document.addEventListener("visibilitychange", onVisibility);
+          const frame = (now) => {
+            if (!row.isConnected) { finish(); return; }
+            const count = Math.min(chars.length, Math.max(1, Math.ceil((now - start) * chars.length / duration)));
+            if (count !== shown) {
+              bubble.textContent = chars.slice(0, count).join("");
+              shown = count;
+              if (messages.scrollHeight - messages.scrollTop - messages.clientHeight < 100) messages.scrollTop = messages.scrollHeight;
+            }
+            if (count === chars.length) finish(); else frameId = requestAnimationFrame(frame);
+          };
+          frameId = requestAnimationFrame(frame);
+        });
+        if (row.isConnected) { bubble.removeAttribute("aria-live"); completeAssistant(row, text, sources); }
+      }
+      __name(animateAssistant, "animateAssistant");
       function add(role, text, sources = [], autoScroll = true) {
         const row = document.createElement("div"), bubble = document.createElement("div");
         row.className = "row " + role;
