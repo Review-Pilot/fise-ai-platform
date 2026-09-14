@@ -7838,17 +7838,10 @@ async function completeChatbotDeletion(request, env) {
   );
 }
 __name(completeChatbotDeletion, "completeChatbotDeletion");
-var testingPlanSchemaPromise;
 async function ensureTestingPlanSchema(env) {
-  if (!testingPlanSchemaPromise) {
-    testingPlanSchemaPromise = env.DB.prepare(
-      "CREATE TABLE IF NOT EXISTS testing_plan_overrides (user_id TEXT PRIMARY KEY,plan_code TEXT NOT NULL,updated_at TEXT NOT NULL)"
-    ).run().catch((error) => {
-      testingPlanSchemaPromise = null;
-      throw error;
-    });
-  }
-  await testingPlanSchemaPromise;
+  await env.DB.prepare(
+    "CREATE TABLE IF NOT EXISTS testing_plan_overrides (user_id TEXT PRIMARY KEY,plan_code TEXT NOT NULL,updated_at TEXT NOT NULL)"
+  ).run();
 }
 __name(ensureTestingPlanSchema, "ensureTestingPlanSchema");
 async function changeTestingPlan(request, env) {
