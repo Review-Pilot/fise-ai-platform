@@ -73,3 +73,71 @@ test('profile route is private and renders only the account interface', async ()
     assert.doesNotThrow(() => new Script(javascript));
   }
 });
+
+test('an older dashboard failure cannot replace a newer navigation', async () => {
+  const { env } = environment();
+  const page = await worker.fetch(new Request(origin + '/profile', {
+    headers: { cookie: 'fise_session=test-session' },
+  }), env);
+  const html = await page.text();
+  const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
+  const match = script.match(/    async function loadDashboardFrame\(frame,requestUrl='\/dashboard\?embed=1',requestOptions=\{\}\)\{[\s\S]*?\n    \}\n    function renderChatbots/);
+  assert.ok(match, 'dashboard navigation handler is present');
+  const handler = match[0].replace(/\n    function renderChatbots[\s\S]*$/, '');
+  let rejectOld;
+  let rejectNew;
+  const pending = [
+    new Promise((_, reject) => { rejectOld = reject; }),
+    new Promise((_, reject) => { rejectNew = reject; }),
+  ];
+  let requestCount = 0;
+  const navigate = new Function(
+    'fetch', 'dashboardFrameError', 'location', 'demoLock',
+    'closeProfile', 'openAccount', 'bindDashboardFrame',
+    handler + '\nreturn loadDashboardFrame;',
+  )(
+    () => pending[requestCount++],
+    (frame, message) => { frame.srcdoc = 'ERROR: ' + message; },
+    { href: origin }, null, () => {}, () => {}, () => {},
+  );
+  const frame = {
+    dataset: {},
+    setAttribute() {},
+    removeAttribute() {},
+  };
+  const oldNavigation = navigate(frame, '/dashboard?embed=1');
+  const newNavigation = navigate(frame, '/dashboard/chatbots/new/settings?embed=1');
+  rejectOld(new Error('old request failed'));
+  await oldNavigation;
+  assert.equal(frame.srcdoc, undefined, 'the older failure did not replace the newer screen');
+  rejectNew(new Error('new request failed'));
+  await newNavigation;
+  assert.equal(frame.srcdoc, 'ERROR: new request failed');
+});
+
+test('website menu retains its links if configuration fails and uses direct destinations', async () => {
+  const { env } = environment();
+  const response = await worker.fetch(new Request(origin + '/website-frame.js'), env);
+  assert.equal(response.status, 200);
+  const javascript = await response.text();
+  const run = new Function('document', 'fetch', javascript);
+  const nav = { innerHTML: '', style: { visibility: 'hidden' } };
+  const document = {
+    getElementById(id) { return id === 'fise-global-nav' ? nav : null; },
+    createElement() { return { set textContent(value) { this.innerHTML = value; }, innerHTML: '' }; },
+    querySelectorAll() { return []; },
+    documentElement: { style: { setProperty() {} } },
+  };
+  run(document, async () => ({ ok: false, json: async () => ({}) }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nav.style.visibility, 'visible', 'the existing menu stays usable');
+
+  nav.style.visibility = 'hidden';
+  run(document, async () => ({ ok: true, json: async () => ({}) }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nav.style.visibility, 'visible');
+  for (const path of ['/#features', '/#pricing', '/blog']) {
+    assert.ok(nav.innerHTML.includes('href="' + path + '"'), path);
+  }
+  assert.doesNotMatch(nav.innerHTML, /href="\/(?:ai-chatbots|pricing|resources)"/);
+});
