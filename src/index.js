@@ -4124,8 +4124,18 @@ var WebsiteModule = (() => {
   .profile-tab.active{background:#171c26!important;color:#fff!important;border-color:#171c26!important}
   .profile-tab.active .profile-tab-icon{color:#fff!important}
   .profile-signout{margin-top:14px}
-  .profile-signout button{display:flex!important;align-items:center;gap:10px;justify-content:flex-start!important}
-  .profile-signout button svg{width:17px;height:17px;flex:0 0 auto}
+  .profile-signout button{display:flex!important;width:100%;min-height:43px;padding:0 13px!important;align-items:center;justify-content:flex-start!important;gap:12px;border:1px solid transparent!important;border-radius:999px!important;color:#111!important;background:transparent!important;font-size:16px;font-weight:700;text-align:left}
+  .profile-signout button:hover{border-color:#dddde0!important;background:#ededee!important;transform:translateX(2px)}
+  .profile-signout button:focus-visible{outline:2px solid #171c26;outline-offset:2px}
+  .profile-signout button svg{width:18px;height:18px;flex:0 0 18px}
+  .profile-panel[data-profile-panel="subscription"] .profile-detail a{color:#111;text-decoration:underline;text-decoration-color:#a9adb2;text-underline-offset:3px}
+  .profile-panel[data-profile-panel="subscription"] .profile-detail a:hover{color:#000;text-decoration-color:#111}
+  .profile-panel[data-profile-panel="subscription"] .profile-plan-form select{border-color:#c9ccd0;color:#111;background:#fff}
+  .profile-panel[data-profile-panel="subscription"] .profile-plan-form select:focus{border-color:#73777d;box-shadow:0 0 0 3px rgba(17,17,17,.09);outline:none}
+  .profile-panel[data-profile-panel="subscription"] .profile-plan-button{border-color:#171c26;color:#fff;background:#171c26}
+  .profile-panel[data-profile-panel="subscription"] .profile-plan-button:hover{border-color:#000;background:#000}
+  .profile-panel[data-profile-panel="subscription"] .profile-testing-title>span{color:#34383d;background:#f1f2f3}
+  .profile-panel[data-profile-panel="subscription"] .profile-subscription-summary{border-color:#d7d9dc;color:#111;background:#eceeef}
   .help-reference{padding:100px 0 150px;background:var(--soft)}
   .help-intro{max-width:720px;margin:0 0 56px}
   .help-intro h1{margin:16px 0 18px;font-size:clamp(38px,4vw,52px);letter-spacing:-.03em}
@@ -4765,16 +4775,16 @@ var WebsiteModule = (() => {
         });
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||'Could not change the testing plan');
-        profileText('profile-plan',titleCase(data.subscription?.plan_code||select.value));
+        profileText('profile-plan',titleCase(data.subscription?.plan_code||requestedPlan));
         profileText('profile-subscription-status',titleCase(data.subscription?.status||'active'));
         const statusNode=document.getElementById('profile-subscription-status');
         statusNode?.classList.remove('none','inactive');
         statusNode?.classList.add('active');
-        const savedPlanLabel=titleCase(data.subscription?.plan_code||select.value);
+        const savedPlanLabel=titleCase(data.subscription?.plan_code||requestedPlan);
         profileText('profile-plan-summary',savedPlanLabel);
         profileText('profile-billing-state-summary','Testing active');
         profileText('profile-plan-summary-line',savedPlanLabel+' · Active');
-        profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
+        profileText('profile-provider',titleCase(data.subscription?.provider||'manual'));
         message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||requestedPlan)+'. No payment was charged.';
         document.querySelectorAll('.profile-dashboard-frame,[data-dashboard-frame="demo"]').forEach((frame)=>{
           if(frame.dataset.dashboardLoaded==='true')loadDashboardFrame(frame,frame.dataset.currentUrl||'/dashboard?embed=1');
@@ -7844,11 +7854,11 @@ async function changeTestingPlan(request, env) {
     const subscriptionId = existing?.id || crypto.randomUUID();
     if (existing?.id) {
       await env.DB.prepare(
-        "UPDATE subscriptions SET plan_code=?,status='active',provider='testing',updated_at=? WHERE id=?"
+        "UPDATE subscriptions SET plan_code=?,status='active',updated_at=? WHERE id=?"
       ).bind(plan, now, subscriptionId).run();
     } else {
       await env.DB.prepare(
-        "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'testing',?,'active',?,?)"
+        "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'manual',?,'active',?,?)"
       ).bind(subscriptionId, user.id, plan, now, now).run();
     }
     const saved = await env.DB.prepare(
