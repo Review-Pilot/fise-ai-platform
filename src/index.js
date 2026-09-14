@@ -917,6 +917,11 @@ var PLAN_CONVERSATION_LIMITS = Object.freeze({
   enterprise: 5e3
 });
 var CONVERSATION_MESSAGE_GROUP_SIZE = 5;
+function monthStartIso() {
+  const date = /* @__PURE__ */ new Date();
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).toISOString();
+}
+__name(monthStartIso, "monthStartIso");
 function normalizedPlanCode(value) {
   const plan = String(value || "free").trim().toLowerCase();
   return plan === "starter" || plan === "none" ? "free" : plan;
@@ -7935,7 +7940,11 @@ async function showDashboard(request, env) {
     return redirect(
       embeddedRequest ? "/login?embed=1" : "/login"
     );
-  await ensureTestingPlanSchema(env);
+  try {
+    await ensureTestingPlanSchema(env);
+  } catch (error) {
+    console.error("Testing plan schema check failed; continuing without it", error);
+  }
   let result;
   try {
     result = await env.DB.prepare(
@@ -7956,7 +7965,12 @@ async function showDashboard(request, env) {
     ).bind(monthStartIso(), user.id).all();
   } catch (error) {
     console.error("Dashboard detail query failed; using safe fallback", error);
-    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
+    try {
+      result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
+    } catch (fallbackError) {
+      console.error("Dashboard fallback query also failed; showing an empty dashboard", fallbackError);
+      result = { results: [] };
+    }
   }
   const url = requestedUrl;
   let message = "";
@@ -8842,10 +8856,7 @@ async function logout(request, env) {
   return redirect("/", { "set-cookie": cookie });
 }
 __name(logout, "logout");
-var index_default = {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    try {
+async function routeFiseRequest(request, env, url) {
       if (url.pathname === "/api/health" && request.method === "GET") {
         try {
           await env.DB.prepare("SELECT 1 AS ok").first();
@@ -9112,6 +9123,13 @@ var index_default = {
       if (url.pathname === "/logout" && request.method === "POST")
         return logout(request, env);
       return json({ error: "Not found" }, 404);
+}
+__name(routeFiseRequest, "routeFiseRequest");
+var index_default = {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    try {
+      return await routeFiseRequest(request, env, url);
     } catch (error) {
       console.error("Unhandled request error", error);
       return htmlResponse(
