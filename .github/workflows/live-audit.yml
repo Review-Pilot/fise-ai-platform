@@ -1,0 +1,37 @@
+name: Fise live public audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-audit.yml'
+      - 'scripts/live-public-scan.mjs'
+      - 'scripts/print-lighthouse-results.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Scan deployed public routes and links
+        run: node scripts/live-public-scan.mjs
+      - name: Measure mobile Lighthouse speed
+        run: npx --yes lighthouse@12 https://fise-ai-platform.seb-slabbert1.workers.dev/ --only-categories=performance --output=json --output-path=./lighthouse-mobile.json --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --quiet
+      - name: Measure desktop Lighthouse speed
+        run: npx --yes lighthouse@12 https://fise-ai-platform.seb-slabbert1.workers.dev/ --preset=desktop --only-categories=performance --output=json --output-path=./lighthouse-desktop.json --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --quiet
+      - name: Print performance results
+        run: node scripts/print-lighthouse-results.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fise-public-lighthouse
+          path: lighthouse-*.json
+          if-no-files-found: ignore
