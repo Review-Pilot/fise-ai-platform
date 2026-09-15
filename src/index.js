@@ -386,13 +386,26 @@ function helpChevron(down) {
   return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 }
 __name(helpChevron, "helpChevron");
+var HELP_MODULE_LINKS = {
+  "getting-started": { label: "Go to your dashboard", href: "/dashboard" },
+  "customising": { label: "Customise your chatbot", href: "/dashboard#chatbot-management" },
+  "knowledge": { label: "Manage your chatbot's knowledge", href: "/dashboard#private-ai-knowledge" },
+  "leads-subscription": { label: "View leads and subscription", href: "/profile?tab=subscription" },
+  "connecting": { label: "Get your embed code", href: "/dashboard#chatbot-management" }
+};
+function renderHelpToc() {
+  return `<ul class="help-toc">${HELP_MODULES.map((mod) => `<li><a href="#${escapeHelpHtml(mod.key)}">${escapeHelpHtml(mod.title)}</a></li>`).join("")}</ul>`;
+}
+__name(renderHelpToc, "renderHelpToc");
 function renderHelpModules() {
   return HELP_MODULES.map((mod, mi) => {
     const topics = mod.topics.map((topic) => {
       const steps = topic.steps.map((s) => `<li>${escapeHelpHtml(s)}</li>`).join("");
       return `<details class="help-topic"><summary><span>${escapeHelpHtml(topic.title)}</span><span class="help-topic-chevron">${helpChevron(false)}</span></summary><div class="help-topic-body">${helpVideoPlaceholder()}<ol>${steps}</ol></div></details>`;
     }).join("");
-    return `<details class="help-module"${mi === 0 ? " open" : ""}><summary><span class="help-module-heading"><span class="help-module-title">${escapeHelpHtml(mod.title)}</span><span class="help-module-summary">${escapeHelpHtml(mod.summary)}</span></span><span class="help-module-meta"><span class="help-module-count">${mod.topics.length} guides</span><span class="help-module-chevron">${helpChevron(true)}</span></span></summary><div class="help-module-body">${topics}</div></details>`;
+    const relatedLink = HELP_MODULE_LINKS[mod.key];
+    const related = relatedLink ? `<a class="help-module-link" href="${escapeHelpHtml(relatedLink.href)}">${escapeHelpHtml(relatedLink.label)} →</a>` : "";
+    return `<details class="help-module" id="${escapeHelpHtml(mod.key)}"${mi === 0 ? " open" : ""}><summary><span class="help-module-heading"><span class="help-module-title">${escapeHelpHtml(mod.title)}</span><span class="help-module-summary">${escapeHelpHtml(mod.summary)}</span></span><span class="help-module-meta"><span class="help-module-count">${mod.topics.length} guides</span><span class="help-module-chevron">${helpChevron(true)}</span></span></summary><div class="help-module-body">${topics}${related}</div></details>`;
   }).join("");
 }
 __name(renderHelpModules, "renderHelpModules");
@@ -1885,7 +1898,12 @@ Date: ${lead.created_at}`
     const mic = root.querySelector(".mic");
     const emojiToggle = root.querySelector(".emoji-toggle");
     const emojiPicker = root.querySelector(".emoji-picker");
-    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    let saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    } catch {
+      saved = {};
+    }
     let conversation = saved.conversation || "";
     let pendingFile = null;
     let recorder = null;
@@ -2234,7 +2252,12 @@ Date: ${lead.created_at}`
       const close = root.querySelector(".close"), historyTrigger = root.querySelector(".history-trigger"), historyList = root.querySelector(".history-list"), historyNew = root.querySelector(".history-new");
       const form = root.querySelector(".composer"), input = root.querySelector(".input"), send = root.querySelector(".send"), messages = root.querySelector(".messages");
       const attach = root.querySelector(".attach"), fileInput = root.querySelector(".file-input"), attachmentBar = root.querySelector(".attachment-bar"), attachmentName = root.querySelector(".attachment-name"), removeFile = root.querySelector(".remove-file"), mic = root.querySelector(".mic");
-      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      let saved = {};
+      try {
+        saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      } catch {
+        saved = {};
+      }
       const introDateStorageKey = storageKey + "-v2-video-intro-date-v2";
       const businessName = String(config.business_name || "Get Found").trim();
       const introMessage = `Hello im ${String(config.name || "Stanz").trim()}, ${businessName}'s AI Assistant. I can help you with any query you might have.`;
@@ -2835,7 +2858,7 @@ Date: ${lead.created_at}`
     return new Response(widgetJavascript(), {
       headers: {
         "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
+        "cache-control": "public, max-age=3600, stale-while-revalidate=600",
         "access-control-allow-origin": "*",
         "x-content-type-options": "nosniff"
       }
@@ -3542,6 +3565,16 @@ var WebsiteModule = (() => {
 .hero-trust svg{color:#68686e!important}
 .step-icon{background:linear-gradient(145deg,#2a2a2e,#000)!important;box-shadow:0 12px 28px rgba(0,0,0,.2)!important}
 .reference-hero h1 span{background:linear-gradient(90deg,var(--pink),var(--accent-blue),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent!important}
+.js-reveal .reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
+.js-reveal .reveal.is-visible{opacity:1;transform:none}
+.js-reveal .reveal .feature-card,.js-reveal .reveal .pricing-card{transition:opacity .5s ease,transform .5s ease,box-shadow .18s ease,border-color .18s ease}
+.js-reveal .reveal:not(.is-visible) .feature-card,.js-reveal .reveal:not(.is-visible) .pricing-card{opacity:0;transform:translateY(18px)}
+.feature-grid .feature-card:nth-child(2){transition-delay:.08s}
+.feature-grid .feature-card:nth-child(3){transition-delay:.16s}
+.pricing-grid .pricing-card:nth-child(2){transition-delay:.06s}
+.pricing-grid .pricing-card:nth-child(3){transition-delay:.12s}
+.pricing-grid .pricing-card:nth-child(4){transition-delay:.18s}
+@media(prefers-reduced-motion:reduce){.js-reveal .reveal,.js-reveal .reveal .feature-card,.js-reveal .reveal .pricing-card{opacity:1!important;transform:none!important;transition:none!important}}
 `;
   const requestedStyles = html2`
   main { display:flex; flex-direction:column; }
@@ -3805,6 +3838,16 @@ var WebsiteModule = (() => {
   .account-standard.hide { display:none; }
   .account-note { margin:14px 0 0; padding:12px 13px; border-radius:10px;
     color:#536174; background:#f5f7fa; font-size:12px; line-height:1.5; }
+  .account-setup-skip { display:block; width:100%; margin:10px 0 0; padding:8px;
+    border:0; border-radius:8px; color:#69778a; background:transparent;
+    cursor:pointer; font-size:12px; font-weight:750; text-align:center;
+    transition:color .16s ease,background .16s ease; }
+  .account-setup-skip:hover,.account-setup-skip:focus-visible { color:#1769e0;
+    background:#f5f7fa; }
+  .profile-set-password { margin-left:10px; padding:0; border:0;
+    background:transparent; color:#1769e0; cursor:pointer; font-size:12px;
+    font-weight:800; text-decoration:underline; transition:color .16s ease; }
+  .profile-set-password:hover,.profile-set-password:focus-visible { color:#0d4ea6; }
   .account-sent { display:none; margin:0 0 18px; padding:13px 14px;
     border:1px solid #a9d9bd; border-radius:11px; color:#167044;
     background:#effaf3; font-size:14px; line-height:1.45; }
@@ -4182,6 +4225,11 @@ var WebsiteModule = (() => {
   .help-video-play{width:36px;height:36px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;color:#fff;background:var(--ink);font-size:11px}
   .help-video-placeholder strong{display:block;font-size:13px;color:#23293a;font-weight:800}
   .help-video-placeholder small{color:#8892a0;font-size:12px}
+  .help-toc{display:flex;flex-wrap:wrap;gap:10px;max-width:820px;margin:0 0 40px;padding:0;list-style:none}
+  .help-toc a{display:inline-flex;align-items:center;padding:10px 18px;border:1px solid #eceef1;border-radius:999px;color:#3c4656;background:#fff;font-size:14px;font-weight:750;text-decoration:none;transition:border-color .18s ease,background .18s ease,color .18s ease}
+  .help-toc a:hover,.help-toc a:focus-visible{border-color:#139fbc;color:#139fbc;background:#f5fdfe}
+  .help-module-link{display:inline-flex;align-items:center;gap:6px;margin:10px 20px 18px;color:#139fbc;font-size:14px;font-weight:800;text-decoration:none}
+  .help-module-link:hover{text-decoration:underline}
   @media(max-width:720px){.help-module>summary{padding:20px 20px}.help-module-meta{gap:10px}.help-module-count{display:none}}
 `;
   const tidioInspiredStyles = html2`
@@ -4383,7 +4431,7 @@ var WebsiteModule = (() => {
   }
   __name(referenceFooter, "referenceFooter");
   function accountModal() {
-    return html2`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field"><label for="register-username">Username</label><input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"></div><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email or username</label><input id="signin-identifier" name="identifier" autocomplete="username" maxlength="254" required placeholder="Email or username"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a one-time link</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a username and password before continuing.</p><form method="post" action="/api/account/credentials"><label for="setup-username">Username</label><input id="setup-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div></div></section></div>`;
+    return html2`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field"><label for="register-username">Username</label><input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"></div><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email or username</label><input id="signin-identifier" name="identifier" autocomplete="username" maxlength="254" required placeholder="Email or username"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a one-time link</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a username and password before continuing.</p><form method="post" action="/api/account/credentials"><label for="setup-username">Username</label><input id="setup-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div><button class="account-setup-skip" type="button" id="account-setup-skip">Remind me later</button></div></section></div>`;
   }
   __name(accountModal, "accountModal");
   function profileDrawer() {
@@ -4402,7 +4450,7 @@ var WebsiteModule = (() => {
         <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><div class="profile-head-actions"><span class="profile-security-badge">Secure account</span><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div></div>
         <section class="profile-panel active" data-profile-panel="account">
           <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div></div>
-          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong></div><span class="profile-password-message show" id="profile-password-message">Your password is set and cannot be changed unless you reset it.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
+          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-set-password" id="profile-set-password" type="button" hidden>Set a password</button></div><span class="profile-password-message show" id="profile-password-message">Your password is set and cannot be changed unless you reset it.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
         </section>
         <section class="profile-panel" data-profile-panel="subscription">
           <div class="profile-panel-heading"><div><h3>Subscription</h3><p class="profile-intro">Your current plan, billing status and testing controls.</p></div></div>
@@ -4491,11 +4539,11 @@ var WebsiteModule = (() => {
   }
   __name(prepareReferenceBody, "prepareReferenceBody");
   function referenceShell(title, description, body, c, bodyClass = "") {
-    return html2(_b || (_b = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="', '"><title>', "</title><style>", "", '</style></head><body class="', '">', "", "", "", "", "<script>", "", "<\/script></body></html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), referenceStyles, requestedStyles, escapeWebsiteHtml(bodyClass), referenceHeader(), body, referenceFooter(), accountModal(), profileDrawer(), referenceJavascript(), requestedJavascript());
+    return html2(_b || (_b = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="', '"><title>', '</title><link rel="stylesheet" href="/reference-styles.css"></head><body class="', '">', "", "", "", "", "<script>", "", "<\/script></body></html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), escapeWebsiteHtml(bodyClass), referenceHeader(), body, referenceFooter(), accountModal(), profileDrawer(), referenceJavascript(), requestedJavascript());
   }
   __name(referenceShell, "referenceShell");
   function referenceProfilePage() {
-    return html2(_c || (_c = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><style>', "", 'body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">', "<script>", "<\/script></body></html>"])), referenceStyles, requestedStyles, profileDrawer(), referenceJavascript());
+    return html2(_c || (_c = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><link rel="stylesheet" href="/reference-styles.css"><style>body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">', "<script>", "<\/script></body></html>"])), profileDrawer(), referenceJavascript());
   }
   __name(referenceProfilePage, "referenceProfilePage");
   function visualOverridesJavascript(c) {
@@ -4514,6 +4562,31 @@ var WebsiteModule = (() => {
     const menu=document.getElementById('video-menu');
     const nav=document.getElementById('video-nav');
     menu?.addEventListener('click',()=>nav?.classList.toggle('open'));
+
+    const revealTargets=[...document.querySelectorAll('.reveal')];
+    const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if(revealTargets.length&&'IntersectionObserver' in window&&!reducedMotion){
+      document.documentElement.classList.add('js-reveal');
+      const revealObserver=new IntersectionObserver((entries)=>{
+        for(const entry of entries){
+          if(entry.isIntersecting){
+            entry.target.classList.add('is-visible');
+            revealObserver.unobserve(entry.target);
+          }
+        }
+      },{rootMargin:'0px 0px -10% 0px',threshold:.1});
+      revealTargets.forEach((target)=>revealObserver.observe(target));
+    }
+
+    function openHelpModuleFromHash(){
+      if(!location.hash)return;
+      try{
+        const target=document.querySelector('.help-module'+location.hash);
+        if(target){target.open=true;setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'start'}),50)}
+      }catch{}
+    }
+    openHelpModuleFromHash();
+    window.addEventListener('hashchange',openHelpModuleFromHash);
 
     const reviews=${JSON.stringify(testimonials)};
     const text=document.getElementById('review-text');
@@ -4707,6 +4780,8 @@ var WebsiteModule = (() => {
       profileText('profile-email',data.account?.email);
       profileText('profile-name',data.account?.username||'Not added yet');
       profileText('profile-password',data.account?.password_set?'••••••••••':'Not set');
+      const setPasswordButton=document.getElementById('profile-set-password');
+      if(setPasswordButton)setPasswordButton.hidden=Boolean(data.account?.password_set);
       profileText('profile-created',data.account?.created_at?new Date(data.account.created_at).toLocaleDateString():'—');
       profileText('profile-plan',data.subscription?.plan_code?titleCase(data.subscription.plan_code):'None');
       const subscriptionStatus=document.getElementById('profile-subscription-status');
@@ -4745,6 +4820,15 @@ var WebsiteModule = (() => {
     document.querySelectorAll('[data-close-account]').forEach((button)=>button.addEventListener('click',closeAccount));
     document.querySelectorAll('[data-close-profile]').forEach((button)=>button.addEventListener('click',closeProfile));
     document.querySelectorAll('[data-account-view]').forEach((button)=>button.addEventListener('click',()=>showAccountView(button.dataset.accountView)));
+    document.getElementById('account-setup-skip')?.addEventListener('click',()=>{
+      try{localStorage.setItem('fise-skip-credential-setup','1')}catch{}
+      closeAccount();
+    });
+    document.getElementById('profile-set-password')?.addEventListener('click',()=>{
+      try{localStorage.removeItem('fise-skip-credential-setup')}catch{}
+      closeProfile();
+      showAccountView('setup');
+    });
     document.querySelectorAll('[data-password-toggle]').forEach((button)=>button.addEventListener('click',()=>{
       const input=document.getElementById(button.dataset.passwordToggle);
       if(!input)return;
@@ -4825,7 +4909,9 @@ var WebsiteModule = (() => {
             demoLink?.classList.remove('requires-signin');
             if(demoLock)demoLock.hidden=true;
             if(demoFrame){demoFrame.hidden=false;if(demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame)}
-            if(status.credentials_required){
+            let skipCredentialSetup=false;
+            try{skipCredentialSetup=localStorage.getItem('fise-skip-credential-setup')==='1'}catch{}
+            if(status.credentials_required&&!skipCredentialSetup){
               closeProfile();
               showAccountView('setup');
             }else{
@@ -4875,7 +4961,7 @@ var WebsiteModule = (() => {
   __name(requestedJavascript, "requestedJavascript");
   function referenceHome(c) {
     const dots = testimonials.map((_, i) => html2`<button class="carousel-dot${i === 0 ? " active" : ""}" type="button" aria-label="Show review ${i + 1}"></button>`).join("");
-    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><div class="hero-pill">${referenceIcon("spark")}Helpful AI website <span class="keep-brand-font">chatbots</span></div><h1>Turn website visitors into customers — <span>automatically.</span></h1><p class="reference-hero-copy">Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.</p><div class="reference-actions"><a class="reference-button dark" href="/demo">Try the demo <span>→</span></a><a class="reference-button" href="/login">Get started <span>→</span></a></div><div class="hero-trust"><span>${referenceIcon("clock")}24/7 availability</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div><div class="assistant-badge"><span class="assistant-icon">${referenceIcon("chat")}</span><span><strong>Live assistant</strong><small>Replies in seconds</small></span></div></div></div></section><section class="customer-stories" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="testimonial-shell"><article class="testimonial-card"><span class="quote-mark">”</span><div class="review-stars">★★★★★</div><blockquote id="review-text">“${escapeWebsiteHtml(testimonials[0][0])}”</blockquote><div class="review-person"><span class="review-avatar" id="review-avatar">${testimonials[0][3]}</span><span><strong id="review-name">${testimonials[0][1]}</strong><span id="review-role">${testimonials[0][2]}</span></span></div></article><div class="carousel-controls"><button class="carousel-arrow" id="review-prev" type="button" aria-label="Previous review">‹</button><span class="carousel-dots">${dots}</span><button class="carousel-arrow" id="review-next" type="button" aria-label="Next review">›</button></div></div></div></section><section class="features-section" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>A practical website assistant</h2><p>Designed to give visitors helpful answers and a clear next step.</p></div><div class="feature-grid"><article class="feature-card"><div class="feature-icon">${referenceIcon("clock")}</div><h3>Useful answers, around the clock</h3><p>Help visitors find answers to common questions whenever they visit your website.</p></article><article class="feature-card"><div class="feature-icon">${referenceIcon("building")}</div><h3>Built around your business</h3><p>Use approved business information and your own brand voice to keep every response relevant.</p></article><article class="feature-card"><div class="feature-icon">${referenceIcon("chats")}</div><h3>Clearer customer conversations</h3><p>Guide visitors to the information, enquiry, or next step that matters most.</p></article></div></div></section><section class="pricing-section" id="pricing"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Pricing</div><h2>Choose the right fit for your business</h2><p>Start simply, then grow as your customer conversations grow.</p></div><div class="pricing-grid"><article class="pricing-card free-plan-card"><h3>Free</h3><p class="price-intro">50 AI conversations per month.</p><p class="video-price">R0<small>/month</small></p><ul class="video-feature-list"><li>50 AI conversations per month</li><li>Customisable dashboard</li><li class="unavailable">Website installation</li></ul><a class="reference-button" href="/login">Start for free <span>→</span></a></article><article class="pricing-card"><h3>Essential</h3><p class="price-intro">250 AI conversations per month.</p><p class="video-price">R500<small>/month</small></p><ul class="video-feature-list"><li>250 AI conversations per month</li><li>Website installation</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article><article class="pricing-card popular"><span class="popular-label">Most popular</span><h3>Grow</h3><p class="price-intro">1,000 AI conversations per month.</p><p class="video-price">R2,000<small>/month</small></p><ul class="video-feature-list"><li>1,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button dark" href="/login">Get started <span>→</span></a></article><article class="pricing-card"><h3>Enterprise</h3><p class="price-intro">5,000 AI conversations per month.</p><p class="video-price">R5,000<small>/month</small></p><ul class="video-feature-list"><li>5,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Advanced lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article></div></div></section><section class="closing-section"><div class="video-container"><div class="closing-card"><h2>Give every visitor a helpful first response</h2><p>See how Fise AI can help your website answer questions, guide customers, and capture better enquiries.</p><div class="closing-actions"><a class="reference-button" href="/login">Get started free <span>→</span></a><a class="reference-button" href="/#features">Explore features</a></div></div></div></section></main>`, c);
+    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><div class="hero-pill">${referenceIcon("spark")}Helpful AI website <span class="keep-brand-font">chatbots</span></div><h1>Turn website visitors into customers — <span>automatically.</span></h1><p class="reference-hero-copy">Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.</p><div class="reference-actions"><a class="reference-button dark" href="/demo">Try the demo <span>→</span></a><a class="reference-button" href="/login">Get started <span>→</span></a></div><div class="hero-trust"><span>${referenceIcon("clock")}24/7 availability</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div><div class="assistant-badge"><span class="assistant-icon">${referenceIcon("chat")}</span><span><strong>Live assistant</strong><small>Replies in seconds</small></span></div></div></div></section><section class="customer-stories reveal" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="testimonial-shell"><article class="testimonial-card"><span class="quote-mark">”</span><div class="review-stars">★★★★★</div><blockquote id="review-text">“${escapeWebsiteHtml(testimonials[0][0])}”</blockquote><div class="review-person"><span class="review-avatar" id="review-avatar">${testimonials[0][3]}</span><span><strong id="review-name">${testimonials[0][1]}</strong><span id="review-role">${testimonials[0][2]}</span></span></div></article><div class="carousel-controls"><button class="carousel-arrow" id="review-prev" type="button" aria-label="Previous review">‹</button><span class="carousel-dots">${dots}</span><button class="carousel-arrow" id="review-next" type="button" aria-label="Next review">›</button></div></div></div></section><section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>A practical website assistant</h2><p>Built to give every visitor a helpful answer and a clear next step.</p></div><div class="feature-grid"><article class="feature-card"><div class="feature-icon">${referenceIcon("clock")}</div><h3>Useful answers, around the clock</h3><p>Visitors get accurate answers to common questions any time they visit — day or night.</p></article><article class="feature-card"><div class="feature-icon">${referenceIcon("building")}</div><h3>Built around your business</h3><p>Every response draws on your approved business information and your own brand voice.</p></article><article class="feature-card"><div class="feature-icon">${referenceIcon("chats")}</div><h3>Clearer customer conversations</h3><p>Visitors get guided straight to the information, enquiry or next step that matters most.</p></article></div></div></section><section class="pricing-section reveal" id="pricing"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Pricing</div><h2>Choose the right fit for your business</h2><p>Start simply, then grow as your customer conversations grow.</p></div><div class="pricing-grid"><article class="pricing-card free-plan-card"><h3>Free</h3><p class="price-intro">50 AI conversations per month.</p><p class="video-price">R0<small>/month</small></p><ul class="video-feature-list"><li>50 AI conversations per month</li><li>Customisable dashboard</li><li class="unavailable">Website installation</li></ul><a class="reference-button" href="/login">Start for free <span>→</span></a></article><article class="pricing-card"><h3>Essential</h3><p class="price-intro">250 AI conversations per month.</p><p class="video-price">R500<small>/month</small></p><ul class="video-feature-list"><li>250 AI conversations per month</li><li>Website installation</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article><article class="pricing-card popular"><span class="popular-label">Most popular</span><h3>Grow</h3><p class="price-intro">1,000 AI conversations per month.</p><p class="video-price">R2,000<small>/month</small></p><ul class="video-feature-list"><li>1,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button dark" href="/login">Get started <span>→</span></a></article><article class="pricing-card"><h3>Enterprise</h3><p class="price-intro">5,000 AI conversations per month.</p><p class="video-price">R5,000<small>/month</small></p><ul class="video-feature-list"><li>5,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Advanced lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article></div></div></section><section class="closing-section reveal"><div class="video-container"><div class="closing-card"><h2>Give every visitor a helpful first response</h2><p>See how Fise AI can help your website answer questions, guide customers, and capture better enquiries.</p><div class="closing-actions"><a class="reference-button" href="/login">Get started free <span>→</span></a><a class="reference-button" href="/#features">Explore features</a></div></div></div></section></main>`, c);
   }
   __name(referenceHome, "referenceHome");
   function referenceDemo(c) {
@@ -4900,7 +4986,7 @@ var WebsiteModule = (() => {
     return referenceShell(
       "Help centre | Fise AI",
       "Step-by-step guides for setting up and customising your Fise AI chatbot.",
-      html2`<main class="help-reference"><div class="video-container"><div class="help-intro"><div class="reference-eyebrow">Fise AI help centre</div><h1>Guides for every part of Fise AI.</h1><p>Click a module to see its topics, then click a topic to open its guide. Need something else? <a href="/contact">Contact the Fise AI team</a>.</p></div><div class="help-modules">${renderHelpModules()}</div></div></main>`,
+      html2`<main class="help-reference"><div class="video-container"><div class="help-intro"><div class="reference-eyebrow">Fise AI help centre</div><h1>Guides for every part of Fise AI.</h1><p>Jump to a topic below, or click a module to see its topics. Need something else? <a href="/contact">Contact the Fise AI team</a>.</p></div>${renderHelpToc()}<div class="help-modules">${renderHelpModules()}</div></div></main>`,
       c
     );
   }
@@ -5194,7 +5280,7 @@ ${message}`,
     );
   }
   __name(websiteFrameJavascript2, "websiteFrameJavascript");
-  return { WEBSITE_DEFAULTS, escapeWebsiteHtml, handlePublicWebsite: handlePublicWebsite2, readWebsiteContent: readWebsiteContent2, saveWebsiteContent, updateWebsiteContent: updateWebsiteContent2, websiteFrameJavascript: websiteFrameJavascript2, submitContactRequest: submitContactRequest2 };
+  return { WEBSITE_DEFAULTS, escapeWebsiteHtml, handlePublicWebsite: handlePublicWebsite2, readWebsiteContent: readWebsiteContent2, saveWebsiteContent, updateWebsiteContent: updateWebsiteContent2, websiteFrameJavascript: websiteFrameJavascript2, submitContactRequest: submitContactRequest2, referenceStyles, requestedStyles };
 })();
 var StudioModule = (() => {
   const { WEBSITE_DEFAULTS, escapeWebsiteHtml: esc, readWebsiteContent: readWebsiteContent2, saveWebsiteContent, handlePublicWebsite: handlePublicWebsite2 } = WebsiteModule;
@@ -6345,7 +6431,7 @@ ${JSON.stringify(finalState)}`,
 })();
 var { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
 var { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript } = ChatModule;
-var { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript, submitContactRequest } = WebsiteModule;
+var { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript, submitContactRequest, referenceStyles, requestedStyles } = WebsiteModule;
 var { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 var html = String.raw;
 async function isFiseStudioAdmin(user, env) {
@@ -6477,6 +6563,10 @@ var sharedStyles = html`
   color:var(--blue); background:#eaf2ff; font-size:21px; } .settings-group[open]
   summary::after { content:"−"; } .settings-group[open] summary {
   border-bottom:1px solid var(--line); } .settings-group-body { padding:20px; }
+  .settings-group { transition:box-shadow .2s ease,border-color .2s ease; }
+  .settings-group summary { transition:background .16s ease; }
+  .settings-group summary:hover { background:rgba(23,105,224,.04); }
+  .settings-group summary::after { transition:background .16s ease,color .16s ease; }
   .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px;
   align-items:start; } .setting-section { padding:22px; border:1px solid
   var(--line); border-radius:17px; background:rgba(255,255,255,.96);
@@ -6865,7 +6955,7 @@ var sharedStyles = html`
   .dashboard-account-tab.active{background:#171c26!important;color:#fff!important;border-color:#171c26!important}
   .dashboard-account-tab.active .dashboard-account-tab-icon{color:#fff!important}
   .dashboard-account-tab.active::before{display:none}
-  .dashboard-account-foot{margin-top:14px;display:flex;flex:1;flex-direction:column;gap:14px}
+  .dashboard-account-foot{margin-top:14px;display:flex;flex:1;flex-direction:column;justify-content:flex-end;gap:14px}
   .dashboard-account-signout{margin-top:0}
   .dashboard-account-signout button{display:flex;width:100%;align-items:center;gap:10px;min-height:44px;padding:0 13px;border:1px solid transparent;border-radius:999px;color:#2b2e32;background:transparent;font-size:16px;font-weight:700;text-align:left;cursor:pointer}
   .dashboard-account-signout button:hover{border-color:#dddde0;background:#ededee}
@@ -6879,12 +6969,12 @@ function escapeHtml(value = "") {
 __name(escapeHtml, "escapeHtml");
 var _d;
 function documentPage(title, body) {
-  return html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <style>\n          ", '\n        </style>\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), sharedStyles, body, (/* @__PURE__ */ new Date()).getFullYear());
+  return html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), body, (/* @__PURE__ */ new Date()).getFullYear());
 }
 __name(documentPage, "documentPage");
 var _e;
 function embeddedDocumentPage(title, body) {
-  return html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <style>\n          ", "\n          body { background:#f3f6fa; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), sharedStyles, body);
+  return html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <link rel=\"stylesheet\" href=\"/site.css\">\n        <style>\n          body { background:#f3f6fa; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), body);
 }
 __name(embeddedDocumentPage, "embeddedDocumentPage");
 function dashboardAccountSidebar() {
@@ -6898,15 +6988,15 @@ function dashboardAccountSidebar() {
       ${renderAccountNav({ activeKey: "chatbot", tabClass: "dashboard-account-tab", iconClass: "dashboard-account-tab-icon", linkMode: true })}
     </nav>
     <div class="dashboard-account-foot">
-      <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
       <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
+      <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
     </div>
   </aside>`;
 }
 __name(dashboardAccountSidebar, "dashboardAccountSidebar");
 var _f;
 function dashboardDocumentPage(title, body) {
-  return html(_f || (_f = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <style>", '</style>\n      </head>\n      <body class="dashboard-account-page">\n        <div class="dashboard-account-layout">\n          ', '\n          <div class="dashboard-account-main">', '</div>\n        </div>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), sharedStyles, dashboardAccountSidebar(), body);
+  return html(_f || (_f = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body class="dashboard-account-page">\n        <div class="dashboard-account-layout">\n          ', '\n          <div class="dashboard-account-main">', '</div>\n        </div>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), dashboardAccountSidebar(), body);
 }
 __name(dashboardDocumentPage, "dashboardDocumentPage");
 function loginPage(message = "", isError = false, embedded = false) {
@@ -7051,7 +7141,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
 
               <div class="dash-management-grid">
                 <section class="dash-private-card" id="private-ai-knowledge">
-                  <div class="dash-private-head"><span class="dash-icon"><svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2V6Z"/></svg></span><span class="dash-connected">${bot.vector_store_id ? "Connected" : "Preparing"}</span></div>
+                  <div class="dash-private-head"><span class="dash-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="15.5" r="1.3"/></svg></span><span class="dash-connected">${bot.vector_store_id ? "Connected" : "Preparing"}</span></div>
                   <h2>Private AI Knowledge</h2>
                   <p>Your secure vector store is connected and ready to supply private context to your chatbot.</p>
                   <a class="dash-secondary-button" href="#website-knowledge">Manage knowledge</a>
@@ -7062,7 +7152,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
                     <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"><span><svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h-1"/><circle cx="13" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span><strong>Customise chatbot</strong><small>Voice, appearance and behaviour</small><b>↗</b></a>
                     <a href="/widget/test?key=${encodeURIComponent(bot.public_key)}"><span><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span><strong>Open live preview</strong><small>Test the current experience</small><b>↗</b></a>
                     <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6 20v-1.5A5.5 5.5 0 0 1 11.5 13h1A5.5 5.5 0 0 1 18 18.5V20"/></svg></span><strong>View captured leads</strong><small>Review your latest enquiries</small><b>↗</b></a>
-                    <a href="#technical-info-${escapeHtml(bot.id)}" data-technical-toggle="technical-info-${escapeHtml(bot.id)}"><span>{ }</span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>⌄</b></a>
+                    <a href="#technical-info-${escapeHtml(bot.id)}" data-technical-toggle="technical-info-${escapeHtml(bot.id)}"><span><svg viewBox="0 0 24 24"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg></span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>⌄</b></a>
                   </div>
                 </section>
               </div>
@@ -8955,7 +9045,25 @@ async function routeFiseRequest(request, env, url) {
         return new Response(websiteFrameJavascript(), {
           headers: {
             "content-type": "application/javascript; charset=utf-8",
-            "cache-control": "no-store",
+            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+            "x-content-type-options": "nosniff"
+          }
+        });
+      }
+      if (url.pathname === "/site.css" && request.method === "GET") {
+        return new Response(sharedStyles, {
+          headers: {
+            "content-type": "text/css; charset=utf-8",
+            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+            "x-content-type-options": "nosniff"
+          }
+        });
+      }
+      if (url.pathname === "/reference-styles.css" && request.method === "GET") {
+        return new Response(referenceStyles + requestedStyles, {
+          headers: {
+            "content-type": "text/css; charset=utf-8",
+            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
             "x-content-type-options": "nosniff"
           }
         });
