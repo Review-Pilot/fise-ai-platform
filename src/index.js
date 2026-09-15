@@ -1007,8 +1007,12 @@ var ChatModule = (() => {
   __name(corsHeaders, "corsHeaders");
   async function botForKey(env, key) {
     if (!key || key.length > 180) return null;
-    await ensureTestingPlanSchema(env);
-    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`).run();
+    try {
+      await ensureTestingPlanSchema(env);
+      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`).run();
+    } catch (error) {
+      console.error("Widget schema check failed; continuing without it", error);
+    }
     return env.DB.prepare(`
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,
            c.model,c.primary_colour,c.greeting,c.instructions,c.allowed_domains_json,c.monthly_message_limit,
@@ -7339,14 +7343,19 @@ async function currentUser(request, env) {
   if (!token) return null;
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1e3);
-  return env.DB.prepare(
+  try {
+    return await env.DB.prepare(
+      `
+      SELECT users.id, users.email, users.name, users.username, users.created_at,
+        CASE WHEN users.password_hash IS NOT NULL AND users.password_hash != '' THEN 1 ELSE 0 END AS password_set
+      FROM sessions JOIN users ON users.id = sessions.user_id
+      WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'
     `
-    SELECT users.id, users.email, users.name, users.username, users.created_at,
-      CASE WHEN users.password_hash IS NOT NULL AND users.password_hash != '' THEN 1 ELSE 0 END AS password_set
-    FROM sessions JOIN users ON users.id = sessions.user_id
-    WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'
-  `
-  ).bind(tokenHash, now).first();
+    ).bind(tokenHash, now).first();
+  } catch (error) {
+    console.error("Session lookup failed; treating request as signed out", error);
+    return null;
+  }
 }
 __name(currentUser, "currentUser");
 async function createUserSession(userId, env, destination) {
@@ -7894,7 +7903,11 @@ __name(changeTestingPlan, "changeTestingPlan");
 async function accountProfile(request, env) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: "Sign in again" }, 401);
-  await ensureTestingPlanSchema(env);
+  try {
+    await ensureTestingPlanSchema(env);
+  } catch (error) {
+    console.error("Testing plan schema check failed; continuing without it", error);
+  }
   const [subscription, chatbotResult, website] = await Promise.all([
     env.DB.prepare(
       `SELECT COALESCE(tpo.plan_code,s.plan_code) AS plan_code,
@@ -8108,7 +8121,11 @@ function planHasLeadCapture(bot) {
 }
 __name(planHasLeadCapture, "planHasLeadCapture");
 async function ownedChatbot(env, userId, chatbotId) {
-  await ensureTestingPlanSchema(env);
+  try {
+    await ensureTestingPlanSchema(env);
+  } catch (error) {
+    console.error("Testing plan schema check failed; continuing without it", error);
+  }
   return env.DB.prepare(
     `
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,
