@@ -7173,7 +7173,14 @@ function cookieValue(request, name) {
   const cookies = request.headers.get("cookie") || "";
   for (const item of cookies.split(";")) {
     const [key, ...parts] = item.trim().split("=");
-    if (key === name) return decodeURIComponent(parts.join("="));
+    if (key === name) {
+      try {
+        return decodeURIComponent(parts.join("="));
+      } catch (error) {
+        console.error("Malformed cookie value; treating as absent", error);
+        return "";
+      }
+    }
   }
   return "";
 }
@@ -7908,15 +7915,14 @@ async function accountProfile(request, env) {
   } catch (error) {
     console.error("Testing plan schema check failed; continuing without it", error);
   }
-  const [subscription, chatbotResult, website] = await Promise.all([
+  const [testingPlan, billingSubscription, chatbotResult, website] = await Promise.all([
     env.DB.prepare(
-      `SELECT COALESCE(tpo.plan_code,s.plan_code) AS plan_code,
-              CASE WHEN tpo.user_id IS NOT NULL THEN 'active' ELSE s.status END AS status,
-              s.provider,s.created_at,COALESCE(tpo.updated_at,s.updated_at) AS updated_at
-       FROM subscriptions s
-       LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=s.user_id
-       WHERE s.user_id = ?
-       ORDER BY s.updated_at DESC,s.id DESC LIMIT 1`
+      `SELECT plan_code,updated_at FROM testing_plan_overrides WHERE user_id = ?`
+    ).bind(user.id).first(),
+    env.DB.prepare(
+      `SELECT plan_code,status,provider,created_at,updated_at
+       FROM subscriptions WHERE user_id = ?
+       ORDER BY updated_at DESC,id DESC LIMIT 1`
     ).bind(user.id).first(),
     env.DB.prepare(
       `SELECT id,name,business_name,status,model
@@ -7924,6 +7930,19 @@ async function accountProfile(request, env) {
     ).bind(user.id).all(),
     readWebsiteContent(env)
   ]);
+  // A testing plan override is stored in its own table, independent of the
+  // subscriptions table. A user who has only ever used the free testing-plan
+  // selector (never a real subscription) has no subscriptions row at all, so
+  // this must not require one to exist before the override can be shown —
+  // that previously made the profile page (and its plan dropdown) silently
+  // fall back to "Free" on every reload even though the override was saved.
+  const subscription = testingPlan || billingSubscription ? {
+    plan_code: testingPlan?.plan_code || billingSubscription?.plan_code || null,
+    status: testingPlan ? "active" : billingSubscription?.status || null,
+    provider: billingSubscription?.provider || null,
+    created_at: billingSubscription?.created_at || null,
+    updated_at: testingPlan?.updated_at || billingSubscription?.updated_at || null
+  } : null;
   const rawSubscriptionStatus = String(subscription?.status || "").toLowerCase();
   const subscriptionWithDisplay = subscription ? {
     ...subscription,
