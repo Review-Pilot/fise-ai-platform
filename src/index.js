@@ -4237,7 +4237,7 @@ var WebsiteModule = (() => {
   .reference-hero h1{font-size:clamp(44px,4vw,68px);line-height:1.06;letter-spacing:-.045em;text-wrap:balance}
   .reference-hero h1 .hero-stat{display:inline-block;padding:.07em .2em .1em;border-radius:.16em;color:#fff!important;background:#050505!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#fff}
   .hero-demo-button{min-width:178px}
-  .hero-demo-button .demo-arrow{display:inline-block;font-size:27px;font-weight:900;line-height:.8;transform:scaleX(1.18);transform-origin:left center}
+  .hero-demo-button .demo-arrow{display:inline-block;margin-left:3px;font-size:29px;font-weight:900;line-height:.8;-webkit-text-stroke:1px currentColor;transform:scaleX(1.22);transform-origin:left center}
   .hero-media-wrap{isolation:isolate}
   .hero-media{position:relative;z-index:1;overflow:hidden}
   .hero-depth-shapes{position:absolute;inset:-1px;z-index:0;pointer-events:none}
