@@ -4235,9 +4235,9 @@ var WebsiteModule = (() => {
   /* Fact-led homepage hero */
   .reference-hero{overflow:hidden}
   .reference-hero-grid{grid-template-columns:1.18fr .82fr;gap:52px}
-  .reference-hero h1{max-width:none;font-size:clamp(44px,4vw,68px);line-height:1.06;letter-spacing:-.045em;text-wrap:balance}
+  .reference-hero h1{max-width:none;font-size:clamp(44px,4vw,68px);line-height:1.12;letter-spacing:-.045em;text-wrap:balance}
   .reference-hero h1 .hero-stat{display:inline-block;padding:.07em .2em .1em;border-radius:.16em;color:#fff!important;background:#050505!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#fff}
-  .reference-hero h1 .hero-line{display:block;white-space:nowrap}
+  .reference-hero h1 .hero-line{display:block;padding-bottom:.1em;white-space:nowrap;color:#050505!important;background:none!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#050505}
   .hero-demo-button{min-width:178px}
   .hero-demo-button .demo-arrow{display:inline-block;margin-left:3px;font-size:29px;font-weight:900;line-height:.8;-webkit-text-stroke:1px currentColor;transform:scaleX(1.22);transform-origin:left center}
   .hero-media-wrap{isolation:isolate}
