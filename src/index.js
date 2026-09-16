@@ -4234,7 +4234,7 @@ var WebsiteModule = (() => {
 
   /* Fact-led homepage hero */
   .reference-hero{overflow:hidden}
-  .reference-hero h1{font-size:clamp(44px,4vw,68px);line-height:1.06;letter-spacing:-.045em;text-wrap:balance}
+  .reference-hero h1{font-size:clamp(32px,3vw,49px);line-height:1.08;letter-spacing:-.04em;text-wrap:balance}
   .reference-hero h1 .hero-stat{display:inline-block;padding:.07em .2em .1em;border-radius:.16em;color:#fff!important;background:#050505!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#fff}
   .hero-demo-button{min-width:178px}
   .hero-demo-button .demo-arrow{display:inline-block;margin-left:3px;font-size:29px;font-weight:900;line-height:.8;-webkit-text-stroke:1px currentColor;transform:scaleX(1.22);transform-origin:left center}
@@ -4248,7 +4248,7 @@ var WebsiteModule = (() => {
   .depth-four{width:104px;height:104px;right:86px;bottom:-52px;background:#626469}
   .assistant-badge{z-index:2}
   @media(max-width:720px){
-    .reference-hero h1{font-size:clamp(39px,11vw,52px)}
+    .reference-hero h1{font-size:clamp(32px,8vw,42px)}
     .hero-demo-button{width:100%}
     .depth-one{width:140px;height:140px;right:28px;top:-48px}
     .depth-two{width:110px;height:110px;right:-38px;top:76px}
@@ -4982,7 +4982,7 @@ var WebsiteModule = (() => {
   }
   __name(referenceJavascript, "referenceJavascript");
   function requestedJavascript() {
-    return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
+    return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-stat">82% of visitors</span> leave your website before purchase due to unanswered questions';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
   function referenceHome(c) {
