@@ -6732,6 +6732,13 @@ var sharedStyles = html`
   .advanced-body .delete-tools{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:18px;padding:16px;border-color:#f0d4d4;background:#fffafa}.advanced-body .delete-tools p{margin:4px 0 0}.advanced-body .delete-tools form{flex:0 0 auto}
   .onboarding-card{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr);gap:38px;padding:34px;border-radius:20px;box-shadow:0 18px 50px rgba(28,52,84,.08)}
   .onboarding-copy .eyebrow{display:inline-flex;align-items:center;min-height:28px;margin-bottom:16px;padding:0 11px;border-radius:8px;color:#fff;background:#050505}.onboarding-copy>p{color:#637083;line-height:1.6}
+  .setup-wizard .setup-steps>div.completed{color:#354256}.setup-wizard .setup-steps>div.completed span{background:#111}
+  .setup-stage-card{padding:26px;border:1px solid #dfe6ee;border-radius:16px;background:#f9fbfd}.setup-stage-card h2{margin-bottom:7px}.setup-stage-card>p{margin-bottom:20px;color:#637083;line-height:1.55}
+  .setup-site-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;padding:14px 16px;border:1px solid #dfe6ee;border-radius:12px;background:#fff}.setup-site-summary small{display:block;margin-bottom:4px;color:#748092}.setup-site-summary strong{overflow-wrap:anywhere}
+  .setup-scan-progress{padding:18px;border:1px solid #dce4ed;border-radius:13px;background:#fff}.setup-scan-progress-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:11px}.setup-scan-progress-head small{display:block;margin-top:4px;color:#637083}.setup-scan-progress .progress{height:10px;overflow:hidden;border-radius:999px;background:#e7ebf0}.setup-scan-progress .progress span{display:block;height:100%;min-width:5%;border-radius:inherit;background:#050505;transition:width .3s ease}.scan-percent{font-weight:900}
+  .setup-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.setup-form-grid .full-field{grid-column:1/-1}.setup-form-grid label{margin:0;color:#3e4c5f;font-size:12px}.setup-form-grid label input,.setup-form-grid label textarea,.setup-form-grid label select{margin-top:7px}.setup-form-grid textarea{min-height:105px}.setup-checks{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;grid-column:1/-1}.setup-checks label{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #dfe6ee;border-radius:11px;background:#fff}.setup-checks input{width:auto;margin:0}
+  .setup-stage-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:20px}.setup-stage-actions .btn{background:#050505}.setup-stage-actions .btn:hover{background:#202020}.setup-error{margin:0 0 14px;padding:11px 13px;border:1px solid #efcaca;border-radius:10px;color:#8f2525;background:#fff5f5;font-size:12px}
+  @media (max-width:700px){.setup-form-grid{grid-template-columns:1fr}.setup-form-grid .full-field{grid-column:auto}.setup-checks{grid-template-columns:1fr;grid-column:auto}.setup-site-summary,.setup-scan-progress-head,.setup-stage-actions{align-items:stretch;flex-direction:column}.setup-stage-actions .btn{width:100%}}
   .setup-steps{display:grid;gap:4px;margin-top:26px}.setup-steps>div{display:grid;grid-template-columns:30px 1fr;column-gap:11px;padding:12px;border-radius:11px;color:#738094}.setup-steps>div.active{color:#102033;background:#eef5ff}.setup-steps span{width:30px;height:30px;display:grid;grid-row:1/3;place-items:center;border-radius:9px;color:#fff;background:#9aa8ba;font-size:12px;font-weight:900}.setup-steps .active span{background:#050505}.setup-steps strong{font-size:13px}.setup-steps small{margin-top:3px;font-size:11px;line-height:1.4}
   .create-bot-form{padding:24px;border:1px solid #e0e6ed;border-radius:16px;background:#f9fbfd}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.create-bot-form label{margin:0;color:#3e4c5f;font-size:12px}.create-bot-form label input,.create-bot-form label textarea{margin-top:7px}.full-field{grid-column:1/-1}.colour-field{grid-column:1/-1}.colour-field input[type="color"]{width:62px;height:44px;padding:5px}.create-bot-form .btn.full{margin-top:18px;background:#050505}.create-bot-form .btn.full:hover{background:#202020}.form-assurance{margin:11px 0 0;color:#748092;text-align:center;font-size:11px}
   @media (max-width:820px) {
@@ -7069,6 +7076,14 @@ function documentPage(title, body) {
   return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
 }
 __name(documentPage, "documentPage");
+function deletionDocumentPage(title, body) {
+  const year = new Date().getFullYear();
+  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>
+    body.deletion-page{min-height:100vh;display:flex;flex-direction:column;background:#f5f7fa}.deletion-page main{flex:1}.deletion-page .shell{background:#fff}.deletion-foot{border-top:1px solid #e1e6ec;background:#fff}.deletion-foot-inner{min-height:92px;display:flex;align-items:center;justify-content:space-between;gap:24px}.deletion-foot-links{display:flex;align-items:center;gap:22px}.deletion-foot a{color:#263449;text-decoration:none;font-weight:700}.deletion-foot small{color:#748092}@media(max-width:700px){.deletion-foot-inner{padding:22px 0;align-items:flex-start;flex-direction:column}.deletion-foot-links{flex-wrap:wrap}}
+  </style></head><body class="deletion-page"><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard">Chatbot</a></div></header>${body}<footer class="deletion-foot"><div class="wrap deletion-foot-inner"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><nav class="deletion-foot-links" aria-label="Footer"><a href="/dashboard">Chatbot</a><a href="/help">Help</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><small>© ${year} Fise AI</small></div></footer></body></html>`;
+  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+}
+__name(deletionDocumentPage, "deletionDocumentPage");
 var _e;
 function embeddedDocumentPage(title, body) {
   const page = html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <link rel=\"stylesheet\" href=\"/site.css\">\n        <style>\n          body { background:#f3f6fa; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), body);
@@ -7183,11 +7198,65 @@ function renderDashboardKnowledge(bot, embedded = false) {
 }
 __name(renderDashboardKnowledge, "renderDashboardKnowledge");
 var _g;
-function dashboardPage(user, chatbots, platformOrigin, message = "", isError = false, embedded = false) {
+function renderSetupWizard(bot, stage, embedded = false) {
+  const activeStep = stage === "customise" ? 3 : 2;
+  const scanStatusValue = bot.scan_status || (bot.status === "scanning" ? "running" : "not_started");
+  const scanActive = ["queued", "discovering", "running", "indexing"].includes(scanStatusValue);
+  const scanFailed = scanStatusValue === "failed";
+  const found = Number(bot.pages_found || 0);
+  const processed = Number(bot.pages_processed || 0);
+  const percent = found ? Math.min(100, Math.round(processed / found * 100)) : scanActive ? 5 : 0;
+  const ui = uiSettings(bot.ui_settings_json);
+  let questions = [];
+  try {
+    const parsed = JSON.parse(bot.popular_questions_json || "[]");
+    if (Array.isArray(parsed)) questions = parsed;
+  } catch {}
+  if (!questions.length && Array.isArray(bot.setup_suggested_questions)) questions = bot.setup_suggested_questions;
+  if (!questions.length) questions = ["What do you offer?", "What are your prices?", "How can I contact you?"];
+  const steps = html`<div class="setup-steps">
+    <div class="${activeStep > 1 ? "completed" : "active"}"><span>1</span><strong>Business details</strong><small>Name your chatbot and add your website.</small></div>
+    <div class="${activeStep === 2 ? "active" : activeStep > 2 ? "completed" : ""}"><span>2</span><strong>Scan website</strong><small>Fise securely prepares up to 100 useful pages.</small></div>
+    <div class="${activeStep === 3 ? "active" : ""}"><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div>
+  </div>`;
+  let stageContent = "";
+  if (activeStep === 2) {
+    const scanAction = embedded ? "/api/scans/start?embed=1&setup=1" : "/api/scans/start?setup=1";
+    const progress = scanActive ? html`<div class="setup-scan-progress" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
+      <div class="setup-scan-progress-head"><div><strong>Scanning your website</strong><small class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</small></div><span class="scan-percent">${percent}%</span></div>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${Math.max(5, percent)}%"></span></div>
+    </div>` : html`${scanFailed && bot.scan_error ? `<p class="setup-error">${escapeHtml(bot.scan_error)}</p>` : ""}<form method="post" action="${scanAction}"><input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}"><button class="btn full" type="submit">${scanFailed ? "Try website scan again" : "Scan website"}</button></form>`;
+    stageContent = html`<div class="setup-stage-card"><h2>Scan your website</h2><p>Fise will securely read your public pages and prepare the knowledge your chatbot needs. This normally takes a few minutes.</p><div class="setup-site-summary"><div><small>Website to scan</small><strong>${escapeHtml(bot.website_url || "")}</strong></div><span>${scanActive ? "Scan in progress" : scanFailed ? "Scan needs attention" : "Ready to scan"}</span></div>${progress}</div>`;
+  } else {
+    const finishAction = `/api/chatbots/${encodeURIComponent(bot.id)}/finish-setup${embedded ? "?embed=1" : ""}`;
+    stageContent = html`<form class="setup-stage-card" method="post" action="${finishAction}">
+      <h2>Customise and launch</h2><p>Choose the essential appearance and conversation settings. You can change any of these later.</p>
+      <div class="setup-form-grid">
+        <label>Opening message<textarea name="greeting" maxlength="500" required>${escapeHtml(bot.greeting || "Hi! How can I help you today?")}</textarea></label>
+        <label>Chatbot guidance <span class="muted">(optional)</span><textarea name="instructions" maxlength="2000" placeholder="Be friendly, concise and helpful.">${escapeHtml(bot.instructions || "")}</textarea></label>
+        <label class="full-field">Popular questions <span class="muted">(one per line, up to four)</span><textarea name="popular_questions" maxlength="800" required>${escapeHtml(questions.slice(0, 4).join("\n"))}</textarea></label>
+        <label>Chatbot version<select name="widget_version"><option value="1" ${selected(ui.widget_version, "1")}>Version 1.1</option><option value="2" ${selected(ui.widget_version, "2")}>Version 2.1</option></select></label>
+        <label>Brand colour<input name="primary_colour" type="color" value="${escapeHtml(bot.primary_colour || "#1769e0")}" required></label>
+        <label>Answer length<select name="answer_length"><option value="short" ${selected(bot.answer_length || "short", "short")}>Short</option><option value="standard" ${selected(bot.answer_length, "standard")}>Medium</option><option value="detailed" ${selected(bot.answer_length, "detailed")}>Long</option></select></label>
+        <label>Tone<select name="formality"><option value="friendly" ${selected(bot.formality || "friendly", "friendly")}>Friendly</option><option value="professional" ${selected(bot.formality, "professional")}>Professional</option><option value="formal" ${selected(bot.formality, "formal")}>Formal</option></select></label>
+        <label>Opening size<select name="default_size"><option value="standard" ${selected(bot.default_size || "standard", "standard")}>Standard</option><option value="large" ${selected(bot.default_size, "large")}>Large</option></select></label>
+        <div class="setup-checks">
+          <label><input type="checkbox" name="allow_files" value="1" ${checked(bot.allow_files)}> Allow attachments</label>
+          <label><input type="checkbox" name="allow_voice" value="1" ${checked(bot.allow_voice)}> Allow voice messages</label>
+          <label><input type="checkbox" name="allow_emoji" value="1" ${checked(ui.allow_emoji)}> Allow emoji picker</label>
+        </div>
+      </div>
+      <div class="setup-stage-actions"><button class="btn" type="submit">Finish setup and open dashboard</button></div>
+    </form>`;
+  }
+  return html`<section class="card onboarding-card setup-wizard"><div class="onboarding-copy"><div class="eyebrow">Quick setup</div><h2>Set up your chatbot</h2><p>Complete all three steps here. Your dashboard will open when the chatbot is ready.</p>${steps}</div>${stageContent}</section>`;
+}
+__name(renderSetupWizard, "renderSetupWizard");
+function dashboardPage(user, chatbots, platformOrigin, message = "", isError = false, embedded = false, setupStage = "") {
   const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}">
         ${escapeHtml(message)}
       </div>` : "";
-  const botList = chatbots.length ? chatbots.map(
+  const botList = chatbots.length && !setupStage ? chatbots.map(
     (bot) => {
       const planCode = normalizedPlanCode(bot.plan_code);
       const conversationLimit = Number(bot.conversation_limit || planConversationLimit(planCode));
@@ -7281,11 +7350,11 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
             </div>`;
     }
   ).join("") : "";
-  const createPanel = chatbots.length ? "" : html`<section class="card onboarding-card">
+  const createPanel = chatbots.length ? setupStage ? renderSetupWizard(chatbots[0], setupStage, embedded) : "" : html`<section class="card onboarding-card">
         <div class="onboarding-copy">
           <div class="eyebrow">Quick setup</div>
           <h2>Create your chatbot</h2>
-          <p>Start with the essentials. You can customise every detail after your website has been scanned.</p>
+          <p>Complete all three steps here. Your dashboard will open when the chatbot is fully set up.</p>
           <div class="setup-steps"><div class="active"><span>1</span><strong>Business details</strong><small>Name your chatbot and add your website.</small></div><div><span>2</span><strong>Scan website</strong><small>Fise securely prepares up to 100 useful pages.</small></div><div><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div></div>
         </div>
         <form class="create-bot-form" method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
@@ -7293,11 +7362,8 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
             <label>Business name<input id="business_name" name="business_name" maxlength="100" required placeholder="Example Company" /></label>
             <label>Chatbot name<input id="name" name="name" maxlength="80" required placeholder="Example Assistant" /></label>
             <label class="full-field">Website URL<input id="website_url" name="website_url" type="url" maxlength="500" required placeholder="https://example.com" /></label>
-            <label class="full-field">Opening greeting<input id="greeting" name="greeting" maxlength="240" value="Hi! How can I help you today?" required /></label>
-            <label class="colour-field">Brand colour<input id="primary_colour" name="primary_colour" type="color" value="#1769e0" required /></label>
-            <label class="full-field">Chatbot guidance <span class="muted">(optional)</span><textarea id="instructions" name="instructions" maxlength="2000" placeholder="Be friendly, concise and helpful."></textarea></label>
           </div>
-          <button class="btn full" type="submit">Create chatbot</button>
+          <button class="btn full" type="submit">Continue to website scan</button>
           <p class="form-assurance">Your website remains unchanged until you install the finished chatbot.</p>
         </form>
       </section>`;
@@ -7491,8 +7557,11 @@ function validPassword(value) {
 __name(validPassword, "validPassword");
 function dashboardReturnUrl(request, values = {}) {
   const params = new URLSearchParams();
-  if (new URL(request.url).searchParams.get("embed") === "1")
+  const requestUrl = new URL(request.url);
+  if (requestUrl.searchParams.get("embed") === "1")
     params.set("embed", "1");
+  if (requestUrl.searchParams.get("setup") === "1")
+    params.set("setup", "scan");
   for (const [key, value] of Object.entries(values)) {
     if (value !== void 0 && value !== null && value !== "")
       params.set(key, String(value));
@@ -7821,7 +7890,7 @@ async function ensureChatbotDeletionSchema(env) {
 __name(ensureChatbotDeletionSchema, "ensureChatbotDeletionSchema");
 function chatbotDeletionMessage(title, message, status = 200) {
   return htmlResponse(
-    documentPage(
+    deletionDocumentPage(
       title,
       '<main class="wrap"><section class="shell"><h1>' + escapeHtml(title) + '</h1><p class="lead">' + escapeHtml(message) + '</p><a class="btn ghost" href="/dashboard">Return to dashboard</a></section></main>'
     ),
@@ -7923,7 +7992,7 @@ async function showChatbotDeletionConfirmation(request, env) {
       400
     );
   const content = '<main class="wrap"><section class="shell"><div class="eyebrow">Final security check</div><h1>Permanently delete ' + escapeHtml(pending.name) + '?</h1><p class="lead">This cannot be undone. The chatbot, knowledge sources, conversations, messages, leads, settings and OpenAI knowledge store will be removed. Your Fise account and subscription will remain.</p><div class="details"><div><small>Account</small><code>' + escapeHtml(pending.email) + "</code></div><div><small>Website</small><code>" + escapeHtml(pending.website_url || "Not set") + '</code></div></div><form method="post" action="/chatbot-deletion/confirm"><input type="hidden" name="token" value="' + escapeHtml(token) + '"><button class="btn full danger" type="submit">Permanently delete chatbot</button></form><p class="fine"><a href="/dashboard">Cancel and return to dashboard</a></p></section></main>';
-  return htmlResponse(documentPage("Confirm chatbot deletion", content));
+  return htmlResponse(deletionDocumentPage("Confirm chatbot deletion", content));
 }
 __name(showChatbotDeletionConfirmation, "showChatbotDeletionConfirmation");
 async function removeChatbotVectorStore(env, vectorStoreId) {
@@ -8174,7 +8243,10 @@ async function showDashboard(request, env) {
   try {
     result = await env.DB.prepare(
       `
-      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
+      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,
+        COALESCE(cs.answer_length,'short') AS answer_length,COALESCE(cs.formality,'friendly') AS formality,
+        COALESCE(cs.popular_questions_json,'[]') AS popular_questions_json,COALESCE(cs.default_size,'standard') AS default_size,
+        COALESCE(cs.allow_files,1) AS allow_files,COALESCE(cs.allow_voice,1) AS allow_voice,COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,
         CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
         (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
          FROM messages m JOIN conversations mc ON mc.id=m.conversation_id
@@ -8184,14 +8256,14 @@ async function showDashboard(request, env) {
         (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
         (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
         (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
-      FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
+      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
       LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
       WHERE c.user_id = ? ORDER BY c.created_at DESC`
     ).bind(monthStartIso(), user.id).all();
   } catch (error) {
     console.error("Dashboard detail query failed; using safe fallback", error);
     try {
-      result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
+      result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,COALESCE(cs.answer_length,'short') AS answer_length,COALESCE(cs.formality,'friendly') AS formality,COALESCE(cs.popular_questions_json,'[]') AS popular_questions_json,COALESCE(cs.default_size,'standard') AS default_size,COALESCE(cs.allow_files,1) AS allow_files,COALESCE(cs.allow_voice,1) AS allow_voice,COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
     } catch (fallbackError) {
       console.error("Dashboard fallback query also failed; showing an empty dashboard", fallbackError);
       result = { results: [] };
@@ -8209,6 +8281,8 @@ async function showDashboard(request, env) {
     message = "Check your email for the secure chatbot deletion link. It expires in 30 minutes.";
   if (url.searchParams.get("deleted") === "1")
     message = "The chatbot and its related data were permanently deleted.";
+  if (url.searchParams.get("onboarding") === "complete")
+    message = "Your chatbot is fully set up and ready to use.";
   if (url.searchParams.get("error")) {
     message = url.searchParams.get("error");
     isError = true;
@@ -8234,13 +8308,45 @@ async function showDashboard(request, env) {
       conversation_limit: planConversationLimit(bot.plan_code)
     };
   }));
+  let setupStage = "";
+  const setupBot = dashboardBots[0];
+  if (setupBot) {
+    let rawUi = {};
+    try {
+      const parsed = JSON.parse(setupBot.ui_settings_json || "{}");
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) rawUi = parsed;
+    } catch {}
+    const requestedSetup = url.searchParams.get("setup") || "";
+    const legacyIncomplete = ["setup", "scanning"].includes(String(setupBot.status || ""));
+    const guidedIncomplete = rawUi.onboarding_complete === false;
+    if (requestedSetup || legacyIncomplete || guidedIncomplete) {
+      const status = setupBot.scan_status || (setupBot.status === "scanning" ? "running" : "not_started");
+      const scanComplete = ["completed", "completed_with_errors"].includes(status) || setupBot.status === "ready";
+      setupStage = requestedSetup === "customise" || scanComplete ? "customise" : "scan";
+      if (setupStage === "customise") {
+        try {
+          const fullBot = await ownedChatbot(env, user.id, setupBot.id);
+          if (fullBot) Object.assign(setupBot, fullBot);
+          let existingQuestions = [];
+          try {
+            const parsedQuestions = JSON.parse(setupBot.popular_questions_json || "[]");
+            if (Array.isArray(parsedQuestions)) existingQuestions = parsedQuestions;
+          } catch {}
+          if (!existingQuestions.length) setupBot.setup_suggested_questions = await tailoredPopularQuestions(env, setupBot);
+        } catch (error) {
+          console.error("Could not prepare final onboarding suggestions", error);
+        }
+      }
+    }
+  }
   const content = dashboardPage(
     user,
     dashboardBots,
     new URL(request.url).origin,
     message,
     isError,
-    embedded
+    embedded,
+    setupStage
   );
   return embedded ? embeddedHtmlResponse(content) : htmlResponse(content);
 }
@@ -8761,6 +8867,47 @@ function googleSheetsWebhook(value) {
   return null;
 }
 __name(googleSheetsWebhook, "googleSheetsWebhook");
+async function finishChatbotSetup(request, env, chatbotId) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  const user = await currentUser(request, env);
+  if (!user) return redirect("/login");
+  const bot = await ownedChatbot(env, user.id, chatbotId);
+  if (!bot) return redirect(dashboardReturnUrl(request, { error: "Chatbot not found.", setup: "customise" }));
+  const form = await request.formData();
+  const greeting = String(form.get("greeting") || "").trim().slice(0, 500);
+  const instructions = String(form.get("instructions") || "").trim().slice(0, 2000);
+  const colour = String(form.get("primary_colour") || "").trim().toLowerCase();
+  const answerLength = ["short", "standard", "detailed"].includes(String(form.get("answer_length"))) ? String(form.get("answer_length")) : "short";
+  const formality = ["friendly", "professional", "formal"].includes(String(form.get("formality"))) ? String(form.get("formality")) : "friendly";
+  const defaultSize = ["standard", "large"].includes(String(form.get("default_size"))) ? String(form.get("default_size")) : "standard";
+  const questions = [...new Set(String(form.get("popular_questions") || "").split(/\r?\n/).map((item) => item.trim().slice(0, 120)).filter(Boolean))].slice(0, 4);
+  if (!greeting || !/^#[0-9a-f]{6}$/i.test(colour) || !questions.length) return redirect(dashboardReturnUrl(request, { error: "Complete the opening message, brand colour and at least one popular question.", setup: "customise" }));
+  const allowFiles = form.get("allow_files") === "1" ? 1 : 0;
+  const allowVoice = form.get("allow_voice") === "1" ? 1 : 0;
+  let storedUi = {};
+  try {
+    const parsed = JSON.parse(bot.ui_settings_json || "{}");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) storedUi = parsed;
+  } catch {}
+  const normalUi = uiSettings(bot.ui_settings_json);
+  const nextUi = { ...storedUi, ...normalUi, widget_version: String(form.get("widget_version")) === "2" ? "2" : "1", allow_emoji: form.get("allow_emoji") === "1", onboarding_complete: true };
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE chatbots SET primary_colour=?,greeting=?,instructions=?,updated_at=? WHERE id=? AND user_id=?").bind(colour, greeting, instructions, now, chatbotId, user.id),
+    env.DB.prepare(`
+      INSERT INTO chatbot_settings
+        (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(chatbot_id) DO UPDATE SET
+        answer_length=excluded.answer_length,formality=excluded.formality,popular_questions_json=excluded.popular_questions_json,
+        default_size=excluded.default_size,allow_files=excluded.allow_files,allow_voice=excluded.allow_voice,
+        ui_settings_json=excluded.ui_settings_json,updated_at=excluded.updated_at
+    `).bind(chatbotId, answerLength, formality, JSON.stringify(questions), defaultSize, allowFiles, allowVoice, Number(bot.lead_capture_enabled || 0), bot.lead_cta_label || "Talk to us", bot.lead_destination_email || "", bot.google_sheets_webhook || "", JSON.stringify(nextUi), now, now),
+    env.DB.prepare("DELETE FROM response_cache WHERE chatbot_id=?").bind(chatbotId)
+  ]);
+  return redirect(dashboardReturnUrl(request, { onboarding: "complete" }));
+}
+__name(finishChatbotSetup, "finishChatbotSetup");
 async function updateChatbotSettings(request, env, chatbotId) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -9057,9 +9204,9 @@ async function createChatbot(request, env) {
   const form = await request.formData();
   const businessName = String(form.get("business_name") || "").trim().slice(0, 100);
   const name = String(form.get("name") || "").trim().slice(0, 80);
-  const greeting = String(form.get("greeting") || "").trim().slice(0, 240);
+  const greeting = String(form.get("greeting") || "Hi! How can I help you today?").trim().slice(0, 240);
   const instructions = String(form.get("instructions") || "").trim().slice(0, 2e3);
-  const colour = String(form.get("primary_colour") || "").trim();
+  const colour = String(form.get("primary_colour") || "#1769e0").trim();
   const websiteInput = String(form.get("website_url") || "").trim().slice(0, 500);
   let website;
   try {
@@ -9116,7 +9263,7 @@ async function createChatbot(request, env) {
       "Talk to us",
       "",
       "",
-      JSON.stringify({ allow_emoji: false }),
+      JSON.stringify({ allow_emoji: false, onboarding_complete: false }),
       nowIso,
       nowIso
     ).run();
@@ -9127,7 +9274,7 @@ async function createChatbot(request, env) {
       dashboardReturnUrl(request, { error: error.message || "The chatbot could not be created." })
     );
   }
-  return redirect(dashboardReturnUrl(request, { created: "1" }));
+  return redirect(dashboardReturnUrl(request, { created: "1", setup: "scan" }));
 }
 __name(createChatbot, "createChatbot");
 async function logout(request, env) {
@@ -9142,6 +9289,28 @@ async function logout(request, env) {
   return redirect("/", { "set-cookie": cookie });
 }
 __name(logout, "logout");
+async function personalisePublicWebsiteForChatbotOwner(request, env, response) {
+  if (!String(response.headers.get("content-type") || "").includes("text/html")) return response;
+  let user;
+  try { user = await currentUser(request, env); } catch { return response; }
+  if (!user) return response;
+  let bot;
+  try { bot = await env.DB.prepare("SELECT id FROM chatbots WHERE user_id=? LIMIT 1").bind(user.id).first(); } catch { return response; }
+  if (!bot) return response;
+  let markup = await response.text();
+  markup = markup
+    .replaceAll('href="/demo">Demo</a>', 'href="/dashboard">Chatbot</a>')
+    .replaceAll('href="/demo">Demo <span', 'href="/dashboard">Chatbot <span')
+    .replaceAll('<div class="reference-eyebrow">Live demo</div>', '<div class="reference-eyebrow">Chatbot</div>')
+    .replaceAll("Live demo | Fise AI", "Chatbot | Fise AI")
+    .replaceAll("Sign in to access the Demo", "Open your Chatbot")
+    .replaceAll('title="Fise AI platform demo"', 'title="Fise AI chatbot"')
+    .replaceAll('href="/demo"', 'href="/dashboard"');
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  return new Response(markup, { status: response.status, statusText: response.statusText, headers });
+}
+__name(personalisePublicWebsiteForChatbotOwner, "personalisePublicWebsiteForChatbotOwner");
 async function routeFiseRequest(request, env, url) {
       if (url.pathname === "/api/health" && request.method === "GET") {
         try {
@@ -9292,7 +9461,8 @@ async function routeFiseRequest(request, env, url) {
       if (url.pathname === "/api/contact" && request.method === "POST")
         return submitContactRequest(request, env);
       const publicWebsiteResponse = await handlePublicWebsite(request, env);
-      if (publicWebsiteResponse) return publicWebsiteResponse;
+      if (publicWebsiteResponse)
+        return personalisePublicWebsiteForChatbotOwner(request, env, publicWebsiteResponse);
       if (url.pathname === "/api/auth/status" && request.method === "GET") {
         const user = await currentUser(request, env);
         return json({
@@ -9373,6 +9543,15 @@ async function routeFiseRequest(request, env, url) {
           request,
           env,
           decodeURIComponent(settingsPageMatch[1])
+        );
+      const finishSetupMatch = url.pathname.match(
+        /^\/api\/chatbots\/([^/]+)\/finish-setup$/
+      );
+      if (finishSetupMatch && request.method === "POST")
+        return finishChatbotSetup(
+          request,
+          env,
+          decodeURIComponent(finishSetupMatch[1])
         );
       const settingsApiMatch = url.pathname.match(
         /^\/api\/chatbots\/([^/]+)\/settings$/
