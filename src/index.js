@@ -4113,22 +4113,24 @@ var WebsiteModule = (() => {
   .why-bars i:nth-child(5){height:100%}
   @media(max-width:1000px){.why-grid{grid-template-columns:1fr}}
   .pricing-grid{align-items:stretch}
-  .pricing-card{border-radius:22px!important;border-color:#ececef!important;padding:38px 34px 34px!important;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease!important;box-shadow:none!important}
-  .pricing-card:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(10,15,26,.07)}
-  .pricing-card.popular{transform:translateY(-14px)}
-  .pricing-card.popular:hover{transform:translateY(-18px)}
-  .pricing-card h3{font-size:22px!important;font-weight:800!important;letter-spacing:-.02em!important}
-  .price-intro{font-size:14.5px!important;min-height:0!important;margin:0 0 30px!important;color:#7a8494!important}
-  .video-price{font-size:38px!important}
+  .pricing-card{position:relative;isolation:isolate;overflow:hidden;border-radius:22px!important;border:1px solid transparent!important;padding:38px 34px 34px!important;transition:transform .25s ease,box-shadow .25s ease!important;box-shadow:0 10px 30px rgba(10,4,20,.25)!important;color:#fff!important;background:linear-gradient(150deg,#0c1220 0%,#171226 42%,#2a1030 72%,#3a1024 100%)!important}
+  .pricing-card::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 70% at 90% 0%,rgba(236,72,153,.3),transparent 55%),radial-gradient(90% 60% at 0% 100%,rgba(59,130,246,.22),transparent 55%),radial-gradient(70% 50% at 50% 30%,rgba(168,85,247,.16),transparent 60%)}
+  .pricing-card:hover{transform:translateY(-10px) scale(1.025);box-shadow:0 26px 54px rgba(10,4,20,.4)!important}
+  .pricing-card.popular{background:linear-gradient(150deg,#0c1220 0%,#171226 42%,#2a1030 72%,#3a1024 100%) padding-box,linear-gradient(135deg,#ec4899,#3b82f6,#a855f7) border-box!important}
+  .pricing-card h3{font-size:22px!important;font-weight:800!important;letter-spacing:-.02em!important;color:#fff!important}
+  .price-intro{font-size:14.5px!important;min-height:0!important;margin:0 0 30px!important;color:rgba(255,255,255,.6)!important}
+  .video-price{font-size:38px!important;color:#fff!important}
+  .video-price small{color:rgba(255,255,255,.55)!important}
   .video-feature-list{gap:16px!important}
-  .video-feature-list li{display:flex!important;align-items:center!important;gap:12px!important;color:#2c3444!important;font-size:14.5px!important;font-weight:600!important}
-  .video-feature-list li:before{content:"✓"!important;flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px!important;font-weight:900;background:#eef6ff;color:#2f6bff}
-  .video-feature-list li.unavailable{padding:10px 12px;margin:-10px -12px 0;border-radius:12px;background:#fdeef1;color:#9a3a52!important}
-  .video-feature-list li.unavailable:before{content:"✕"!important;background:#fbdbe2;color:#c23a58}
-  .pricing-card .reference-button{border-radius:12px!important;font-weight:800!important}
-  .pricing-card .reference-button:not(.dark):hover{border-color:#c9cfd6!important;background:#fafbfc!important}
+  .video-feature-list li{display:flex!important;align-items:center!important;gap:12px!important;color:rgba(255,255,255,.88)!important;font-size:14.5px!important;font-weight:600!important}
+  .video-feature-list li:before{content:"✓"!important;flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px!important;font-weight:900;background:rgba(255,255,255,.14)!important;color:#fff!important}
+  .video-feature-list li.unavailable{padding:10px 12px;margin:-10px -12px 0;border-radius:12px;background:rgba(236,72,153,.14)!important;color:rgba(255,255,255,.65)!important}
+  .video-feature-list li.unavailable:before{content:"✕"!important;background:rgba(236,72,153,.28)!important;color:#ffd7e8!important}
+  .pricing-card .reference-button{border-radius:12px!important;font-weight:800!important;border-color:rgba(255,255,255,.28)!important;color:#fff!important;background:rgba(255,255,255,.07)!important;box-shadow:none!important}
+  .pricing-card .reference-button:not(.dark):hover{border-color:rgba(255,255,255,.5)!important;background:rgba(255,255,255,.14)!important}
+  .pricing-card .reference-button.dark{border-color:transparent!important;color:#0a0f1a!important;background:#fff!important;box-shadow:none!important}
+  .pricing-card .reference-button.dark:hover{background:#f1f1f3!important}
   .popular-label{top:-16px!important;font-size:12.5px!important;letter-spacing:.02em!important;padding:8px 20px!important}
-  @media(max-width:1000px){.pricing-card.popular{transform:none}.pricing-card.popular:hover{transform:translateY(-5px)}}
 `;
   const tidioInspiredStyles = html2`
   :root { --fise-blue:#0566ff; --fise-blue-deep:#004ac5; --fise-ink:#080f1a;
