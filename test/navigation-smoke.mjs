@@ -145,6 +145,8 @@ test('an unexpected dashboard database failure renders a page instead of crashin
   assert.equal(response.status, 200, 'the dashboard still renders instead of the request rejecting');
   const html = await response.text();
   assert.match(html, /Dashboard/);
+  assert.doesNotMatch(html, /<div class="dash-topbar-actions">/);
+  assert.doesNotMatch(html, /Workspace active/);
 });
 
 test('website menu retains its links if configuration fails and uses direct destinations', async () => {
@@ -172,4 +174,53 @@ test('website menu retains its links if configuration fails and uses direct dest
     assert.ok(nav.innerHTML.includes('href="' + path + '"'), path);
   }
   assert.doesNotMatch(nav.innerHTML, /href="\/(?:ai-chatbots|pricing|resources)"/);
+});
+
+function chatbotPageEnvironment() {
+  const bot = {
+    id: 'bot-1', user_id: 'test-user', name: 'Alex', business_name: 'Fise Test',
+    website_url: 'https://example.invalid', status: 'active', public_key: 'public-test',
+    vector_store_id: '', model: 'gpt-5-mini', primary_colour: '#111111',
+    greeting: 'Hello', instructions: '', answer_length: 'short', formality: 'friendly',
+    popular_questions_json: '[]', default_size: 'standard', allow_files: 1,
+    allow_voice: 1, lead_capture_enabled: 1, lead_cta_label: 'Talk to us',
+    lead_destination_email: '', google_sheets_webhook: '',
+    ui_settings_json: '{"widget_version":"1"}', plan_code: 'grow', subscription_status: 'active',
+  };
+  const DB = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async run() { return { success: true }; },
+        async first() {
+          if (sql.includes('FROM sessions JOIN users')) return { id: 'test-user', email: 'test@example.invalid', password_set: 1 };
+          if (sql.includes('FROM chatbots c')) return bot;
+          return null;
+        },
+        async all() {
+          if (sql.includes('FROM leads')) return { results: [] };
+          return { results: [] };
+        },
+      };
+    },
+  };
+  return { DB };
+}
+
+test('customise and leads pages use the landing footer and requested black actions', async () => {
+  const headers = { cookie: 'fise_session=test-session' };
+  const settings = await worker.fetch(new Request(origin + '/dashboard/chatbots/bot-1/settings', { headers }), chatbotPageEnvironment());
+  const settingsHtml = await settings.text();
+  assert.match(settingsHtml, /class="wrap chatbot-settings-page"/);
+  assert.match(settingsHtml, /class="btn settings-save-top"[^>]*form="chatbot-settings-form"/);
+  assert.match(settingsHtml, /class="btn settings-preview-button"/);
+  assert.doesNotMatch(settingsHtml, /class="setting-section full save-bar"/);
+  assert.match(settingsHtml, /<footer class="reference-footer">/);
+  assert.match(settingsHtml, /Built for businesses that care about every conversation\./);
+
+  const leads = await worker.fetch(new Request(origin + '/dashboard/chatbots/bot-1/leads', { headers }), chatbotPageEnvironment());
+  const leadsHtml = await leads.text();
+  assert.match(leadsHtml, /class="wrap leads-page"/);
+  assert.match(leadsHtml, /class="btn leads-download"/);
+  assert.match(leadsHtml, /<footer class="reference-footer">/);
 });

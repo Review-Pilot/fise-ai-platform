@@ -5,7 +5,7 @@ var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __f
 
 var ACCOUNT_SIDEBAR_ITEMS = [
   { key: "account", label: "Profile", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg>' },
-  { key: "chatbot", label: "Chatbot", icon: '<svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="11" rx="2"/><path d="M9 7V5h6v2M9 12h6M12 10v4"/></svg>' },
+  { key: "chatbot", label: "Chatbot", icon: '<img src="/chatbot-dashboard-icon.png" alt="" />' },
   { key: "subscription", label: "Subscription", icon: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg>' },
   { key: "affiliate", label: "Affiliate", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg>' }
 ];
@@ -3260,7 +3260,7 @@ var WebsiteModule = (() => {
   }
   __name(publicNav, "publicNav");
   function shell(title, description, content, c) {
-    return html2(_a || (_a = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="description" content="', '" />\n        <title>', "</title>\n        <style>\n          ", ":root {\n            --blue: ", ";\n            --bright: ", ";\n            --navy: ", ";\n          }\n          ", '\n        </style>\n      </head>\n      <body>\n        <div class="notice">', '</div>\n        <header class="site-head">\n          <div class="container nav">\n            <a class="logo" href="/">', '</a>\n            <nav class="nav-links" id="nav">', `</nav>
+    const page = html2(_a || (_a = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="description" content="', '" />\n        <title>', "</title>\n        <style>\n          ", ":root {\n            --blue: ", ";\n            --bright: ", ";\n            --navy: ", ";\n          }\n          ", '\n        </style>\n      </head>\n      <body>\n        <div class="notice">', '</div>\n        <header class="site-head">\n          <div class="container nav">\n            <a class="logo" href="/">', '</a>\n            <nav class="nav-links" id="nav">', `</nav>
             <a class="button primary small" href="/login">Try Fise AI</a
             ><button
               class="menu"
@@ -3271,6 +3271,7 @@ var WebsiteModule = (() => {
           </div>
         </header>
         `, '\n        <footer class="site-foot">\n          <div class="container">\n            <div class="foot-grid">\n              <div>\n                <a class="logo" href="/" style="color:white">', '</a>\n                <p style="max-width:310px;line-height:1.6">\n                  ', "\n                </p>\n              </div>\n              <div>\n                <h3>Product</h3>\n                ", '<a\n                  href="/#demo"\n                  >', "</a\n                >", "", "\n              </div>\n              <div>\n                <h3>Company</h3>\n                ", "", "", '<a\n                  href="/contact"\n                  >Contact</a\n                >\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy-policy">Privacy</a><a href="/terms-and-conditions">Terms</a\n                ><a href="mailto:', '"\n                  >', '</a\n                >\n              </div>\n            </div>\n            <div class="foot-bottom">\n              <span\n                >\xA9 ', " Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script>", "<\/script>\n      </body>\n    </html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), legacyStyles, escapeWebsiteHtml(c.theme_primary), escapeWebsiteHtml(c.theme_primary), escapeWebsiteHtml(c.theme_navy), c.site_css || "", escapeWebsiteHtml(c.announcement), logo(c), publicNav(c), content, logo(c), escapeWebsiteHtml(c.footer_text), enabled(c.nav_chatbots_enabled) ? html2`<a href="/#features">AI Chatbots</a>` : "", escapeWebsiteHtml(c.nav_demo_label), enabled(c.nav_pricing_enabled) ? html2`<a href="/#pricing">Pricing</a>` : "", enabled(c.nav_signin_enabled) ? html2`<a href="/login">Customer sign in</a>` : "", enabled(c.nav_about_enabled) || enabled(c.nav_dropdown_about_enabled) ? html2`<a href="/about">About</a>` : "", enabled(c.nav_resources_enabled) && enabled(c.nav_resources_page_enabled) ? html2`<a href="/blog">${escapeWebsiteHtml(c.nav_resources_label)}</a>` : "", enabled(c.nav_blog_enabled) || enabled(c.nav_dropdown_blog_enabled) ? html2`<a href="/blog">Blog</a>` : "", escapeWebsiteHtml(c.contact_email), escapeWebsiteHtml(c.contact_email), (/* @__PURE__ */ new Date()).getFullYear(), visualOverridesJavascript(c));
+    return page.replace("</style>", referenceStyles + requestedStyles + "</style>").replace(/<footer class="site-foot">[\s\S]*?<\/footer>/, referenceFooter());
   }
   __name(shell, "shell");
   function home(c) {
@@ -4225,6 +4226,39 @@ var WebsiteModule = (() => {
   .help-module-link:hover{text-decoration:underline}
   @media(max-width:720px){.help-module>summary{padding:20px 20px}.help-module-meta{gap:10px}.help-module-count{display:none}}
 
+  /* Account settings: a white description strip above a #F2F2F2 work area. */
+  .profile-main{position:relative;padding:0!important;background:#f2f2f2!important}
+  .profile-floating-close{position:absolute;top:25px;right:clamp(24px,4vw,64px);z-index:4}
+  .profile-panel{max-width:none!important;margin:0!important}
+  .profile-panel-heading{min-height:130px;margin:0!important;padding:38px clamp(28px,5vw,76px) 28px;border-bottom:1px solid #e4e4e4;background:#fff}
+  .profile-panel-heading h3{margin:0 56px 12px 0;font-size:34px;line-height:1.1;letter-spacing:-.035em}
+  .profile-panel-heading .profile-intro{margin:0;color:#58657a;font-size:18px}
+  .profile-panel-surface,.profile-subscription-stack{margin:32px clamp(28px,5vw,76px) 56px}
+  .profile-tab-icon img{display:block;width:18px;height:18px;object-fit:contain}
+
+  /* Contact: more breathing room and a calmer, balanced form layout. */
+  .contact-reference{padding:112px 0 132px;background:#f7f7f8}
+  .contact-layout{grid-template-columns:minmax(0,.9fr) minmax(480px,1.1fr);gap:90px;align-items:start}
+  .contact-intro{padding:30px 0 0}
+  .contact-intro h1{max-width:620px;margin:14px 0 24px;font-size:clamp(46px,4.5vw,66px);line-height:1.05;letter-spacing:-.045em}
+  .contact-intro>p{max-width:610px;font-size:19px;line-height:1.7}
+  .contact-points{display:grid;gap:17px;margin-top:36px}
+  .contact-card{padding:44px;border-radius:20px;box-shadow:0 20px 48px rgba(15,23,42,.07)}
+  .contact-card form{gap:22px}
+  .contact-card input,.contact-card textarea{margin-top:9px}
+  .contact-card textarea{min-height:168px}
+
+  @media(max-width:1000px){.contact-layout{grid-template-columns:1fr;gap:45px}.contact-intro{padding-top:0}}
+  @media(max-width:720px){
+    .profile-panel-heading{min-height:116px;padding:30px 22px 22px}
+    .profile-panel-heading h3{font-size:28px}
+    .profile-panel-heading .profile-intro{font-size:16px}
+    .profile-panel-surface,.profile-subscription-stack{margin:24px 20px 42px}
+    .profile-floating-close{top:20px;right:18px}
+    .contact-reference{padding:64px 0 78px}
+    .contact-card{padding:28px 22px}
+  }
+
   /* Fact-led homepage hero */
   .reference-hero{overflow:hidden}
   .reference-hero-grid{grid-template-columns:1.18fr .82fr;gap:52px}
@@ -4458,7 +4492,7 @@ var WebsiteModule = (() => {
   function profileDrawer() {
     return html2`<div class="profile-layer" id="profile-layer" aria-hidden="true">
     <button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button>
-    <aside class="profile-drawer" aria-labelledby="profile-title">
+    <aside class="profile-drawer" aria-label="Fise account settings">
       <div class="profile-side">
         <a class="profile-brand" href="/"><span class="profile-sidebar-mark" aria-hidden="true">✣</span><span>Fise AI</span></a>
         <div class="profile-side-title"><small>Customer portal</small></div>
@@ -4468,7 +4502,7 @@ var WebsiteModule = (() => {
         <form class="profile-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
       </div>
       <div class="profile-main">
-        <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><div class="profile-head-actions"><span class="profile-security-badge">Secure account</span><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div></div>
+        <button class="profile-close profile-floating-close" type="button" data-close-profile aria-label="Close profile">×</button>
         <section class="profile-panel active" data-profile-panel="account">
           <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div></div>
           <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-set-password" id="profile-set-password" type="button" hidden>Set a password</button></div><span class="profile-password-message show" id="profile-password-message">Your password is set and cannot be changed unless you reset it.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
@@ -6493,6 +6527,7 @@ var CHATBOT_DELETE_REQUEST_LIMIT = 3;
 var DIRECT_EMAIL_LOGIN = false;
 var PASSWORD_ITERATIONS = 5e4;
 var sharedStyles = html`
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   :root { color-scheme:light; --blue:#1769e0; --blue2:#0d55bd; --dark:#102033;
   --muted:#637083; --line:#dfe6ef; --soft:#f4f7fb; --ok:#167044;
   --danger:#a52b2b; } * { box-sizing:border-box; } body { margin:0;
@@ -7061,6 +7096,41 @@ var sharedStyles = html`
     .dash-delete-dialog-actions form,.dash-delete-cancel,.dash-delete-confirm{width:100%}
   }
   @media(max-width:720px){.dashboard-account-layout{grid-template-columns:1fr!important}.dashboard-account-side{position:relative;height:auto;min-height:0;padding:18px}.dashboard-account-foot{flex:0}.dashboard-workspace-state{margin-top:14px}}
+
+  /* Shared landing-page footer used across every Fise page with a footer. */
+  .reference-footer{padding:92px 0 35px;color:#071126;background:#f4f4f4;font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .reference-footer .video-container{width:min(1640px,calc(100% - 96px));margin:auto}
+  .reference-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:60px}
+  .reference-footer h3{margin:8px 0 29px;color:#071126;font-size:17px}
+  .reference-footer a{display:block;margin:0 0 23px;color:#7d8795;font-size:16px;text-decoration:none}
+  .reference-footer a:hover{color:#111}
+  .footer-demo-cta{display:flex;justify-content:center;margin:10px 0 52px}
+  .reference-footer .video-demo-pill{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:999px;color:#1f2733!important;background:#e9ebee;font-weight:800;text-decoration:none}
+  .reference-footer .video-demo-pill:hover{background:#dee1e6}
+  .reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:20px;padding-top:33px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:14px}
+
+  /* Requested account and chatbot-page refinements. */
+  .dash-topbar-actions{display:none!important}
+  .dashboard-account-foot{gap:0!important}
+  .dashboard-account-signout button{min-height:43px!important;gap:12px!important}
+  .dashboard-account-tab-icon img{display:block;width:18px;height:18px;object-fit:contain}
+  .chatbot-settings-page .eyebrow,.leads-page .eyebrow{color:#050505!important}
+  .settings-page-header-actions{display:grid;min-width:178px;gap:10px}
+  .settings-page-header-actions .btn{width:100%}
+  .settings-save-top,.settings-preview-button,.leads-download{border-color:#050505!important;color:#fff!important;background:#050505!important}
+  .settings-save-top:hover,.settings-preview-button:hover,.leads-download:hover{background:#000!important}
+  .chatbot-settings-page .save-bar{display:none!important}
+
+  @media(max-width:1000px){
+    .reference-footer .video-container{width:min(100% - 42px,1640px)}
+    .reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}
+  }
+  @media(max-width:720px){
+    .reference-footer .video-container{width:min(100% - 28px,1640px)}
+    .reference-footer-grid{grid-template-columns:1fr;gap:28px}
+    .reference-footer-bottom{align-items:flex-start;flex-direction:column}
+    .settings-page-header-actions{width:100%}
+  }
 `;
 function escapeHtml(value = "") {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -7070,17 +7140,32 @@ function titleCase(value) {
   return String(value || "").replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 __name(titleCase, "titleCase");
+function fiseLandingFooter() {
+  return `<footer class="reference-footer"><div class="video-container"><div class="reference-footer-grid"><div><h3>Product</h3><a href="/#features">Features</a><a href="/#clients">Our Clients</a><a href="/#pricing">Pricing</a></div><div><h3>Company</h3><a href="/about">About</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/help">Help</a></div><div><h3>Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener">T&amp;C's</a></div></div><div class="footer-demo-cta"><a class="video-demo-pill" href="/demo">Demo</a></div><div class="reference-footer-bottom"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
+}
+__name(fiseLandingFooter, "fiseLandingFooter");
+function fiseEmailFooter(origin) {
+  const base = String(origin || "").replace(/\/$/, "");
+  const link = (path, label) => '<a href="' + escapeHtml(base + path) + '" style="display:block;margin:0 0 10px;color:#7d8795;text-decoration:none">' + label + '</a>';
+  return '<div style="margin-top:34px;padding:34px 30px 24px;background:#f4f4f4;color:#071126"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/demo") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#1f2733;background:#e9ebee;font-weight:bold;text-decoration:none">Demo</a></p><div style="padding-top:20px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
+}
+__name(fiseEmailFooter, "fiseEmailFooter");
 var _d;
 function documentPage(title, body) {
   const page = html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), body, (/* @__PURE__ */ new Date()).getFullYear());
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  let rendered = page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/<footer class="public-foot">[\s\S]*?<\/footer>/, fiseLandingFooter());
+  if (String(title).startsWith("Customize ")) {
+    rendered = rendered.replace('<main class="wrap">', '<main class="wrap chatbot-settings-page">').replace('<a class="btn ghost" href="/dashboard">Back to dashboard</a>', '<div class="settings-page-header-actions"><a class="btn ghost" href="/dashboard">Back to dashboard</a><button class="btn settings-save-top" type="submit" form="chatbot-settings-form">Save changes</button></div>').replace('class="btn"\n          href="/widget/test?', 'class="btn settings-preview-button"\n          href="/widget/test?').replace('<form\n        method="post"\n        action="/api/chatbots/', '<form\n        id="chatbot-settings-form"\n        method="post"\n        action="/api/chatbots/').replace(/\s*<section class="setting-section full save-bar">[\s\S]*?<\/section>/, "");
+  } else if (String(title).startsWith("Leads for ")) {
+    rendered = rendered.replace('<main class="wrap">', '<main class="wrap leads-page">').replace('class="btn"\n          href="/api/chatbots/', 'class="btn leads-download"\n          href="/api/chatbots/');
+  }
+  return rendered;
 }
 __name(documentPage, "documentPage");
 function deletionDocumentPage(title, body) {
-  const year = new Date().getFullYear();
   const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>
-    body.deletion-page{min-height:100vh;display:flex;flex-direction:column;background:#f5f7fa}.deletion-page main{flex:1}.deletion-page .shell{background:#fff}.deletion-foot{border-top:1px solid #e1e6ec;background:#fff}.deletion-foot-inner{min-height:92px;display:flex;align-items:center;justify-content:space-between;gap:24px}.deletion-foot-links{display:flex;align-items:center;gap:22px}.deletion-foot a{color:#263449;text-decoration:none;font-weight:700}.deletion-foot small{color:#748092}@media(max-width:700px){.deletion-foot-inner{padding:22px 0;align-items:flex-start;flex-direction:column}.deletion-foot-links{flex-wrap:wrap}}
-  </style></head><body class="deletion-page"><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard">Chatbot</a></div></header>${body}<footer class="deletion-foot"><div class="wrap deletion-foot-inner"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><nav class="deletion-foot-links" aria-label="Footer"><a href="/dashboard">Chatbot</a><a href="/help">Help</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><small>© ${year} Fise AI</small></div></footer></body></html>`;
+    body.deletion-page{min-height:100vh;display:flex;flex-direction:column;background:#f5f7fa}.deletion-page main{flex:1}.deletion-page .shell{background:#fff}
+  </style></head><body class="deletion-page"><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard">Chatbot</a></div></header>${body}${fiseLandingFooter()}</body></html>`;
   return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
 }
 __name(deletionDocumentPage, "deletionDocumentPage");
@@ -7101,7 +7186,6 @@ function dashboardAccountSidebar() {
       ${renderAccountNav({ activeKey: "chatbot", tabClass: "dashboard-account-tab", iconClass: "dashboard-account-tab-icon", linkMode: true })}
     </nav>
     <div class="dashboard-account-foot">
-      <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
       <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
     </div>
   </aside>`;
@@ -7110,7 +7194,7 @@ __name(dashboardAccountSidebar, "dashboardAccountSidebar");
 var _f;
 function dashboardDocumentPage(title, body) {
   const page = html(_f || (_f = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body class="dashboard-account-page">\n        <div class="dashboard-account-layout">\n          ', '\n          <div class="dashboard-account-main">', '</div>\n        </div>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), dashboardAccountSidebar(), body);
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/\s*<div class="dash-topbar-actions">[\s\S]*?<\/div>/, "");
 }
 __name(dashboardDocumentPage, "dashboardDocumentPage");
 function loginPage(message = "", isError = false, embedded = false) {
@@ -7936,7 +8020,7 @@ async function requestChatbotDeletion(request, env, chatbotId) {
   const origin = new URL(request.url).origin;
   const confirmationUrl = origin + "/chatbot-deletion/confirm?token=" + encodeURIComponent(token);
   const safeName = escapeHtml(bot.name || "Fise chatbot");
-  const emailHtml = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#102033"><h1 style="font-size:28px;margin:0 0 14px">Confirm chatbot deletion</h1><p style="line-height:1.6">A permanent deletion was requested for <strong>' + safeName + '</strong>. Opening this email does not delete it. Review the details and press the final confirmation button.</p><p style="margin:28px 0"><a href="' + escapeHtml(confirmationUrl) + '" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#a52b2b;color:white;text-decoration:none;font-weight:bold">Review deletion request</a></p><p style="color:#637083;font-size:13px;line-height:1.5">This secure link expires in 30 minutes and can only be used once. If you did not request this, ignore the email and the chatbot will remain unchanged.</p></div>';
+  const emailHtml = '<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:28px;color:#102033"><h1 style="font-size:28px;margin:0 0 14px">Confirm chatbot deletion</h1><p style="line-height:1.6">A permanent deletion was requested for <strong>' + safeName + '</strong>. Opening this email does not delete it. Review the details and press the final confirmation button.</p><p style="margin:28px 0"><a href="' + escapeHtml(confirmationUrl) + '" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#a52b2b;color:white;text-decoration:none;font-weight:bold">Review deletion request</a></p><p style="color:#637083;font-size:13px;line-height:1.5">This secure link expires in 30 minutes and can only be used once. If you did not request this, ignore the email and the chatbot will remain unchanged.</p>' + fiseEmailFooter(origin) + '</div>';
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
