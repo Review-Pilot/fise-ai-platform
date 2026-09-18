@@ -4113,8 +4113,12 @@ var WebsiteModule = (() => {
   .why-bars i:nth-child(5){height:100%}
   @media(max-width:1000px){.why-grid{grid-template-columns:1fr}}
   .pricing-grid{align-items:stretch}
-  .pricing-card{position:relative;isolation:isolate;overflow:hidden;border-radius:22px!important;border:1px solid transparent!important;padding:38px 34px 34px!important;transition:transform .25s ease,box-shadow .25s ease!important;box-shadow:0 10px 30px rgba(10,4,20,.25)!important;color:#fff!important;background:linear-gradient(150deg,#0c1220 0%,#171226 42%,#2a1030 72%,#3a1024 100%)!important}
-  .pricing-card::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 70% at 90% 0%,rgba(236,72,153,.3),transparent 55%),radial-gradient(90% 60% at 0% 100%,rgba(59,130,246,.22),transparent 55%),radial-gradient(70% 50% at 50% 30%,rgba(168,85,247,.16),transparent 60%)}
+  .pricing-card{position:relative;isolation:isolate;border-radius:22px!important;border:1px solid transparent!important;padding:38px 34px 34px!important;transition:transform .25s ease,box-shadow .25s ease!important;box-shadow:0 10px 30px rgba(10,4,20,.25)!important;color:#fff!important;background:linear-gradient(150deg,#0c1220 0%,#171226 42%,#2a1030 72%,#3a1024 100%)!important}
+  .pricing-card::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:21px;overflow:hidden}
+  .pricing-grid .pricing-card:nth-child(1)::after{background:radial-gradient(105% 60% at 6% 0%,rgba(59,130,246,.15),transparent 55%),radial-gradient(85% 55% at 100% 100%,rgba(168,85,247,.11),transparent 55%)}
+  .pricing-grid .pricing-card:nth-child(2)::after{background:radial-gradient(105% 60% at 96% 4%,rgba(168,85,247,.15),transparent 55%),radial-gradient(85% 55% at 2% 96%,rgba(236,72,153,.11),transparent 55%)}
+  .pricing-grid .pricing-card:nth-child(3)::after{background:radial-gradient(115% 65% at 92% 0%,rgba(236,72,153,.17),transparent 55%),radial-gradient(85% 55% at 2% 100%,rgba(59,130,246,.13),transparent 55%),radial-gradient(65% 45% at 50% 35%,rgba(168,85,247,.09),transparent 60%)}
+  .pricing-grid .pricing-card:nth-child(4)::after{background:radial-gradient(105% 60% at 8% 100%,rgba(59,130,246,.14),transparent 55%),radial-gradient(85% 55% at 96% 0%,rgba(168,85,247,.12),transparent 55%)}
   .pricing-card:hover{transform:translateY(-10px) scale(1.025);box-shadow:0 26px 54px rgba(10,4,20,.4)!important}
   .pricing-card.popular{background:linear-gradient(150deg,#0c1220 0%,#171226 42%,#2a1030 72%,#3a1024 100%) padding-box,linear-gradient(135deg,#ec4899,#3b82f6,#a855f7) border-box!important}
   .pricing-card h3{font-size:22px!important;font-weight:800!important;letter-spacing:-.02em!important;color:#fff!important}
@@ -4130,7 +4134,7 @@ var WebsiteModule = (() => {
   .pricing-card .reference-button:not(.dark):hover{border-color:rgba(255,255,255,.5)!important;background:rgba(255,255,255,.14)!important}
   .pricing-card .reference-button.dark{border-color:transparent!important;color:#0a0f1a!important;background:#fff!important;box-shadow:none!important}
   .pricing-card .reference-button.dark:hover{background:#f1f1f3!important}
-  .popular-label{top:-16px!important;font-size:12.5px!important;letter-spacing:.02em!important;padding:8px 20px!important}
+  .popular-label{top:-19px!important;font-size:15px!important;letter-spacing:.02em!important;padding:10px 26px!important;font-weight:800!important;box-shadow:0 10px 22px rgba(168,85,247,.35)!important}
 `;
   const tidioInspiredStyles = html2`
   :root { --fise-blue:#0566ff; --fise-blue-deep:#004ac5; --fise-ink:#080f1a;
