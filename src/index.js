@@ -4347,6 +4347,38 @@ var WebsiteModule = (() => {
   .pricing-card .reference-button.dark{border-color:transparent!important;color:#0a0f1a!important;background:#fff!important;box-shadow:none!important}
   .pricing-card .reference-button.dark:hover{background:#f1f1f3!important}
   .popular-label{top:-19px!important;font-size:15px!important;letter-spacing:.02em!important;padding:10px 26px!important;font-weight:800!important;box-shadow:0 10px 22px rgba(168,85,247,.35)!important}
+
+  /* Fise session: Chatbase-style customer story carousel */
+  .customer-stories{padding:105px 0 30px!important}
+  .story-carousel{position:relative;margin-top:60px!important;overflow:hidden}
+  .story-track{display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:2px 2px 10px;margin:-2px -2px 0;-ms-overflow-style:none;scrollbar-width:none}
+  .story-track::-webkit-scrollbar{display:none}
+  .story-card{position:relative;flex:0 0 min(900px,86vw);scroll-snap-align:start;min-height:430px;border-radius:22px;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;justify-content:space-between;padding:32px 38px;color:#fff;background:linear-gradient(150deg,var(--story-tint) 0%,#0c1220 68%)}
+  .story-media{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover;opacity:.5}
+  .story-media-fallback{background:radial-gradient(120% 90% at 88% -10%,rgba(255,255,255,.16),transparent 55%),radial-gradient(90% 70% at 0% 115%,rgba(0,0,0,.28),transparent 60%)}
+  .story-scrim{position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,rgba(4,6,12,.78) 0%,rgba(4,6,12,.1) 42%,rgba(4,6,12,.32) 100%)}
+  .story-top{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .story-logo-chip{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 16px;border-radius:11px;background:rgba(255,255,255,.96);box-shadow:0 8px 18px rgba(0,0,0,.2)}
+  .story-logo-chip img{display:block;height:20px;max-width:150px;object-fit:contain}
+  .story-play{flex:0 0 auto;width:50px;height:50px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.38);border-radius:50%;background:rgba(9,13,22,.45);color:#fff;cursor:pointer;backdrop-filter:blur(6px);transition:background .2s ease,transform .2s ease}
+  .story-play:hover{background:rgba(255,255,255,.2);transform:scale(1.06)}
+  .story-play svg{width:19px;height:19px;margin-left:2px}
+  .story-play.is-playing svg{margin-left:0}
+  .story-bottom blockquote{margin:0 0 16px;max-width:620px;color:#fff;font-size:23px;line-height:1.4;font-weight:650;letter-spacing:-.01em}
+  .story-byline{display:flex;flex-direction:column;gap:2px;margin-bottom:16px}
+  .story-byline strong{font-size:15px}
+  .story-byline span{color:rgba(255,255,255,.66);font-size:13.5px}
+  .story-cta{display:inline-flex;align-items:center;gap:8px;color:#fff!important;font-size:14px;font-weight:750;text-decoration:none}
+  .story-cta svg{width:15px;height:15px}
+  .story-cta:hover{text-decoration:underline}
+  #clients .carousel-controls{margin-top:30px}
+  #clients .carousel-arrow{width:48px!important;height:48px!important;border-radius:10px!important;font-size:22px!important}
+  #clients .carousel-arrow:hover:not(:disabled){border-color:#139fbc;color:#139fbc}
+  #clients .carousel-arrow:disabled{opacity:.35;cursor:not-allowed}
+  @media(max-width:720px){
+    .story-card{flex-basis:90vw;min-height:380px;padding:24px 22px}
+    .story-bottom blockquote{font-size:19px}
+  }
 `;
   const tidioInspiredStyles = html2`
   :root { --fise-blue:#0566ff; --fise-blue-deep:#004ac5; --fise-ink:#080f1a;
@@ -4474,11 +4506,23 @@ var WebsiteModule = (() => {
     return html2`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || ""}</svg>`;
   }
   __name(referenceIcon, "referenceIcon");
-  const testimonials = [
-    ["Add the customer\u2019s written testimonial here when their video is ready.", "Customer testimonial", "Review Pilot", "RP", "#25d6a8"],
-    ["Add the customer\u2019s written testimonial here when their video is ready.", "Customer testimonial", "African Welcome Safaris", "AW", "#f5a623"],
-    ["Add the customer\u2019s written testimonial here when their video is ready.", "Customer testimonial", "Vineyard Car Hire", "VC", "#5878ef"]
+  const CUSTOMER_STORIES = [
+    { quote: "Add the customer\u2019s written testimonial here when it\u2019s ready.", name: "Customer testimonial", business: "Review Pilot", href: "https://www.reviewpilot.co.za/", logo: "https://reviewpilot.co.za/storage/9313ad83-3eaa-44ea-8ad4-12c6833d27e0/UERc4sjzqY2vKIUcwq9YcCOFocIp7NMYnnHu642i.png", color: "#25d6a8", videoUrl: "" },
+    { quote: "Add the customer\u2019s written testimonial here when it\u2019s ready.", name: "Customer testimonial", business: "African Welcome Safaris", href: "https://www.africanwelcomesafaris.com/", logo: "https://www.africanwelcomesafaris.com/wp-content/uploads/2025/06/logo.jpg", color: "#f5a623", videoUrl: "" },
+    { quote: "Add the customer\u2019s written testimonial here when it\u2019s ready.", name: "Customer testimonial", business: "Vineyard Car Hire", href: "https://vineyardcarhire.co.za/", logo: "https://vineyardcarhire.co.za/img/company-logo.png", color: "#5878ef", videoUrl: "" }
   ];
+  function storyCard(story) {
+    const bg = story.videoUrl ? html2`<video class="story-media" autoplay muted loop playsinline preload="metadata" src="${escapeWebsiteHtml(story.videoUrl)}"></video>` : html2`<div class="story-media story-media-fallback"></div>`;
+    const playButton = story.videoUrl ? html2`<button class="story-play" type="button" data-story-play aria-label="Play ${escapeWebsiteHtml(story.business)} story">${referenceIcon("play")}</button>` : "";
+    const cta = story.href ? html2`<a class="story-cta" href="${story.href}" target="_blank" rel="noopener">Read customer story ${referenceIcon("external")}</a>` : "";
+    return html2`<article class="story-card" style="--story-tint:${story.color}">${bg}<div class="story-scrim"></div><div class="story-top"><span class="story-logo-chip"><img src="${story.logo}" alt="${escapeWebsiteHtml(story.business)}" loading="lazy"></span>${playButton}</div><div class="story-bottom"><blockquote>\u201c${escapeWebsiteHtml(story.quote)}\u201d</blockquote><div class="story-byline"><strong>${escapeWebsiteHtml(story.name)}</strong><span>${escapeWebsiteHtml(story.business)}</span></div>${cta}</div></article>`;
+  }
+  __name(storyCard, "storyCard");
+  function storyCarousel() {
+    const cards = CUSTOMER_STORIES.map((s) => storyCard(s)).join("");
+    return html2`<section class="customer-stories reveal" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="story-carousel"><div class="story-track" id="story-track">${cards}</div></div><div class="carousel-controls"><button class="carousel-arrow" id="story-prev" type="button" aria-label="Previous story">\u2039</button><button class="carousel-arrow" id="story-next" type="button" aria-label="Next story">\u203a</button></div></div></section>`;
+  }
+  __name(storyCarousel, "storyCarousel");
   const TRUSTED_BUSINESSES = [
     {
       name: "Review Pilot",
@@ -4706,25 +4750,41 @@ var WebsiteModule = (() => {
     openHelpModuleFromHash();
     window.addEventListener('hashchange',openHelpModuleFromHash);
 
-    const reviews=${JSON.stringify(testimonials)};
-    const text=document.getElementById('review-text');
-    const name=document.getElementById('review-name');
-    const role=document.getElementById('review-role');
-    const avatar=document.getElementById('review-avatar');
-    const dots=[...document.querySelectorAll('.carousel-dot')];
-    let index=0;
-    function show(next){
-      index=(next+reviews.length)%reviews.length;
-      const review=reviews[index];
-      if(text)text.textContent='“'+review[0]+'”';
-      if(name)name.textContent=review[1];
-      if(role)role.textContent=review[2];
-      if(avatar){avatar.textContent=review[3];avatar.style.background=review[4]}
-      dots.forEach((dot,i)=>dot.classList.toggle('active',i===index));
-    }
-    document.getElementById('review-prev')?.addEventListener('click',()=>show(index-1));
-    document.getElementById('review-next')?.addEventListener('click',()=>show(index+1));
-    dots.forEach((dot,i)=>dot.addEventListener('click',()=>show(i)));
+    (function(){
+      const track=document.getElementById('story-track');
+      const prevBtn=document.getElementById('story-prev');
+      const nextBtn=document.getElementById('story-next');
+      if(!track||!prevBtn||!nextBtn)return;
+      function updateArrows(){
+        const max=track.scrollWidth-track.clientWidth-2;
+        prevBtn.disabled=track.scrollLeft<=2;
+        nextBtn.disabled=max<=2||track.scrollLeft>=max;
+      }
+      function step(dir){
+        const card=track.querySelector('.story-card');
+        const gap=22;
+        const amount=card?card.getBoundingClientRect().width+gap:track.clientWidth*0.9;
+        track.scrollBy({left:dir*amount,behavior:'smooth'});
+      }
+      prevBtn.addEventListener('click',()=>step(-1));
+      nextBtn.addEventListener('click',()=>step(1));
+      let raf=null;
+      track.addEventListener('scroll',()=>{
+        if(raf)cancelAnimationFrame(raf);
+        raf=requestAnimationFrame(updateArrows);
+      },{passive:true});
+      window.addEventListener('resize',updateArrows);
+      updateArrows();
+      track.querySelectorAll('[data-story-play]').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          const card=btn.closest('.story-card');
+          const video=card?card.querySelector('video.story-media'):null;
+          if(!video)return;
+          if(video.paused){video.play();video.muted=false;btn.classList.add('is-playing')}
+          else{video.pause();video.muted=true;btn.classList.remove('is-playing')}
+        });
+      });
+    })();
 
     const demo=document.getElementById('demo-browser');
     const full=document.getElementById('demo-fullscreen');
@@ -5078,8 +5138,7 @@ var WebsiteModule = (() => {
   }
   __name(requestedJavascript, "requestedJavascript");
   function referenceHome(c) {
-    const dots = testimonials.map((_, i) => html2`<button class="carousel-dot${i === 0 ? " active" : ""}" type="button" aria-label="Show review ${i + 1}"></button>`).join("");
-    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("clock")}24/7 availability</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div></div></div></section><section class="customer-stories reveal" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="testimonial-shell"><article class="testimonial-card"><span class="quote-mark">”</span><div class="review-stars">★★★★★</div><blockquote id="review-text">“${escapeWebsiteHtml(testimonials[0][0])}”</blockquote><div class="review-person"><span class="review-avatar" id="review-avatar">${testimonials[0][3]}</span><span><strong id="review-name">${testimonials[0][1]}</strong><span id="review-role">${testimonials[0][2]}</span></span></div></article><div class="carousel-controls"><button class="carousel-arrow" id="review-prev" type="button" aria-label="Previous review">‹</button><span class="carousel-dots">${dots}</span><button class="carousel-arrow" id="review-next" type="button" aria-label="Next review">›</button></div></div></div></section><section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
+    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("clock")}24/7 availability</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div></div></div></section>${storyCarousel()}<section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
     <article class="feature-card"><div class="feature-media"><img src="https://images.unsplash.com/photo-1626863905121-3b0c0ed7b94c?auto=format&amp;fit=crop&amp;w=900&amp;q=82" alt="Customer support team helping clients" loading="lazy"></div><div class="feature-copy"><span class="feature-kicker">Always available</span><h3>Helpful answers, 24/7</h3><p>Give every visitor an immediate, useful response—even after hours or while your team is busy.</p></div></article>
     <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="knowledge-window"><div class="mini-window-top"><i></i><i></i><i></i></div><div class="knowledge-row"><b>1</b>Website pages scanned</div><div class="knowledge-row"><b>2</b>Files and FAQs added</div><div class="knowledge-row"><b>3</b>Private knowledge ready</div><span class="knowledge-ready">Ready</span></div></div></div><div class="feature-copy"><span class="feature-kicker">Business knowledge</span><h3>Trained on your information</h3><p>Scan up to 100 website pages and add approved files so answers stay relevant to your business.</p></div></article>
     <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="brand-window"><div class="brand-controls"><span class="brand-swatch"></span><span class="brand-swatch"></span><span class="brand-swatch"></span></div><div class="brand-chat"><span></span><span></span><span></span></div></div></div></div><div class="feature-copy"><span class="feature-kicker">Your look and voice</span><h3>Made for your brand</h3><p>Choose the colours, chatbot name, greeting, tone and popular questions from your dashboard.</p></div></article>
