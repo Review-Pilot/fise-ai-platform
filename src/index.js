@@ -5,7 +5,7 @@ var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __f
 
 var ACCOUNT_SIDEBAR_ITEMS = [
   { key: "account", label: "Profile", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg>' },
-  { key: "chatbot", label: "Chatbot", icon: '<img src="/chatbot-dashboard-icon.png" alt="" />' },
+  { key: "chatbot", label: "Chatbot", icon: '<svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="11" rx="2"/><path d="M9 7V5h6v2M9 12h6M12 10v4"/></svg>' },
   { key: "subscription", label: "Subscription", icon: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg>' },
   { key: "affiliate", label: "Affiliate", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg>' }
 ];
@@ -386,26 +386,13 @@ function helpChevron(down) {
   return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 }
 __name(helpChevron, "helpChevron");
-var HELP_MODULE_LINKS = {
-  "getting-started": { label: "Go to your dashboard", href: "/dashboard" },
-  "customising": { label: "Customise your chatbot", href: "/dashboard#chatbot-management" },
-  "knowledge": { label: "Manage your chatbot's knowledge", href: "/dashboard#private-ai-knowledge" },
-  "leads-subscription": { label: "View leads and subscription", href: "/profile?tab=subscription" },
-  "connecting": { label: "Get your embed code", href: "/dashboard#chatbot-management" }
-};
-function renderHelpToc() {
-  return `<ul class="help-toc">${HELP_MODULES.map((mod) => `<li><a href="#${escapeHelpHtml(mod.key)}">${escapeHelpHtml(mod.title)}</a></li>`).join("")}</ul>`;
-}
-__name(renderHelpToc, "renderHelpToc");
 function renderHelpModules() {
   return HELP_MODULES.map((mod, mi) => {
     const topics = mod.topics.map((topic) => {
       const steps = topic.steps.map((s) => `<li>${escapeHelpHtml(s)}</li>`).join("");
       return `<details class="help-topic"><summary><span>${escapeHelpHtml(topic.title)}</span><span class="help-topic-chevron">${helpChevron(false)}</span></summary><div class="help-topic-body">${helpVideoPlaceholder()}<ol>${steps}</ol></div></details>`;
     }).join("");
-    const relatedLink = HELP_MODULE_LINKS[mod.key];
-    const related = relatedLink ? `<a class="help-module-link" href="${escapeHelpHtml(relatedLink.href)}">${escapeHelpHtml(relatedLink.label)} →</a>` : "";
-    return `<details class="help-module" id="${escapeHelpHtml(mod.key)}"${mi === 0 ? " open" : ""}><summary><span class="help-module-heading"><span class="help-module-title">${escapeHelpHtml(mod.title)}</span><span class="help-module-summary">${escapeHelpHtml(mod.summary)}</span></span><span class="help-module-meta"><span class="help-module-count">${mod.topics.length} guides</span><span class="help-module-chevron">${helpChevron(true)}</span></span></summary><div class="help-module-body">${topics}${related}</div></details>`;
+    return `<details class="help-module"${mi === 0 ? " open" : ""}><summary><span class="help-module-heading"><span class="help-module-title">${escapeHelpHtml(mod.title)}</span><span class="help-module-summary">${escapeHelpHtml(mod.summary)}</span></span><span class="help-module-meta"><span class="help-module-count">${mod.topics.length} guides</span><span class="help-module-chevron">${helpChevron(true)}</span></span></summary><div class="help-module-body">${topics}</div></details>`;
   }).join("");
 }
 __name(renderHelpModules, "renderHelpModules");
@@ -930,11 +917,6 @@ var PLAN_CONVERSATION_LIMITS = Object.freeze({
   enterprise: 5e3
 });
 var CONVERSATION_MESSAGE_GROUP_SIZE = 5;
-function monthStartIso() {
-  const date = /* @__PURE__ */ new Date();
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).toISOString();
-}
-__name(monthStartIso, "monthStartIso");
 function normalizedPlanCode(value) {
   const plan = String(value || "free").trim().toLowerCase();
   return plan === "starter" || plan === "none" ? "free" : plan;
@@ -1020,12 +1002,7 @@ var ChatModule = (() => {
   __name(corsHeaders, "corsHeaders");
   async function botForKey(env, key) {
     if (!key || key.length > 180) return null;
-    try {
-      await ensureTestingPlanSchema(env);
-      await env.DB.prepare(`CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`).run();
-    } catch (error) {
-      console.error("Widget schema check failed; continuing without it", error);
-    }
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS chatbot_developer_settings (chatbot_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,system_prompt_append TEXT NOT NULL DEFAULT '',widget_css TEXT NOT NULL DEFAULT '',functions_json TEXT NOT NULL DEFAULT '[]',updated_at TEXT NOT NULL,updated_by TEXT)`).run();
     return env.DB.prepare(`
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,
            c.model,c.primary_colour,c.greeting,c.instructions,c.allowed_domains_json,c.monthly_message_limit,
@@ -1043,13 +1020,12 @@ var ChatModule = (() => {
            COALESCE(cds.system_prompt_append,'') AS system_prompt_append,
            COALESCE(cds.widget_css,'') AS widget_css,
            COALESCE(cds.functions_json,'[]') AS functions_json,
-           COALESCE(tpo.plan_code,s.plan_code,'starter') AS plan_code,
-           CASE WHEN tpo.user_id IS NOT NULL THEN 'active' ELSE COALESCE(s.status,'inactive') END AS subscription_status
+           COALESCE(s.plan_code,'starter') AS plan_code,
+           COALESCE(s.status,'inactive') AS subscription_status
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
     LEFT JOIN chatbot_developer_settings cds ON cds.chatbot_id=c.id
-    LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
-    LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
+    LEFT JOIN subscriptions s ON s.user_id=c.user_id
     WHERE c.public_key = ? LIMIT 1
   `).bind(key).first();
   }
@@ -1066,7 +1042,7 @@ var ChatModule = (() => {
   }
   __name(authorizeBrowser, "authorizeBrowser");
   function growthAccess(bot) {
-    return TESTING_LEAD_CAPTURE || ["active", "trialing"].includes(String(bot.subscription_status || "").toLowerCase()) && ["grow", "growth", "pro", "professional", "business", "enterprise"].includes(String(bot.plan_code || "").toLowerCase());
+    return TESTING_LEAD_CAPTURE || ["active", "trialing"].includes(String(bot.subscription_status || "").toLowerCase()) && ["growth", "pro", "professional", "business", "enterprise"].includes(String(bot.plan_code || "").toLowerCase());
   }
   __name(growthAccess, "growthAccess");
   async function sha256(value) {
@@ -1778,411 +1754,369 @@ Date: ${lead.created_at}`
   }
   __name(leadResponse, "leadResponse");
   function widgetBootstrap(configOverride = null, scriptOverride = null) {
-  const script = scriptOverride || document.currentScript;
-  if (!script || (!configOverride && script.dataset.fiseLoaded === "1")) return;
-  if (!configOverride) script.dataset.fiseLoaded = "1";
-  const key = script.dataset.chatbotKey || "";
-  if (!key) return;
-  const api = new URL(script.src).origin;
-  const storageKey = "fise-chat-" + key.slice(-16);
-  const visitorKey = "fise-visitor";
-  let visitor = localStorage.getItem(visitorKey);
-  if (!visitor) { visitor = crypto.randomUUID(); localStorage.setItem(visitorKey, visitor); }
-
-  if (configOverride) { mount(configOverride); return; }
-
-  fetch(api + "/api/widget/config?key=" + encodeURIComponent(key), { mode: "cors" })
-    .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unavailable")))
-    .then((config) => mount(config))
-    .catch((error) => console.warn("Fise widget:", error.message));
-
-  function mount(config) {
-    const host = document.createElement("div");
-    host.id = "fise-chat-widget";
-    document.body.appendChild(host);
-    const root = host.attachShadow({ mode: "open" });
-    const colour = /^#[0-9a-f]{6}$/i.test(config.primary_colour) ? config.primary_colour : "#1769e0";
-    const rgb = hexRgb(colour);
-    const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
-    const patternIntensity = Math.max(0, Math.min(100, Number(config.pattern_intensity ?? 55)));
-    const patternColour = shade(colour, luminance > 0.58 ? -(8 + patternIntensity * .32) : (10 + patternIntensity * .38));
-    const borderColour = shade(colour, luminance > 0.48 ? -28 : 30);
-    const headerAccentColour = shade(colour, luminance > 0.72 ? -12 : 18);
-    const historyBorderColour = shade(colour, luminance > 0.72 ? -36 : -38);
-    const headerText = luminance > 0.72 ? "#172033" : "#ffffff";
-    const controlBorder = luminance > 0.72 ? "rgba(15,23,42,.34)" : "rgba(255,255,255,.62)";
-    const pattern = patternImage(config.header_pattern || "circles", patternColour);
-    const headerBackground = config.header_gradient === false ? colour : `radial-gradient(circle at 15% 0%,rgba(255,255,255,.18),transparent 32%),radial-gradient(circle at 90% 110%,rgba(0,0,0,.15),transparent 42%),${colour}`;
-    const questionWeight = config.popular_questions_bold === false ? "550" : "850";
-    const questionBorder = config.popular_question_border === "normal" ? "1px" : "2px";
-    const initial = safe(config.name || "F").slice(0, 1).toUpperCase();
-    const avatar = config.avatar_url ? `<img src="${safe(config.avatar_url)}" alt="">` : `<span>${initial}</span>`;
-    const emojiButtons = [
-      "😀", "😃", "😄", "😁", "😊", "🙂", "😉", "😍",
-      "🥰", "😎", "🤩", "😂", "🤣", "😅", "😢", "😭",
-      "😮", "🤔", "🙃", "😴", "😇", "😋", "😜", "🤗",
-      "👋", "👍", "👎", "👏", "🙌", "🤝", "💪", "🙏",
-      "❤️", "💙", "💚", "💛", "🎉", "✅", "⭐", "🔥",
-      "💡", "🚀", "📞", "📅", "📍", "✉️", "📎", "🛒"
-    ].map((emoji) => `<button type="button" data-emoji="${emoji}" aria-label="Add ${emoji}">${emoji}</button>`).join("");
-
-    root.innerHTML = `
+    const script = scriptOverride || document.currentScript;
+    if (!script || !configOverride && script.dataset.fiseLoaded === "1") return;
+    if (!configOverride) script.dataset.fiseLoaded = "1";
+    const key = script.dataset.chatbotKey || "";
+    if (!key) return;
+    const api = new URL(script.src).origin;
+    const storageKey = "fise-chat-" + key.slice(-16);
+    const visitorKey = "fise-visitor";
+    let visitor = localStorage.getItem(visitorKey);
+    if (!visitor) {
+      visitor = crypto.randomUUID();
+      localStorage.setItem(visitorKey, visitor);
+    }
+    if (configOverride) {
+      mount(configOverride);
+      return;
+    }
+    fetch(api + "/api/widget/config?key=" + encodeURIComponent(key), { mode: "cors" }).then((response2) => response2.ok ? response2.json() : Promise.reject(new Error("Unavailable"))).then((config) => mount(config)).catch((error) => console.warn("Fise widget:", error.message));
+    function mount(config) {
+      const host = document.createElement("div");
+      host.id = "fise-chat-widget";
+      document.body.appendChild(host);
+      const root = host.attachShadow({ mode: "open" });
+      const colour = /^#[0-9a-f]{6}$/i.test(config.primary_colour) ? config.primary_colour : "#1769e0";
+      const initial = safe(config.name || "F").slice(0, 1).toUpperCase();
+      const avatar = config.avatar_url ? `<img src="${safe(config.avatar_url)}" alt="">` : `<span>${initial}</span>`;
+      root.innerHTML = `
       <style>
         :host{all:initial;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#102033}
-        *{box-sizing:border-box}
-        button,textarea,input{font:inherit}
-        .callout{position:fixed;right:20px;bottom:104px;z-index:2147483000;padding:12px 16px;border:2px solid ${borderColour};border-radius:15px;color:#172033;background:#fff;box-shadow:0 14px 36px rgba(15,23,42,.18);font:800 13px/1.2 inherit;transition:transform .18s,box-shadow .18s}
-        .callout:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(15,23,42,.22)}
-        .launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:68px;height:68px;display:grid;place-items:center;border:3px solid ${borderColour};border-radius:21px;color:#fff;background:${colour};box-shadow:0 18px 42px ${colour}55,0 6px 18px rgba(15,23,42,.18);cursor:pointer;transition:transform .18s,box-shadow .18s}
-        .launcher:hover{transform:translateY(-3px) scale(1.025);box-shadow:0 22px 48px ${colour}65,0 8px 20px rgba(15,23,42,.2)}
-        .launcher svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-        .panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid rgba(203,213,225,.9);border-radius:24px;background:#fff;box-shadow:0 34px 95px rgba(15,23,42,.3);transition:width .2s,height .2s,inset .2s}
-        .panel>*{min-width:0;max-width:100%}
-        .panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(480px,calc(100vw - 36px));height:min(740px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}
-        .panel.large{left:50%;top:50%;width:min(940px,calc(100vw - 40px));height:min(800px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}
-        .panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:20px}
-        .head{position:relative;display:block;min-height:128px;padding:0 58px;color:${headerText};background:${headerBackground};box-shadow:inset 0 -1px rgba(0,0,0,.1)}
-        .head:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:${patternIntensity / 100};background-image:${pattern};background-size:30px 30px}
-        .identity,.head-tools,.history-trigger{z-index:2}.identity{position:absolute;left:50%;top:88px;display:flex;align-items:center;justify-content:center;min-width:0;width:max-content;max-width:calc(100% - 28px);gap:11px;overflow:hidden;color:${headerText};transform:translate(-50%,-50%)}.identity-copy{min-width:0;overflow:hidden}.identity-title{display:flex;align-items:baseline;justify-content:center;min-width:0;gap:6px;white-space:nowrap}.generic-chat-icon{width:46px;height:46px;flex:0 0 auto;display:grid;place-items:center;border:1px solid ${controlBorder};border-radius:13px;color:${headerText};background:${headerAccentColour};box-shadow:none}.generic-chat-icon svg,.history-trigger svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.generic-chat-icon svg{width:27px;height:27px}
-        .head strong,.head small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${headerText};font:1000 17px/1.1 inherit;letter-spacing:-.015em}.head small{margin:0;opacity:.96}
-        .head-tools{position:absolute;top:10px;right:10px;z-index:3;display:flex;align-items:center;gap:2px}.head-control{position:relative;width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border:0;border-radius:10px;color:${headerText};background:transparent;box-shadow:none;cursor:pointer}.head-control:hover{background:${headerAccentColour}}.action-icon{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:3.1;stroke-linecap:round;stroke-linejoin:round}.quick-trigger .action-icon{fill:currentColor;stroke:none}.history-trigger{position:absolute;top:10px;left:50%;z-index:3;width:auto;min-width:150px;height:44px;display:flex;align-items:center;justify-content:center;gap:9px;padding:0 16px;transform:translateX(-50%);border:3px solid ${historyBorderColour};border-radius:999px;color:${headerText};background:${headerAccentColour};box-shadow:0 5px 13px rgba(15,23,42,.16);cursor:pointer;font:1000 14px/1 inherit}.history-trigger:hover{transform:translateX(-50%) translateY(-1px);box-shadow:0 7px 16px rgba(15,23,42,.2)}.history-trigger svg{width:21px;height:21px;flex:0 0 auto}.panel.history .questions,.panel.history .composer-wrap{display:none}.history-view{display:none;min-height:0;overflow:auto;padding:10px 18px 18px;background:#fff}.panel.history .messages{display:none}.panel.history .history-view{display:block}.history-title{padding:9px 4px 12px;color:#172033;font:900 15px/1.2 inherit}.history-item{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 5px;border:0;border-bottom:1px solid #e2e8f0;color:#223149;background:#fff;cursor:pointer;text-align:left}.history-item:hover{background:#f7f9fc}.history-copy{min-width:0}.history-first{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:750 12px/1.4 inherit}.history-date{margin-top:3px;color:#64748b;font:550 10px/1.3 inherit}.history-arrow{font-size:22px}.history-empty{padding:34px 10px;color:#64748b;text-align:center;font:600 12px/1.5 inherit}.history-new{margin:18px auto 0;padding:11px 15px;border:0;border-radius:999px;color:#fff;background:${colour};cursor:pointer;font:850 11px inherit}
-        .quick-actions{position:relative}.quick-menu{position:absolute;top:42px;right:0;z-index:20;width:220px;display:none;padding:9px;border:1px solid #d9e1eb;border-radius:14px;color:#172033;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.24)}.quick-menu.open{display:block}.quick-title{padding:7px 9px 9px;color:#667386;font:900 10px/1.2 inherit;letter-spacing:.08em;text-transform:uppercase}.quick-menu button{width:100%;display:flex;align-items:center;gap:9px;padding:10px;border:0;border-radius:9px;color:#172033;background:transparent;cursor:pointer;text-align:left;font:750 12px/1.2 inherit}.quick-menu button:hover{background:#f0f4f8}.quick-menu svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-        .questions{position:relative;z-index:1;min-width:0;padding:18px 14px 11px;border-bottom:1px solid #dbe3ec;background:#fff;box-shadow:none}.questions-label{margin-bottom:12px;color:#172033;text-align:center;font:900 12px/1.2 inherit;letter-spacing:.09em;text-transform:uppercase}.question-grid{display:grid;min-width:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-rows:1fr;align-items:stretch;gap:8px}.large .question-grid,.fullscreen .question-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-        .question{width:100%;min-width:0;min-height:54px;height:100%;display:flex;align-items:center;justify-content:flex-start;padding:9px 12px;overflow-wrap:anywhere;word-break:normal;hyphens:auto;border:${questionBorder} solid #cbd5e1;border-radius:10px;color:#16243a;background:#fff;box-shadow:0 4px 10px rgba(15,23,42,.06);cursor:pointer;text-align:left;white-space:normal;font:${questionWeight} 11.5px/1.35 inherit;transition:transform .18s,box-shadow .18s,border-color .18s}.large .question,.fullscreen .question{font-size:13px}.question:hover{transform:translateY(-2px);border-color:${borderColour};color:#16243a;box-shadow:0 8px 17px rgba(15,23,42,.12)}
-        .messages{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overflow-anchor:none;padding:18px;background:#fff;scrollbar-color:#aeb8c6 transparent}.date-divider{margin:0 0 18px;color:#111827;text-align:center;font:900 11px/1.2 inherit}.row{display:flex;min-width:0;margin:0 0 15px}.row.user{justify-content:flex-end}.bubble{min-width:0;max-width:88%;padding:13px 15px;border:1px solid rgba(226,232,240,.85);border-radius:17px 17px 17px 5px;background:#f3f4f6;box-shadow:0 7px 20px rgba(15,23,42,.08);overflow-wrap:anywhere;word-break:break-word;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:900;color:#071426}.user .bubble{border:0;border-radius:17px 17px 5px 17px;color:#fff;background:${colour};box-shadow:0 10px 24px ${colour}33}.user .bubble strong{color:#fff}.bubble a{color:#0b1220;font-weight:900;text-decoration:underline;text-underline-offset:3px}.user .bubble a{color:#fff}.sources{margin-top:13px;padding-top:10px;border-top:1px solid #d9dee6;color:#475569;font:850 10px/1.4 inherit}.sources a{display:block;margin-top:7px;color:#0b1220;font-weight:900;text-decoration:none}.sources a:hover{text-decoration:underline}
-        .panel.history .history-view{grid-row:2/-1}.composer{border-color:#b8c3d1;background:#f3f4f6}.typing-bubble{min-width:62px}.typing-dots{height:22px;display:flex;align-items:center;justify-content:center;gap:5px}.typing-dots i{width:7px;height:7px;border-radius:50%;background:${colour};animation:fiseBounce .9s infinite ease-in-out}.typing-dots i:nth-child(2){animation-delay:.14s}.typing-dots i:nth-child(3){animation-delay:.28s}@keyframes fiseBounce{0%,60%,100%{transform:translateY(2px);opacity:.38}30%{transform:translateY(-5px);opacity:1}}
-        .lead-card{width:min(100%,560px);padding:17px;border:2px solid ${colour}55;border-radius:17px;background:#fff;box-shadow:0 9px 26px rgba(15,23,42,.1)}.lead-card h3{margin:0 0 5px;color:#172033;font:900 16px inherit}.lead-card p{margin:0 0 13px;color:#64748b;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:5px;color:#172033;font:850 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;outline:none;font:500 12px inherit}.lead-card input:focus,.lead-card textarea:focus{border-color:${colour};box-shadow:0 0 0 3px ${colour}18}.lead-card textarea{min-height:72px;resize:vertical}.lead-submit{margin-top:10px;padding:11px 14px;border:0;border-radius:10px;color:#fff;background:${colour};cursor:pointer;font:850 11px inherit}
-        .composer-wrap{padding:11px 12px 8px;border-top:1px solid #e2e8f0;background:#fff}.composer{position:relative;display:flex;flex-direction:column;gap:0;border:1.5px solid #cbd5e1;border-radius:17px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08);transition:border-color .18s,box-shadow .18s}.composer:focus-within{border-color:${colour};box-shadow:0 0 0 3px ${colour}18,0 9px 25px rgba(15,23,42,.1)}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #dbe3ec;border-radius:9px;background:#f5f7fa;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#a52b2b;background:transparent;cursor:pointer;font:800 11px inherit}.input{width:100%;min-width:0;max-height:110px;min-height:58px;padding:13px 14px 4px;border:0;outline:none;resize:none;background:transparent;font:500 13px/1.42 inherit}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;gap:3px}.tool{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;color:#5f6e81;background:transparent;cursor:pointer}.tool svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool:hover{color:${colour};background:${colour}0d}.tool.active{color:#fff;background:#c0392b}.send{width:44px;height:38px;display:grid;place-items:center;border:0;border-radius:11px;color:#fff;background:${colour};box-shadow:0 7px 15px ${colour}35;cursor:pointer}.send svg{width:19px;height:19px;fill:currentColor}.send:disabled{opacity:.55;cursor:wait}
-        .emoji-picker{position:absolute;left:10px;bottom:50px;z-index:12;width:306px;max-width:calc(100% - 20px);max-height:220px;display:none;grid-template-columns:repeat(8,1fr);gap:4px;padding:10px;overflow-y:auto;border:1px solid #d8e0e9;border-radius:14px;background:#fff;box-shadow:0 15px 38px rgba(15,23,42,.2)}.emoji-picker.open{display:grid}.emoji-picker button{width:31px;height:31px;border:0;border-radius:8px;background:transparent;cursor:pointer;font-size:19px}.emoji-picker button:hover{background:#eef2f7;transform:scale(1.12)}
-        .powered{padding:7px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:5px 12px;border:1px solid #d7dee7;border-radius:999px;color:#253247;background:#fff;box-shadow:0 3px 9px rgba(15,23,42,.08);text-decoration:none;font:900 10px inherit}.powered a:hover{color:#0b1220;box-shadow:0 6px 14px rgba(15,23,42,.13)}.hidden{display:none!important}
-        @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.head{min-height:128px;padding:0 52px}.generic-chat-icon{width:36px;height:36px}.head-tools{right:7px;gap:1px}.head-control{width:33px}.history-trigger{min-width:138px}.callout{right:14px;bottom:96px}.launcher{right:14px;bottom:14px;width:64px;height:64px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
-        @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:8px 10px 10px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:minmax(0,1fr)}.question:nth-child(n+5){display:none}.identity{top:88px;width:max-content;max-width:calc(100% - 22px);justify-content:center;gap:8px}.generic-chat-icon{width:40px;height:40px}.head strong,.head small{font-size:15px}.history-trigger{top:9px;left:50%;min-width:136px;width:auto;height:40px;padding:0 13px;transform:translateX(-50%)}.history-trigger:hover{transform:translateX(-50%) translateY(-1px)}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}.quick-menu{right:-39px}}
-        .panel{grid-template-rows:auto minmax(0,1fr) auto}
-        .messages,.history-view{grid-area:2/1}.composer-wrap{grid-area:3/1}
-        .questions{width:min(calc(100% - 28px),720px);margin:0 auto 18px;padding:18px 0 8px;border:0;box-shadow:none;background:transparent}
-        .panel.started .questions,.panel.history .questions{display:none}
+        *{box-sizing:border-box}.callout{position:fixed;right:20px;bottom:94px;z-index:2147483000;padding:11px 14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.16);font:700 13px/1.2 inherit;transition:.2s}.launcher{position:fixed;right:20px;bottom:20px;z-index:2147483001;width:58px;height:58px;border:0;border-radius:18px;color:#fff;background:${colour};box-shadow:0 16px 38px ${colour}55;cursor:pointer;font-size:25px}.panel{position:fixed;z-index:2147483002;display:none;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid rgba(203,213,225,.85);border-radius:24px;background:#fff;box-shadow:0 32px 90px rgba(15,23,42,.28);transition:width .2s,height .2s,inset .2s}.panel.open{display:grid}.panel.standard{right:18px;bottom:18px;width:min(460px,calc(100vw - 36px));height:min(720px,calc(100dvh - 36px));max-height:calc(100vh - 36px)}.panel.large{left:50%;top:50%;width:min(920px,calc(100vw - 40px));height:min(780px,calc(100dvh - 40px));max-height:calc(100vh - 40px);transform:translate(-50%,-50%)}.panel.fullscreen{inset:12px;width:auto;height:auto;border-radius:20px}.head{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:86px;padding:15px 18px;color:#fff;background:radial-gradient(circle at 15% 0%,rgba(255,255,255,.22),transparent 32%),radial-gradient(circle at 90% 110%,rgba(0,0,0,.16),transparent 42%),${colour};box-shadow:inset 0 -1px rgba(0,0,0,.09),0 10px 25px ${colour}30}.head:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;background-image:radial-gradient(circle,rgba(255,255,255,.75) 1px,transparent 1.5px);background-size:28px 28px}.identity,.head-tools{position:relative;z-index:1}.identity{display:flex;align-items:center;min-width:0;gap:12px}.avatar{width:48px;height:48px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;border:2px solid rgba(255,255,255,.8);border-radius:14px;color:${colour};background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.2);font:900 19px inherit}.avatar img{width:100%;height:100%;object-fit:cover}.head strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:850 17px/1.2 inherit}.head small{display:flex;align-items:center;gap:5px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.96;font:600 11px/1.2 inherit}.status-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#d9ffe5;box-shadow:0 0 0 3px rgba(217,255,229,.18)}.head-tools{display:flex;align-items:center;gap:8px}.head button,.size{height:38px;border:1px solid rgba(255,255,255,.36);border-radius:11px;color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 1px rgba(255,255,255,.1);cursor:pointer;font:750 11px inherit}.head button:hover,.size:hover{background:rgba(255,255,255,.23)}.newchat{padding:0 12px}.size{width:100px;padding:0 8px;outline:none}.size option{color:#102033;background:#fff}.close{width:38px;font-size:19px!important}.questions{position:relative;z-index:2;padding:14px 16px 16px;border-bottom:1px solid #e7edf4;background:#fff;box-shadow:0 9px 24px rgba(15,23,42,.06)}.questions-label{margin-bottom:9px;color:#64748b;font:850 10px/1.2 inherit;letter-spacing:.08em;text-transform:uppercase}.question-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.large .question-grid,.fullscreen .question-grid{grid-template-columns:repeat(3,1fr)}.question{min-height:42px;padding:9px 11px;border:1px solid #dce3ec;border-radius:12px;color:#16243a;background:#fff;box-shadow:0 5px 13px rgba(15,23,42,.07);cursor:pointer;text-align:left;font:750 11px/1.3 inherit;transition:transform .18s,box-shadow .18s,border-color .18s,color .18s}.question:hover{transform:translateY(-2px);border-color:${colour}99;color:${colour};box-shadow:0 9px 20px rgba(15,23,42,.12)}.messages{min-height:0;overflow:auto;padding:18px;background:linear-gradient(180deg,#f7f9fc,#f2f6fa);scrollbar-color:#aeb8c6 transparent}.row{display:flex;margin:0 0 15px}.row.user{justify-content:flex-end}.bubble{max-width:88%;padding:13px 15px;border:1px solid rgba(226,232,240,.8);border-radius:17px 17px 17px 5px;background:#fff;box-shadow:0 7px 20px rgba(15,23,42,.08);overflow-wrap:anywhere;font:500 13px/1.58 inherit}.bubble p{margin:0 0 10px}.bubble p:last-child,.bubble ul:last-child{margin-bottom:0}.bubble ul{margin:0 0 10px;padding-left:19px}.bubble li+li{margin-top:6px}.bubble strong{font-weight:850;color:#071426}.user .bubble{border:0;border-radius:17px 17px 5px 17px;color:#fff;background:${colour};box-shadow:0 10px 24px ${colour}33}.user .bubble strong{color:#fff}.bubble a{color:${colour};font-weight:800;text-underline-offset:2px}.user .bubble a{color:#fff}.sources{margin-top:13px;padding-top:10px;border-top:1px solid #e5eaf1;color:#64748b;font:750 10px/1.4 inherit}.sources a{display:block;margin-top:6px;color:#1769e0;text-decoration:none}.sources a:hover{text-decoration:underline}.lead-card{width:min(100%,560px);padding:16px;border:1px solid ${colour}55;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.09)}.lead-card h3{margin:0 0 5px;color:${colour};font:850 16px inherit}.lead-card p{margin:0 0 11px;color:#64748b;font:500 11px/1.45 inherit}.lead-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lead-grid .wide{grid-column:1/-1}.lead-card label{display:block;margin-bottom:4px;font:750 10px inherit}.lead-card input,.lead-card textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;outline:none;font:500 12px inherit}.lead-card textarea{min-height:65px;resize:vertical}.lead-submit{margin-top:9px;padding:10px 13px;border:0;border-radius:9px;color:#fff;background:${colour};cursor:pointer;font:800 11px inherit}.composer-wrap{padding:11px 12px 8px;border-top:1px solid #e2e8f0;background:#fff}.composer{display:flex;flex-direction:column;gap:0;overflow:hidden;border:1.5px solid #cbd5e1;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08);transition:border-color .18s,box-shadow .18s}.composer:focus-within{border-color:${colour};box-shadow:0 0 0 3px ${colour}18,0 9px 25px rgba(15,23,42,.1)}.attachment-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin:9px 11px 0;padding:7px 9px;border:1px solid #dbe3ec;border-radius:9px;background:#f5f7fa;font:700 10px inherit}.attachment-bar.show{display:flex}.attachment-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.remove-file{border:0;color:#a52b2b;background:transparent;cursor:pointer;font:800 11px inherit}.input{width:100%;min-width:0;max-height:110px;min-height:58px;padding:13px 14px 4px;border:0;outline:none;resize:none;background:transparent;font:500 13px/1.42 inherit}.composer-actions{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}.tool-group{display:flex;gap:2px}.tool{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:9px;color:#667386;background:transparent;cursor:pointer}.tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.tool:hover{color:${colour};background:${colour}0d}.tool.active{color:#fff;background:#c0392b}.send{width:42px;height:36px;display:grid;place-items:center;border:0;border-radius:11px;color:#fff;background:${colour};box-shadow:0 7px 15px ${colour}35;cursor:pointer}.send svg{width:18px;height:18px;fill:currentColor}.send:disabled{opacity:.55;cursor:wait}.typing{opacity:.65;font-style:italic}.powered{padding:6px 8px 9px;background:#fff;text-align:center}.powered a{display:inline-block;padding:5px 12px;border:1px solid #e0e6ed;border-radius:999px;color:#536174;background:#fff;box-shadow:0 3px 9px rgba(15,23,42,.07);text-decoration:none;font:750 9px inherit}.powered a:hover{color:${colour};box-shadow:0 5px 12px rgba(15,23,42,.11)}.hidden{display:none!important}
+        @media(max-width:620px){.panel.standard,.panel.large,.panel.fullscreen{inset:8px;width:auto;height:auto;max-height:none;transform:none;border-radius:18px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr 1fr}.head{min-height:76px;padding:11px 12px}.avatar{width:42px;height:42px}.head-tools{gap:5px}.size{width:86px}.newchat{padding:0 8px}.callout{right:14px;bottom:86px}.launcher{right:14px;bottom:14px}.lead-grid{grid-template-columns:1fr}.lead-grid .wide{grid-column:auto}.messages{padding:13px}.bubble{max-width:94%}}
+        @media(max-width:430px){.panel.standard,.panel.large,.panel.fullscreen{inset:4px;border-radius:15px}.questions{padding:11px}.question-grid,.large .question-grid,.fullscreen .question-grid{grid-template-columns:1fr}.question:nth-child(n+5){display:none}.head strong{font-size:15px}.head small{max-width:145px}.newchat{display:none}.messages{padding:11px}.composer-wrap{padding:8px 8px 5px}}
+        .composer{border-color:#b8c3d1;background:#f3f4f6}
+        ${String(config.widget_css || "").replace(/<\/?style\b[^>]*>/gi, "").replace(/@import\b[^;]*;?/gi, "")}
       </style>
-      <div class="callout">Need help with anything? 👋</div>
-      <button class="launcher" type="button" aria-label="Open chat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg></button>
+      <div class="callout">Need help with anything? \u{1F44B}</div>
+      <button class="launcher" aria-label="Open chat">\u{1F4AC}</button>
       <section class="panel ${safe(config.default_size || "standard")}" aria-label="Chat with ${safe(config.name)}">
         <header class="head">
-          <button class="history-trigger" type="button" title="Messages" aria-label="Messages"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg><span class="history-label">Messages</span></button>
-          <div class="identity"><div class="generic-chat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="13" rx="3"/><path d="M8 17.5 5 20v-3M8 9.5h8M8 13h5"/></svg></div><div class="identity-copy"><div class="identity-title"><strong>Questions?</strong><small>Chat with ${safe(config.name)}</small></div></div></div>
-          <div class="head-tools">
-            <div class="quick-actions"><button class="head-control quick-trigger" type="button" aria-label="Quick actions" aria-expanded="false"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg></button><div class="quick-menu"><div class="quick-title">Quick actions</div><button type="button" data-size="standard"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Standard view</button><button type="button" data-size="large"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>Large view</button><button type="button" data-size="fullscreen"><svg viewBox="0 0 24 24"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6"/></svg>Fullscreen</button><button type="button" class="new-conversation"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New conversation</button></div></div>
-            <button class="head-control close" type="button" aria-label="Close chat"><svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-          </div>
+          <div class="identity"><div class="avatar">${avatar}</div><div><strong>${safe(config.name)}</strong><small><span class="status-dot"></span>${safe(config.subtitle || config.business_name)}</small></div></div>
+          <div class="head-tools"><button class="newchat" type="button">New chat</button><select class="size" aria-label="Chat size"><option value="standard">Standard</option><option value="large">Large</option><option value="fullscreen">Fullscreen</option></select><button class="close" type="button" aria-label="Close chat">\u2212</button></div>
         </header>
         <div class="questions"><div class="questions-label">Popular questions</div><div class="question-grid"></div></div>
         <div class="messages" aria-live="polite"></div>
-        <div class="history-view"><div class="history-title">All your conversations</div><div class="history-list"></div><button class="history-new" type="button">＋ Start new conversation</button></div>
-        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}…" aria-label="Your message"></textarea><div class="emoji-picker">${emojiButtons}</div><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button><button class="tool emoji-toggle" type="button" title="Add an emoji" aria-label="Add an emoji"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.76 2.24a1 1 0 0 0-1.08-.22L2.62 9.22a1 1 0 0 0 .06 1.88l7.17 2.39 2.39 7.17a1 1 0 0 0 .91.68h.04a1 1 0 0 0 .92-.61l7.86-17.4a1 1 0 0 0-.21-1.09ZM11.4 12.6l-5.32-1.77 10.64-4.24-5.32 6.01Z"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
+        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}\u2026" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg class="mic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 3 17 9-17 9 3-9-3-9Zm3 9h14"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
       </section>`;
-
-    const panel = root.querySelector(".panel");
-    const launcher = root.querySelector(".launcher");
-    const callout = root.querySelector(".callout");
-    const close = root.querySelector(".close");
-    const quickActions = root.querySelector(".quick-actions");
-    const quickTrigger = root.querySelector(".quick-trigger");
-    const quickMenu = root.querySelector(".quick-menu");
-    const newConversation = root.querySelector(".new-conversation");
-    const historyTrigger = root.querySelector(".history-trigger");
-    const historyList = root.querySelector(".history-list");
-    const historyNew = root.querySelector(".history-new");
-    const form = root.querySelector(".composer");
-    const input = root.querySelector(".input");
-    const send = root.querySelector(".send");
-    const messages = root.querySelector(".messages");
-    const questions = root.querySelector(".questions");
-    const questionGrid = root.querySelector(".question-grid");
-    const attach = root.querySelector(".attach");
-    const fileInput = root.querySelector(".file-input");
-    const attachmentBar = root.querySelector(".attachment-bar");
-    const attachmentName = root.querySelector(".attachment-name");
-    const removeFile = root.querySelector(".remove-file");
-    const mic = root.querySelector(".mic");
-    const emojiToggle = root.querySelector(".emoji-toggle");
-    const emojiPicker = root.querySelector(".emoji-picker");
-    let saved = {};
-    try {
-      saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-    } catch {
-      saved = {};
-    }
-    let conversation = saved.conversation || "";
-    let pendingFile = null;
-    let recorder = null;
-    let recordingStream = null;
-    let chunks = [];
-    resetMessages(false);
-
-    for (const question of (config.popular_questions || []).slice(0, 6)) {
-      const button = document.createElement("button");
-      button.type = "button"; button.className = "question"; button.textContent = question;
-      button.onclick = () => submitMessage(question); questionGrid.appendChild(button);
-    }
-    if (config.lead_capture) {
-      const button = document.createElement("button");
-      button.type = "button"; button.className = "question"; button.textContent = config.lead_cta_label || "Talk to us";
-      button.onclick = () => showLeadForm(true); questionGrid.appendChild(button);
-    }
-
-    launcher.onclick = () => { panel.classList.add("open"); callout.style.display = "none"; launcher.style.display = "none"; input.focus(); };
-    close.onclick = () => { panel.classList.remove("open"); quickMenu.classList.remove("open"); launcher.style.display = "grid"; };
-    historyTrigger.onclick = () => { panel.classList.add("history"); quickMenu.classList.remove("open"); loadHistory(); };
-    historyNew.onclick = () => { panel.classList.remove("history"); resetMessages(true); input.focus(); };
-    quickTrigger.onclick = () => { const open = quickMenu.classList.toggle("open"); quickTrigger.setAttribute("aria-expanded", open ? "true" : "false"); };
-    newConversation.onclick = () => { quickMenu.classList.remove("open"); panel.classList.remove("history"); resetMessages(true); input.focus(); };
-    for (const action of root.querySelectorAll("[data-size]")) {
-      action.onclick = () => { panel.classList.remove("standard", "large", "fullscreen"); panel.classList.add(action.dataset.size); quickMenu.classList.remove("open"); };
-    }
-    root.addEventListener("pointerdown", (event) => {
-      if (!event.target.closest(".quick-actions")) quickMenu.classList.remove("open");
-      if (!event.target.closest(".emoji-picker") && !event.target.closest(".emoji-toggle")) emojiPicker.classList.remove("open");
-    });
-    form.addEventListener("submit", (event) => { event.preventDefault(); submitMessage(input.value.trim()); });
-    input.addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submitMessage(input.value.trim()); } });
-    if (!config.allow_files) attach.classList.add("hidden");
-    if (!config.allow_voice || !navigator.mediaDevices || !window.MediaRecorder) mic.classList.add("hidden");
-    if (!config.allow_emoji) emojiToggle.classList.add("hidden");
-    attach.onclick = () => fileInput.click();
-    fileInput.onchange = () => { if (fileInput.files && fileInput.files[0]) uploadVisitorFile(fileInput.files[0]); };
-    removeFile.onclick = clearAttachment;
-    mic.onclick = toggleRecording;
-    emojiToggle.onclick = () => emojiPicker.classList.toggle("open");
-    for (const button of emojiPicker.querySelectorAll("[data-emoji]")) button.onclick = () => insertEmoji(button.dataset.emoji || "");
-
-    function insertEmoji(emoji) {
-      const start = input.selectionStart || input.value.length; const end = input.selectionEnd || start;
-      input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
-      input.setSelectionRange(start + emoji.length, start + emoji.length); emojiPicker.classList.remove("open"); input.focus();
-    }
-
-    async function uploadVisitorFile(file) {
-      clearAttachment();
-      if (file.size > 8 * 1024 * 1024) { add("assistant", "Please choose a file smaller than 8 MB.", [], true); return; }
-      attach.disabled = true; attachmentBar.classList.add("show"); attachmentName.textContent = "Preparing " + file.name + "…";
-      try {
-        const upload = new FormData(); upload.append("file", file, file.name);
-        const response = await fetch(api + "/api/widget/file?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
-        const data = await response.json(); if (!response.ok) throw new Error(data.error || "The file could not be uploaded");
-        pendingFile = data; attachmentName.textContent = "📎 " + data.name;
-      } catch (error) { clearAttachment(); add("assistant", error.message || "The file could not be uploaded.", [], true); }
-      finally { attach.disabled = false; fileInput.value = ""; }
-    }
-
-    function clearAttachment() { pendingFile = null; attachmentBar.classList.remove("show"); attachmentName.textContent = ""; fileInput.value = ""; }
-
-    async function toggleRecording() {
-      if (recorder && recorder.state === "recording") { recorder.stop(); return; }
-      try {
-        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true }); chunks = []; recorder = new MediaRecorder(recordingStream);
-        recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); }; recorder.onstop = transcribeRecording; recorder.start();
-        mic.classList.add("active"); mic.title = "Stop recording"; mic.setAttribute("aria-label", "Stop recording");
-      } catch { add("assistant", "Microphone access was not allowed.", [], true); }
-    }
-
-    async function transcribeRecording() {
-      mic.classList.remove("active"); mic.title = "Record a voice message"; mic.setAttribute("aria-label", "Record a voice message");
-      if (recordingStream) recordingStream.getTracks().forEach((track) => track.stop());
-      const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" }); if (!blob.size) return;
-      mic.disabled = true; input.placeholder = "Transcribing voice message…";
-      try {
-        const upload = new FormData(); upload.append("audio", blob, "voice-message.webm");
-        const response = await fetch(api + "/api/widget/transcribe?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
-        const data = await response.json(); if (!response.ok) throw new Error(data.error || "Voice transcription failed"); input.value = data.text || ""; input.focus();
-      } catch (error) { add("assistant", error.message || "The voice message could not be transcribed.", [], true); }
-      finally { mic.disabled = false; input.placeholder = "Ask " + config.name + "…"; }
-    }
-
-    async function submitMessage(text) {
-      if ((!text && !pendingFile) || send.disabled) return;
-      const fileForMessage = pendingFile; const display = text || "Please review the attached file."; input.value = "";
-      add("user", display + (fileForMessage ? "\n📎 " + fileForMessage.name : ""), [], true); send.disabled = true;
-      const waiting = addTyping();
-      try {
-        const response = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href, stream: false }) });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "Could not send message");
-        conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); clearAttachment();
-        await animateAssistant(waiting, data.reply, config.helpful_pages_enabled ? (data.sources || []) : []);
-        if (waiting.isConnected && data.show_lead_form && config.lead_capture) showLeadForm(false);
-      } catch (error) { completeAssistant(waiting, error.message || "Please try again.", []); }
-      finally { send.disabled = false; input.focus(); }
-    }
-
-    async function loadHistory() {
-      historyList.innerHTML = '<div class="history-empty">Loading conversations…</div>';
-      try {
-        const response = await fetch(api + "/api/widget/history?key=" + encodeURIComponent(key) + "&visitor_id=" + encodeURIComponent(visitor), { mode: "cors" });
-        const data = await response.json(); if (!response.ok) throw new Error(data.error || "History unavailable");
-        historyList.innerHTML = "";
-        if (!data.conversations || !data.conversations.length) { historyList.innerHTML = '<div class="history-empty">No saved conversations yet.</div>'; return; }
-        for (const item of data.conversations) {
-          const button = document.createElement("button"); button.type = "button"; button.className = "history-item";
-          const first = item.first_message || "Conversation"; const date = formatDate(item.updated_at);
-          button.innerHTML = `<span class="history-copy"><span class="history-first">${safe(first)}</span><span class="history-date">${safe(date)}</span></span><span class="history-arrow">›</span>`;
-          button.onclick = () => openConversation(item.id); historyList.appendChild(button);
-        }
-      } catch (error) { historyList.innerHTML = `<div class="history-empty">${safe(error.message || "History unavailable")}</div>`; }
-    }
-
-    async function openConversation(id) {
-      try {
-        const response = await fetch(api + "/api/widget/conversation?key=" + encodeURIComponent(key) + "&visitor_id=" + encodeURIComponent(visitor) + "&conversation_id=" + encodeURIComponent(id), { mode: "cors" });
-        const data = await response.json(); if (!response.ok) throw new Error(data.error || "Conversation unavailable");
-        conversation = data.conversation_id; localStorage.setItem(storageKey, JSON.stringify({ conversation })); panel.classList.remove("history"); messages.innerHTML = "";
-        const firstDate = data.messages && data.messages[0] ? data.messages[0].created_at : new Date().toISOString(); addDate(firstDate);
-        for (const item of data.messages || []) add(item.role === "user" ? "user" : "assistant", item.content, [], false);
-        messages.scrollTop = messages.scrollHeight; input.focus();
-      } catch (error) { historyList.innerHTML = `<div class="history-empty">${safe(error.message || "Conversation unavailable")}</div>`; }
-    }
-
-    function formatDate(value) {
-      try { return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(new Date(value)); } catch { return ""; }
-    }
-
-    function addDate(value) {
-      const date = document.createElement("div"); date.className = "date-divider"; date.textContent = formatDate(value || new Date()); messages.appendChild(date);
-    }
-
-    function resetMessages(clearSaved) {
-      panel.classList.remove("started");
-      if (clearSaved) { conversation = ""; localStorage.removeItem(storageKey); clearAttachment(); }
-      messages.innerHTML = "";
-      messages.appendChild(questions);
-      addDate(new Date());
-      add("assistant", config.greeting || "Hi! How can I help you today?", [], false);
-      messages.scrollTop = 0;
-    }
-
-    function showLeadForm(autoScroll) {
-      panel.classList.add("started");
-      const existing = messages.querySelector(".lead-card");
-      if (existing) { if (autoScroll) existing.scrollIntoView({ behavior: "smooth", block: "nearest" }); return; }
-      const before = messages.scrollTop; const row = document.createElement("div"); row.className = "row assistant";
-      const card = document.createElement("form"); card.className = "lead-card";
-      card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Answer these four quick questions and the team can respond directly.</p><div class="lead-grid"><div><label>1. Name *</label><input name="name" maxlength="100" required></div><div><label>2. Email *</label><input name="email" type="email" maxlength="254" required></div><div class="wide"><label>3. Phone *</label><input name="phone" maxlength="50" required></div><div class="wide"><label>4. Your query *</label><textarea name="enquiry" maxlength="1200" required></textarea></div></div><button class="lead-submit">Send my details</button>`;
-      card.onsubmit = async (event) => {
-        event.preventDefault(); const button = card.querySelector(".lead-submit"); button.disabled = true; button.textContent = "Sending…";
-        const values = Object.fromEntries(new FormData(card).entries()); values.conversation_id = conversation;
-        try {
-          const response = await fetch(api + "/api/widget/lead?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify(values) });
-          const data = await response.json(); if (!response.ok) throw new Error(data.error || "Could not send your details"); card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
-        } catch (error) { button.disabled = false; button.textContent = "Send my details"; alert(error.message || "Please try again."); }
+      const panel = root.querySelector(".panel");
+      const launcher = root.querySelector(".launcher");
+      const callout = root.querySelector(".callout");
+      const close = root.querySelector(".close");
+      const historyTrigger = root.querySelector(".history-trigger");
+      const historyList = root.querySelector(".history-list");
+      const historyNew = root.querySelector(".history-new");
+      const newchat = root.querySelector(".newchat");
+      const size = root.querySelector(".size");
+      const form = root.querySelector(".composer");
+      const input = root.querySelector(".input");
+      const send = root.querySelector(".send");
+      const messages = root.querySelector(".messages");
+      const questionGrid = root.querySelector(".question-grid");
+      const attach = root.querySelector(".attach");
+      const fileInput = root.querySelector(".file-input");
+      const attachmentBar = root.querySelector(".attachment-bar");
+      const attachmentName = root.querySelector(".attachment-name");
+      const removeFile = root.querySelector(".remove-file");
+      const mic = root.querySelector(".mic");
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      let conversation = saved.conversation || "";
+      let pendingFile = null;
+      let recorder = null;
+      let recordingStream = null;
+      let chunks = [];
+      size.value = ["standard", "large"].includes(config.default_size) ? config.default_size : "standard";
+      resetMessages(false);
+      for (const question of (config.popular_questions || []).slice(0, 4)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "question";
+        button.textContent = question;
+        button.onclick = () => submitMessage(question);
+        questionGrid.appendChild(button);
+      }
+      if (config.lead_capture) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "question";
+        button.textContent = config.lead_cta_label || "Talk to us";
+        button.onclick = showLeadForm;
+        questionGrid.appendChild(button);
+      }
+      launcher.onclick = () => {
+        panel.classList.add("open");
+        callout.style.display = "none";
+        launcher.style.display = "none";
+        input.focus();
       };
-      row.appendChild(card); messages.appendChild(row);
-      if (autoScroll) messages.scrollTop = messages.scrollHeight; else messages.scrollTop = before;
-    }
-
-    function addTyping() {
-      const row = document.createElement("div"); row.className = "row assistant";
-      const bubble = document.createElement("div"); bubble.className = "bubble typing-bubble"; bubble.innerHTML = '<span class="typing-dots" aria-label="Typing"><i></i><i></i><i></i></span>';
-      row.appendChild(bubble); messages.appendChild(row); messages.scrollTop = messages.scrollHeight; return row;
-    }
-
-    function completeAssistant(row, text, sources) {
-      const before = messages.scrollTop; const bubble = row.querySelector(".bubble"); bubble.className = "bubble"; bubble.textContent = "";
-      appendRichText(bubble, text); appendSources(bubble, sources); requestAnimationFrame(() => { messages.scrollTop = before; });
-    }
-
-    function updateStreamingAssistant(row, text) {
-      const bubble = row.querySelector(".bubble"); bubble.className = "bubble"; bubble.textContent = text;
-    }
-
-    async function animateAssistant(row, text, sources) {
-      const plain = String(text || "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1");
-      const chars = Array.from(plain);
-      if (!chars.length || document.hidden || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-        if (row.isConnected) completeAssistant(row, text, sources);
-        return;
-      }
-      const bubble = row.querySelector(".bubble");
-      bubble.className = "bubble";
-      bubble.setAttribute("aria-live", "off");
-      const duration = Math.min(3800, Math.max(650, chars.length * 24));
-      await new Promise((resolve) => {
-        const start = performance.now();
-        let frameId;
-        let shown = 0;
-        const finish = () => { cancelAnimationFrame(frameId); document.removeEventListener("visibilitychange", onVisibility); resolve(); };
-        const onVisibility = () => { if (document.hidden) finish(); };
-        document.addEventListener("visibilitychange", onVisibility);
-        const frame = (now) => {
-          if (!row.isConnected) { finish(); return; }
-          const count = Math.min(chars.length, Math.max(1, Math.ceil((now - start) * chars.length / duration)));
-          if (count !== shown) {
-            bubble.textContent = chars.slice(0, count).join("");
-            shown = count;
-            if (messages.scrollHeight - messages.scrollTop - messages.clientHeight < 100) messages.scrollTop = messages.scrollHeight;
-          }
-          if (count === chars.length) finish(); else frameId = requestAnimationFrame(frame);
-        };
-        frameId = requestAnimationFrame(frame);
+      close.onclick = () => {
+        panel.classList.remove("open");
+        launcher.style.display = "block";
+      };
+      newchat.onclick = () => resetMessages(true);
+      size.onchange = () => {
+        panel.classList.remove("standard", "large", "fullscreen");
+        panel.classList.add(size.value);
+      };
+      document.addEventListener("pointerdown", (event) => {
+        if (panel.classList.contains("open") && event.target !== host) {
+          panel.classList.remove("open");
+          launcher.style.display = "block";
+        }
+      }, true);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submitMessage(input.value.trim());
       });
-      if (row.isConnected) { bubble.removeAttribute("aria-live"); completeAssistant(row, text, sources); }
-    }
-
-    function add(role, text, sources = [], autoScroll = true) {
-      if (role === "user") panel.classList.add("started");
-      const row = document.createElement("div"); row.className = "row " + role;
-      const bubble = document.createElement("div"); bubble.className = "bubble"; appendRichText(bubble, text); appendSources(bubble, sources); row.appendChild(bubble); messages.appendChild(row);
-      if (autoScroll) messages.scrollTop = messages.scrollHeight; return row;
-    }
-
-    function appendSources(bubble, sources) {
-      if (!sources || !sources.length) return;
-      const box = document.createElement("div"); box.className = "sources"; box.textContent = "Helpful pages:";
-      for (const source of sources.slice(0, 3)) {
-        if (!/^https?:\/\//i.test(source.url || "")) continue;
-        const link = document.createElement("a"); link.href = source.url; link.target = "_blank"; link.rel = "noopener"; link.textContent = source.title || source.url; box.appendChild(link);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          submitMessage(input.value.trim());
+        }
+      });
+      if (!config.allow_files) attach.classList.add("hidden");
+      if (!config.allow_voice || !navigator.mediaDevices || !window.MediaRecorder) mic.classList.add("hidden");
+      attach.onclick = () => fileInput.click();
+      fileInput.onchange = () => {
+        if (fileInput.files && fileInput.files[0]) uploadVisitorFile(fileInput.files[0]);
+      };
+      removeFile.onclick = clearAttachment;
+      mic.onclick = toggleRecording;
+      async function uploadVisitorFile(file) {
+        clearAttachment();
+        if (file.size > 8 * 1024 * 1024) {
+          add("assistant", "Please choose a file smaller than 8 MB.");
+          return;
+        }
+        attach.disabled = true;
+        attachmentBar.classList.add("show");
+        attachmentName.textContent = "Preparing " + file.name + "\u2026";
+        try {
+          const upload = new FormData();
+          upload.append("file", file, file.name);
+          const response2 = await fetch(api + "/api/widget/file?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
+          const data = await response2.json();
+          if (!response2.ok) throw new Error(data.error || "The file could not be uploaded");
+          pendingFile = data;
+          attachmentName.textContent = "\u{1F4CE} " + data.name;
+        } catch (error) {
+          clearAttachment();
+          add("assistant", error.message || "The file could not be uploaded.");
+        } finally {
+          attach.disabled = false;
+          fileInput.value = "";
+        }
       }
-      bubble.appendChild(box);
-    }
-
-    function appendRichText(container, text) {
-      const lines = String(text || "").replace(/\r/g, "").split("\n"); let list = null;
-      for (const rawLine of lines) {
-        const line = rawLine.trim(); if (!line) { list = null; continue; }
-        if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) {
-          if (!list) { list = document.createElement("ul"); container.appendChild(list); }
-          const item = document.createElement("li"); appendInline(item, line.replace(/^(?:[-*•]|\d+[.)])\s+/, "")); list.appendChild(item);
-        } else { list = null; const paragraph = document.createElement("p"); appendInline(paragraph, line); container.appendChild(paragraph); }
+      __name(uploadVisitorFile, "uploadVisitorFile");
+      function clearAttachment() {
+        pendingFile = null;
+        attachmentBar.classList.remove("show");
+        attachmentName.textContent = "";
+        fileInput.value = "";
       }
-    }
-
-    function appendInline(container, value) {
-      const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi; let last = 0; let match;
-      while ((match = pattern.exec(value))) {
-        if (match.index > last) container.appendChild(document.createTextNode(value.slice(last, match.index)));
-        if (match[1]) { const strong = document.createElement("strong"); strong.textContent = match[1]; container.appendChild(strong); }
-        else { const link = document.createElement("a"); link.href = match[3] || match[4]; link.target = "_blank"; link.rel = "noopener"; link.textContent = match[2] || match[4]; container.appendChild(link); }
-        last = pattern.lastIndex;
+      __name(clearAttachment, "clearAttachment");
+      async function toggleRecording() {
+        if (recorder && recorder.state === "recording") {
+          recorder.stop();
+          return;
+        }
+        try {
+          recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          chunks = [];
+          recorder = new MediaRecorder(recordingStream);
+          recorder.ondataavailable = (event) => {
+            if (event.data.size) chunks.push(event.data);
+          };
+          recorder.onstop = transcribeRecording;
+          recorder.start();
+          mic.classList.add("active");
+          mic.title = "Stop recording";
+          mic.setAttribute("aria-label", "Stop recording");
+        } catch {
+          add("assistant", "Microphone access was not allowed.");
+        }
       }
-      if (last < value.length) container.appendChild(document.createTextNode(value.slice(last)));
+      __name(toggleRecording, "toggleRecording");
+      async function transcribeRecording() {
+        mic.classList.remove("active");
+        mic.title = "Record a voice message";
+        mic.setAttribute("aria-label", "Record a voice message");
+        if (recordingStream) recordingStream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : "audio/webm" });
+        if (!blob.size) return;
+        mic.disabled = true;
+        input.placeholder = "Transcribing voice message\u2026";
+        try {
+          const upload = new FormData();
+          upload.append("audio", blob, "voice-message.webm");
+          const response2 = await fetch(api + "/api/widget/transcribe?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", body: upload });
+          const data = await response2.json();
+          if (!response2.ok) throw new Error(data.error || "Voice transcription failed");
+          input.value = data.text || "";
+          input.focus();
+        } catch (error) {
+          add("assistant", error.message || "The voice message could not be transcribed.");
+        } finally {
+          mic.disabled = false;
+          input.placeholder = "Ask " + config.name + "\u2026";
+        }
+      }
+      __name(transcribeRecording, "transcribeRecording");
+      async function submitMessage(text) {
+        if (!text && !pendingFile || send.disabled) return;
+        const fileForMessage = pendingFile;
+        const display = text || "Please review the attached file.";
+        input.value = "";
+        add("user", display + (fileForMessage ? "\n\u{1F4CE} " + fileForMessage.name : ""));
+        send.disabled = true;
+        const waiting = add("assistant", "Thinking\u2026", [], true);
+        try {
+          const response2 = await fetch(api + "/api/widget/chat?key=" + encodeURIComponent(key), {
+            method: "POST",
+            mode: "cors",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ message: text, attachment: fileForMessage, visitor_id: visitor, conversation_id: conversation, page_url: location.href })
+          });
+          const data = await response2.json();
+          waiting.remove();
+          if (!response2.ok) throw new Error(data.error || "Could not send message");
+          conversation = data.conversation_id;
+          localStorage.setItem(storageKey, JSON.stringify({ conversation }));
+          clearAttachment();
+          add("assistant", data.reply, data.sources || []);
+        } catch (error) {
+          waiting.remove();
+          add("assistant", error.message || "Please try again.");
+        } finally {
+          send.disabled = false;
+          input.focus();
+        }
+      }
+      __name(submitMessage, "submitMessage");
+      function resetMessages(clearSaved) {
+        if (clearSaved) {
+          conversation = "";
+          localStorage.removeItem(storageKey);
+          clearAttachment();
+        }
+        messages.innerHTML = "";
+        add("assistant", config.greeting || "Hi! How can I help you today?");
+      }
+      __name(resetMessages, "resetMessages");
+      function showLeadForm() {
+        const row = document.createElement("div");
+        row.className = "row assistant";
+        const card = document.createElement("form");
+        card.className = "lead-card";
+        card.innerHTML = `<h3>${safe(config.lead_cta_label || "Let us help")}</h3><p>Leave your details and the team can respond to your enquiry.</p><div class="lead-grid"><div><label>Name *</label><input name="name" maxlength="100" required></div><div><label>Phone</label><input name="phone" maxlength="50"></div><div class="wide"><label>Email</label><input name="email" type="email" maxlength="254"></div><div class="wide"><label>Business name</label><input name="business_name" maxlength="120"></div><div class="wide"><label>Enquiry</label><textarea name="enquiry" maxlength="1200"></textarea></div></div><button class="lead-submit">Send my details</button>`;
+        card.onsubmit = async (event) => {
+          event.preventDefault();
+          const button = card.querySelector(".lead-submit");
+          button.disabled = true;
+          button.textContent = "Sending\u2026";
+          const values = Object.fromEntries(new FormData(card).entries());
+          values.conversation_id = conversation;
+          try {
+            const response2 = await fetch(api + "/api/widget/lead?key=" + encodeURIComponent(key), { method: "POST", mode: "cors", headers: { "content-type": "application/json" }, body: JSON.stringify(values) });
+            const data = await response2.json();
+            if (!response2.ok) throw new Error(data.error || "Could not send your details");
+            card.innerHTML = `<h3>Thank you</h3><p>${safe(data.message || "Your details have been sent.")}</p>`;
+          } catch (error) {
+            button.disabled = false;
+            button.textContent = "Send my details";
+            alert(error.message || "Please try again.");
+          }
+        };
+        row.appendChild(card);
+        messages.appendChild(row);
+        messages.scrollTop = messages.scrollHeight;
+      }
+      __name(showLeadForm, "showLeadForm");
+      function add(role, text, sources = [], typing = false) {
+        const row = document.createElement("div");
+        row.className = "row " + role;
+        const bubble = document.createElement("div");
+        bubble.className = "bubble" + (typing ? " typing" : "");
+        appendRichText(bubble, text);
+        row.appendChild(bubble);
+        if (sources.length) {
+          const box = document.createElement("div");
+          box.className = "sources";
+          box.textContent = "Helpful pages:";
+          for (const source of sources.slice(0, 3)) {
+            if (!/^https?:\/\//i.test(source.url || "")) continue;
+            const link = document.createElement("a");
+            link.href = source.url;
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = source.title || source.url;
+            box.appendChild(link);
+          }
+          bubble.appendChild(box);
+        }
+        messages.appendChild(row);
+        messages.scrollTop = messages.scrollHeight;
+        return row;
+      }
+      __name(add, "add");
+      function appendRichText(container, text) {
+        const lines = String(text || "").replace(/\r/g, "").split("\n");
+        let list = null;
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (!line) {
+            list = null;
+            continue;
+          }
+          if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) {
+            if (!list) {
+              list = document.createElement("ul");
+              container.appendChild(list);
+            }
+            const item = document.createElement("li");
+            appendInline(item, line.replace(/^(?:[-*•]|\d+[.)])\s+/, ""));
+            list.appendChild(item);
+          } else {
+            list = null;
+            const paragraph = document.createElement("p");
+            appendInline(paragraph, line);
+            container.appendChild(paragraph);
+          }
+        }
+      }
+      __name(appendRichText, "appendRichText");
+      function appendInline(container, value) {
+        const pattern = /\*\*([^*\n]{1,240})\*\*|\[([^\]]{1,120})\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
+        let last = 0;
+        let match;
+        while (match = pattern.exec(value)) {
+          if (match.index > last) container.appendChild(document.createTextNode(value.slice(last, match.index)));
+          if (match[1]) {
+            const strong = document.createElement("strong");
+            strong.textContent = match[1];
+            container.appendChild(strong);
+          } else {
+            const link = document.createElement("a");
+            link.href = match[3] || match[4];
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = match[2] || match[4];
+            container.appendChild(link);
+          }
+          last = pattern.lastIndex;
+        }
+        if (last < value.length) container.appendChild(document.createTextNode(value.slice(last)));
+      }
+      __name(appendInline, "appendInline");
     }
+    __name(mount, "mount");
+    function safe(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+    __name(safe, "safe");
   }
-
-  function hexRgb(hex) { const value = parseInt(String(hex).slice(1), 16); return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }; }
-  function shade(hex, percent) {
-    const rgb = hexRgb(hex); const factor = percent / 100;
-    const adjust = (value) => Math.max(0, Math.min(255, Math.round(percent >= 0 ? value + (255 - value) * factor : value * (1 + factor))));
-    return "#" + [adjust(rgb.r), adjust(rgb.g), adjust(rgb.b)].map((value) => value.toString(16).padStart(2, "0")).join("");
-  }
-  function patternImage(type, colour) {
-    const shape = {
-      circles: `<circle cx="15" cy="15" r="3" fill="none" stroke="${colour}" stroke-width="1.5"/>`,
-      pluses: `<path d="M15 11v8M11 15h8" fill="none" stroke="${colour}" stroke-width="1.8" stroke-linecap="round"/>`,
-      crosses: `<path d="m12 12 6 6m0-6-6 6" fill="none" stroke="${colour}" stroke-width="1.7" stroke-linecap="round"/>`,
-      lines: `<path d="M11 15h8" fill="none" stroke="${colour}" stroke-width="1.9" stroke-linecap="round"/>`
-    }[type] || "";
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">${shape}</svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }
-  function safe(value) { return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
-}
-    __name(widgetBootstrap, "widgetBootstrap");
+  __name(widgetBootstrap, "widgetBootstrap");
   function widgetBootstrapV2Clean(configOverride = null, scriptOverride = null) {
     const script = scriptOverride || document.currentScript;
     if (!script || !configOverride && script.dataset.fiseLoaded === "1") return;
@@ -2245,12 +2179,7 @@ Date: ${lead.created_at}`
       const close = root.querySelector(".close"), historyTrigger = root.querySelector(".history-trigger"), historyList = root.querySelector(".history-list"), historyNew = root.querySelector(".history-new");
       const form = root.querySelector(".composer"), input = root.querySelector(".input"), send = root.querySelector(".send"), messages = root.querySelector(".messages");
       const attach = root.querySelector(".attach"), fileInput = root.querySelector(".file-input"), attachmentBar = root.querySelector(".attachment-bar"), attachmentName = root.querySelector(".attachment-name"), removeFile = root.querySelector(".remove-file"), mic = root.querySelector(".mic");
-      let saved = {};
-      try {
-        saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-      } catch {
-        saved = {};
-      }
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
       const introDateStorageKey = storageKey + "-v2-video-intro-date-v2";
       const businessName = String(config.business_name || "Get Found").trim();
       const introMessage = `Hello im ${String(config.name || "Stanz").trim()}, ${businessName}'s AI Assistant. I can help you with any query you might have.`;
@@ -2576,8 +2505,8 @@ Date: ${lead.created_at}`
           conversation = data.conversation_id;
           localStorage.setItem(storageKey, JSON.stringify({ conversation }));
           clearAttachment();
-          await animateAssistant(waiting, data.reply, config.helpful_pages_enabled ? data.sources || [] : []);
-          if (waiting.isConnected && data.show_lead_form && config.lead_capture) showLeadForm(false);
+          completeAssistant(waiting, data.reply, config.helpful_pages_enabled ? data.sources || [] : []);
+          if (data.show_lead_form && config.lead_capture) showLeadForm(false);
         } catch (error) {
           completeAssistant(waiting, error.message || "Please try again.", []);
         } finally {
@@ -2723,41 +2652,6 @@ Date: ${lead.created_at}`
         });
       }
       __name(completeAssistant, "completeAssistant");
-      async function animateAssistant(row, text, sources) {
-        const interval = responseTimers.get(row);
-        if (interval) { clearInterval(interval); responseTimers.delete(row); }
-        const plain = String(text || "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1");
-        const chars = Array.from(plain);
-        if (!chars.length || document.hidden || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-          if (row.isConnected) completeAssistant(row, text, sources);
-          return;
-        }
-        const bubble = row.querySelector(".bubble");
-        bubble.className = "bubble";
-        bubble.setAttribute("aria-live", "off");
-        const duration = Math.min(3800, Math.max(650, chars.length * 24));
-        await new Promise((resolve) => {
-          const start = performance.now();
-          let frameId;
-          let shown = 0;
-          const finish = () => { cancelAnimationFrame(frameId); document.removeEventListener("visibilitychange", onVisibility); resolve(); };
-          const onVisibility = () => { if (document.hidden) finish(); };
-          document.addEventListener("visibilitychange", onVisibility);
-          const frame = (now) => {
-            if (!row.isConnected) { finish(); return; }
-            const count = Math.min(chars.length, Math.max(1, Math.ceil((now - start) * chars.length / duration)));
-            if (count !== shown) {
-              bubble.textContent = chars.slice(0, count).join("");
-              shown = count;
-              if (messages.scrollHeight - messages.scrollTop - messages.clientHeight < 100) messages.scrollTop = messages.scrollHeight;
-            }
-            if (count === chars.length) finish(); else frameId = requestAnimationFrame(frame);
-          };
-          frameId = requestAnimationFrame(frame);
-        });
-        if (row.isConnected) { bubble.removeAttribute("aria-live"); completeAssistant(row, text, sources); }
-      }
-      __name(animateAssistant, "animateAssistant");
       function add(role, text, sources = [], autoScroll = true) {
         const row = document.createElement("div"), bubble = document.createElement("div");
         row.className = "row " + role;
@@ -2851,7 +2745,7 @@ Date: ${lead.created_at}`
     return new Response(widgetJavascript(), {
       headers: {
         "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+        "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
         "access-control-allow-origin": "*",
         "x-content-type-options": "nosniff"
       }
@@ -2869,10 +2763,10 @@ Date: ${lead.created_at}`
     const studio = embed && url.searchParams.get("studio") === "1";
     const origin = url.origin;
     const version = widgetVersion === "2" ? "2" : "1";
-    const versionControl = embed ? "" : `<form class="version-control" method="post" action="/api/chatbots/${encodeURIComponent(chatbotId)}/version"><input type="hidden" name="return_to" value="preview"><input type="hidden" name="key" value="${escapeHtml2(key)}"><details class="version-picker"><summary aria-label="Choose chatbot version"><span class="version-picker-title">Version ${version === "2" ? "2.1" : "1.1"}</span><span class="version-picker-chevron" aria-hidden="true"></span></summary><div class="version-picker-menu" role="menu"><button type="submit" name="widget_version" value="1" class="version-picker-option ${version === "1" ? "active" : ""}" role="menuitem"><span><strong>Version 1.1</strong><small>Original branded layout and controls</small></span><span class="version-picker-check" aria-hidden="true">✓</span></button><button type="submit" name="widget_version" value="2" class="version-picker-option ${version === "2" ? "active" : ""}" role="menuitem"><span><strong>Version 2.1</strong><small>Clean modern layout and smoother interactions</small></span><span class="version-picker-check" aria-hidden="true">✓</span></button></div></details></form>`;
+    const versionControl = embed ? "" : `<form class="version-control" method="post" action="/api/chatbots/${encodeURIComponent(chatbotId)}/version"><input type="hidden" name="return_to" value="preview"><input type="hidden" name="key" value="${escapeHtml2(key)}"><label for="widget-version">Chatbot version</label><span class="select-wrap"><select id="widget-version" name="widget_version" data-version-select aria-label="Chatbot version"><option value="1" ${version === "1" ? "selected" : ""}>Version 1</option><option value="2" ${version === "2" ? "selected" : ""}>Version 2</option></select></span></form>`;
     const intro = embed ? "" : `<main class="wrap"><section class="card"><h1>Test your chatbot</h1><p>Open the live widget in the bottom-right corner. Test instant answers, Chat History, files, voice, emojis and the contact survey.</p><a class="back" href="/dashboard">Return to dashboard</a></section></main>`;
     const autoOpen = embed ? `<script>(()=>{let attempts=0;const timer=setInterval(()=>{attempts+=1;const host=document.getElementById('fise-chat-widget');const root=host?.shadowRoot;const launcher=root?.querySelector('.launcher');const panel=root?.querySelector('.panel');if(launcher&&panel){launcher.click();panel.classList.remove('standard','large');panel.classList.add('fullscreen');clearInterval(timer)}else if(attempts>120){clearInterval(timer)}},100)})();<\/script>` : "";
-    const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:96px 0 80px}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}.version-control{position:fixed;top:24px;right:24px;z-index:50}.version-picker{position:relative}.version-picker summary{min-width:158px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 16px;border:1px solid #d7d9dd;border-radius:13px;list-style:none;color:#202124;background:#fff;box-shadow:0 8px 24px rgba(17,24,39,.09);font-size:14px;font-weight:750;cursor:pointer;user-select:none}.version-picker summary::-webkit-details-marker{display:none}.version-picker summary:focus-visible{outline:3px solid rgba(26,115,232,.2);outline-offset:2px}.version-picker-chevron{width:8px;height:8px;border-right:2px solid #868b93;border-bottom:2px solid #868b93;transform:translateY(-2px) rotate(45deg);transition:transform .16s ease}.version-picker[open] .version-picker-chevron{transform:translateY(2px) rotate(225deg)}.version-picker-menu{position:absolute;top:calc(100% + 10px);right:0;width:340px;max-width:calc(100vw - 24px);padding:10px;border:1px solid #d4d6da;border-radius:18px;background:#fff;box-shadow:0 18px 48px rgba(17,24,39,.18);animation:versionMenuIn .16s ease-out}.version-picker-option{width:100%;min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 13px;border:0;border-radius:12px;color:#202124;background:transparent;text-align:left;cursor:pointer}.version-picker-option:hover,.version-picker-option:focus-visible{background:#f5f6f7;outline:none}.version-picker-option strong,.version-picker-option small{display:block}.version-picker-option strong{font-size:16px;line-height:1.3;font-weight:500}.version-picker-option small{margin-top:3px;color:#8b8d91;font-size:14px;line-height:1.35}.version-picker-check{display:none;color:#1a73e8;font-size:24px;font-weight:700}.version-picker-option.active .version-picker-check{display:block}@keyframes versionMenuIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(max-width:650px){.version-control{top:12px;right:12px}.version-picker summary{min-width:145px;height:43px}.wrap{padding-top:74px}}</style></head><body>${versionControl}${intro}<script src="${escapeHtml2(origin)}/widget.js?v=20260908-versions-1" data-chatbot-key="${escapeHtml2(key)}" data-preview="1"><\/script><script src="/widget-test.js" defer><\/script>${autoOpen}</body></html>`;
+    const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fise chatbot demo</title><style>body{margin:0;font-family:Inter,system-ui,sans-serif;color:#102033;background:${embed ? "#fff" : "linear-gradient(145deg,#fff,#eaf3ff)"};min-height:100vh}.wrap{width:min(760px,calc(100% - 32px));margin:auto;padding:96px 0 80px}.card{padding:32px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(27,63,108,.1)}h1{font-size:42px;margin:0 0 12px}p{color:#637083;line-height:1.6}.back{color:#1769e0;font-weight:800}.version-control{position:fixed;top:24px;right:24px;z-index:50;display:flex;align-items:center;gap:10px;padding:7px 8px 7px 13px;border:1px solid #e0e2e6;border-radius:11px;color:#737882;background:#f0f1f3;box-shadow:0 7px 18px rgba(17,24,39,.07)}.version-control label{font-size:12px;font-weight:750}.select-wrap{position:relative}.select-wrap:after{content:"";position:absolute;right:11px;top:50%;width:7px;height:7px;border-right:2px solid #a8adb5;border-bottom:2px solid #a8adb5;transform:translateY(-70%) rotate(45deg);pointer-events:none}.version-control select{min-width:116px;height:36px;padding:0 31px 0 12px;border:0;border-radius:8px;appearance:none;color:#25282e;background:#e7e9ec;outline:none;font-size:13px;font-weight:800;cursor:pointer}.version-control select:focus{box-shadow:0 0 0 3px rgba(17,24,39,.09)}@media(max-width:650px){.version-control{top:12px;right:12px}.version-control label{display:none}.wrap{padding-top:74px}}</style></head><body>${versionControl}${intro}<script src="${escapeHtml2(origin)}/widget.js?v=20260908-versions-1" data-chatbot-key="${escapeHtml2(key)}" data-preview="1"><\/script><script src="/widget-test.js" defer><\/script>${autoOpen}</body></html>`;
     const scriptPolicy = embed ? "'self' 'unsafe-inline'" : "'self'";
     return new Response(content, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": `default-src 'self'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors ${studio ? "'self'" : "'none'"}; base-uri 'none'`, "permissions-policy": "microphone=(self)", "x-content-type-options": "nosniff", "x-frame-options": studio ? "SAMEORIGIN" : "DENY" } });
   }
@@ -3260,7 +3154,7 @@ var WebsiteModule = (() => {
   }
   __name(publicNav, "publicNav");
   function shell(title, description, content, c) {
-    const page = html2(_a || (_a = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="description" content="', '" />\n        <title>', "</title>\n        <style>\n          ", ":root {\n            --blue: ", ";\n            --bright: ", ";\n            --navy: ", ";\n          }\n          ", '\n        </style>\n      </head>\n      <body>\n        <div class="notice">', '</div>\n        <header class="site-head">\n          <div class="container nav">\n            <a class="logo" href="/">', '</a>\n            <nav class="nav-links" id="nav">', `</nav>
+    return html2(_a || (_a = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="description" content="', '" />\n        <title>', "</title>\n        <style>\n          ", ":root {\n            --blue: ", ";\n            --bright: ", ";\n            --navy: ", ";\n          }\n          ", '\n        </style>\n      </head>\n      <body>\n        <div class="notice">', '</div>\n        <header class="site-head">\n          <div class="container nav">\n            <a class="logo" href="/">', '</a>\n            <nav class="nav-links" id="nav">', `</nav>
             <a class="button primary small" href="/login">Try Fise AI</a
             ><button
               class="menu"
@@ -3271,7 +3165,6 @@ var WebsiteModule = (() => {
           </div>
         </header>
         `, '\n        <footer class="site-foot">\n          <div class="container">\n            <div class="foot-grid">\n              <div>\n                <a class="logo" href="/" style="color:white">', '</a>\n                <p style="max-width:310px;line-height:1.6">\n                  ', "\n                </p>\n              </div>\n              <div>\n                <h3>Product</h3>\n                ", '<a\n                  href="/#demo"\n                  >', "</a\n                >", "", "\n              </div>\n              <div>\n                <h3>Company</h3>\n                ", "", "", '<a\n                  href="/contact"\n                  >Contact</a\n                >\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy-policy">Privacy</a><a href="/terms-and-conditions">Terms</a\n                ><a href="mailto:', '"\n                  >', '</a\n                >\n              </div>\n            </div>\n            <div class="foot-bottom">\n              <span\n                >\xA9 ', " Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script>", "<\/script>\n      </body>\n    </html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), legacyStyles, escapeWebsiteHtml(c.theme_primary), escapeWebsiteHtml(c.theme_primary), escapeWebsiteHtml(c.theme_navy), c.site_css || "", escapeWebsiteHtml(c.announcement), logo(c), publicNav(c), content, logo(c), escapeWebsiteHtml(c.footer_text), enabled(c.nav_chatbots_enabled) ? html2`<a href="/#features">AI Chatbots</a>` : "", escapeWebsiteHtml(c.nav_demo_label), enabled(c.nav_pricing_enabled) ? html2`<a href="/#pricing">Pricing</a>` : "", enabled(c.nav_signin_enabled) ? html2`<a href="/login">Customer sign in</a>` : "", enabled(c.nav_about_enabled) || enabled(c.nav_dropdown_about_enabled) ? html2`<a href="/about">About</a>` : "", enabled(c.nav_resources_enabled) && enabled(c.nav_resources_page_enabled) ? html2`<a href="/blog">${escapeWebsiteHtml(c.nav_resources_label)}</a>` : "", enabled(c.nav_blog_enabled) || enabled(c.nav_dropdown_blog_enabled) ? html2`<a href="/blog">Blog</a>` : "", escapeWebsiteHtml(c.contact_email), escapeWebsiteHtml(c.contact_email), (/* @__PURE__ */ new Date()).getFullYear(), visualOverridesJavascript(c));
-    return page.replace("</style>", referenceStyles + requestedStyles + "</style>").replace(/<footer class="site-foot">[\s\S]*?<\/footer>/, referenceFooter());
   }
   __name(shell, "shell");
   function home(c) {
@@ -3559,16 +3452,6 @@ var WebsiteModule = (() => {
 .hero-trust svg{color:#68686e!important}
 .step-icon{background:linear-gradient(145deg,#2a2a2e,#000)!important;box-shadow:0 12px 28px rgba(0,0,0,.2)!important}
 .reference-hero h1 span{background:linear-gradient(90deg,var(--pink),var(--accent-blue),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent!important}
-.js-reveal .reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
-.js-reveal .reveal.is-visible{opacity:1;transform:none}
-.js-reveal .reveal .feature-card,.js-reveal .reveal .pricing-card{transition:opacity .5s ease,transform .5s ease,box-shadow .18s ease,border-color .18s ease}
-.js-reveal .reveal:not(.is-visible) .feature-card,.js-reveal .reveal:not(.is-visible) .pricing-card{opacity:0;transform:translateY(18px)}
-.feature-grid .feature-card:nth-child(2){transition-delay:.08s}
-.feature-grid .feature-card:nth-child(3){transition-delay:.16s}
-.pricing-grid .pricing-card:nth-child(2){transition-delay:.06s}
-.pricing-grid .pricing-card:nth-child(3){transition-delay:.12s}
-.pricing-grid .pricing-card:nth-child(4){transition-delay:.18s}
-@media(prefers-reduced-motion:reduce){.js-reveal .reveal,.js-reveal .reveal .feature-card,.js-reveal .reveal .pricing-card{opacity:1!important;transform:none!important;transition:none!important}}
 `;
   const requestedStyles = html2`
   main { display:flex; flex-direction:column; }
@@ -3832,16 +3715,6 @@ var WebsiteModule = (() => {
   .account-standard.hide { display:none; }
   .account-note { margin:14px 0 0; padding:12px 13px; border-radius:10px;
     color:#536174; background:#f5f7fa; font-size:12px; line-height:1.5; }
-  .account-setup-skip { display:block; width:100%; margin:10px 0 0; padding:8px;
-    border:0; border-radius:8px; color:#69778a; background:transparent;
-    cursor:pointer; font-size:12px; font-weight:750; text-align:center;
-    transition:color .16s ease,background .16s ease; }
-  .account-setup-skip:hover,.account-setup-skip:focus-visible { color:#1769e0;
-    background:#f5f7fa; }
-  .profile-set-password { margin-left:10px; padding:0; border:0;
-    background:transparent; color:#1769e0; cursor:pointer; font-size:12px;
-    font-weight:800; text-decoration:underline; transition:color .16s ease; }
-  .profile-set-password:hover,.profile-set-password:focus-visible { color:#0d4ea6; }
   .account-sent { display:none; margin:0 0 18px; padding:13px 14px;
     border:1px solid #a9d9bd; border-radius:11px; color:#167044;
     background:#effaf3; font-size:14px; line-height:1.45; }
@@ -4159,31 +4032,14 @@ var WebsiteModule = (() => {
   .profile-panel-surface:hover{box-shadow:0 18px 40px rgba(13,13,14,.08)}
   .profile-close:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,13,14,.12)}
 
-  .demo-dashboard-frame{display:block;width:100%;max-width:1720px;margin:36px auto 0;min-height:600px;border:0;background:#f4f4f2;overflow:hidden}
-  .demo-dashboard-frame[hidden],.demo-inline-access[hidden]{display:none}
-  .demo-inline-access{width:min(100% - 38px,720px);margin:36px auto 0;padding:42px 28px;border:1px solid #dedee1;border-radius:14px;background:#f8f8f7;text-align:center}
-  .demo-inline-access h3{margin:0 0 12px;color:#111;font-size:24px}
-  .demo-inline-access p{margin:0 0 22px;color:#60666d;line-height:1.5}
-  .demo-inline-access button{cursor:pointer}
-  @media(max-width:720px){.demo-dashboard-frame{margin-top:28px;min-height:520px}.demo-inline-access{padding:28px 20px}}
-  .footer-demo-cta{display:flex;justify-content:center;width:100%}
-  .footer-demo-cta .video-demo-pill{display:grid;place-items:center;min-width:120px;margin:0 auto;text-align:center;line-height:1}
+  .demo-dashboard-frame{display:block;width:100%;max-width:1720px;margin:44px auto 0;height:calc(100vh - 190px);min-height:720px;border:0;background:#f5f7fa}
+  @media(max-width:720px){.demo-dashboard-frame{height:calc(100vh - 150px);min-height:560px;margin-top:28px}}
   .profile-tab{border-radius:999px!important}
   .profile-tab.active{background:#171c26!important;color:#fff!important;border-color:#171c26!important}
   .profile-tab.active .profile-tab-icon{color:#fff!important}
-  .profile-signout{margin-top:auto;padding-top:14px}
-  .profile-signout button{display:flex!important;width:100%;min-height:43px;padding:0 13px!important;align-items:center;justify-content:flex-start!important;gap:12px;border:1px solid transparent!important;border-radius:999px!important;color:#111!important;background:transparent!important;font-size:16px;font-weight:700;text-align:left}
-  .profile-signout button:hover{border-color:#dddde0!important;background:#ededee!important;transform:translateX(2px)}
-  .profile-signout button:focus-visible{outline:2px solid #171c26;outline-offset:2px}
-  .profile-signout button svg{width:18px;height:18px;flex:0 0 18px}
-  .profile-panel[data-profile-panel="subscription"] .profile-detail a{color:#111;text-decoration:underline;text-decoration-color:#a9adb2;text-underline-offset:3px}
-  .profile-panel[data-profile-panel="subscription"] .profile-detail a:hover{color:#000;text-decoration-color:#111}
-  .profile-panel[data-profile-panel="subscription"] .profile-plan-form select{border-color:#c9ccd0;color:#111;background:#fff}
-  .profile-panel[data-profile-panel="subscription"] .profile-plan-form select:focus{border-color:#73777d;box-shadow:0 0 0 3px rgba(17,17,17,.09);outline:none}
-  .profile-panel[data-profile-panel="subscription"] .profile-plan-button{border-color:#171c26;color:#fff;background:#171c26}
-  .profile-panel[data-profile-panel="subscription"] .profile-plan-button:hover{border-color:#000;background:#000}
-  .profile-panel[data-profile-panel="subscription"] .profile-testing-title>span{color:#34383d;background:#f1f2f3}
-  .profile-panel[data-profile-panel="subscription"] .profile-subscription-summary{border-color:#d7d9dc;color:#111;background:#eceeef}
+  .profile-signout{margin-top:14px}
+  .profile-signout button{display:flex!important;align-items:center;gap:10px;justify-content:flex-start!important}
+  .profile-signout button svg{width:17px;height:17px;flex:0 0 auto}
   .help-reference{padding:100px 0 150px;background:var(--soft)}
   .help-intro{max-width:720px;margin:0 0 56px}
   .help-intro h1{margin:16px 0 18px;font-size:clamp(38px,4vw,52px);letter-spacing:-.03em}
@@ -4219,73 +4075,43 @@ var WebsiteModule = (() => {
   .help-video-play{width:36px;height:36px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;color:#fff;background:var(--ink);font-size:11px}
   .help-video-placeholder strong{display:block;font-size:13px;color:#23293a;font-weight:800}
   .help-video-placeholder small{color:#8892a0;font-size:12px}
-  .help-toc{display:flex;flex-wrap:wrap;gap:10px;max-width:820px;margin:0 0 40px;padding:0;list-style:none}
-  .help-toc a{display:inline-flex;align-items:center;padding:10px 18px;border:1px solid #eceef1;border-radius:999px;color:#3c4656;background:#fff;font-size:14px;font-weight:750;text-decoration:none;transition:border-color .18s ease,background .18s ease,color .18s ease}
-  .help-toc a:hover,.help-toc a:focus-visible{border-color:#139fbc;color:#139fbc;background:#f5fdfe}
-  .help-module-link{display:inline-flex;align-items:center;gap:6px;margin:10px 20px 18px;color:#139fbc;font-size:14px;font-weight:800;text-decoration:none}
-  .help-module-link:hover{text-decoration:underline}
   @media(max-width:720px){.help-module>summary{padding:20px 20px}.help-module-meta{gap:10px}.help-module-count{display:none}}
-
-  /* Account settings: a white description strip above a #F2F2F2 work area. */
-  .profile-main{position:relative;padding:0!important;background:#f2f2f2!important}
-  .profile-floating-close{position:absolute;top:25px;right:clamp(24px,4vw,64px);z-index:4}
-  .profile-panel{max-width:none!important;margin:0!important}
-  .profile-panel-heading{min-height:130px;margin:0!important;padding:38px clamp(28px,5vw,76px) 28px;border-bottom:1px solid #e4e4e4;background:#fff}
-  .profile-panel-heading h3{margin:0 56px 12px 0;font-size:34px;line-height:1.1;letter-spacing:-.035em}
-  .profile-panel-heading .profile-intro{margin:0;color:#58657a;font-size:18px}
-  .profile-panel-surface,.profile-subscription-stack{margin:32px clamp(28px,5vw,76px) 56px}
-  .profile-tab-icon img{display:block;width:18px;height:18px;object-fit:contain}
-
-  /* Contact: more breathing room and a calmer, balanced form layout. */
-  .contact-reference{padding:112px 0 132px;background:#f7f7f8}
-  .contact-layout{grid-template-columns:minmax(0,.9fr) minmax(480px,1.1fr);gap:90px;align-items:start}
-  .contact-intro{padding:30px 0 0}
-  .contact-intro h1{max-width:620px;margin:14px 0 24px;font-size:clamp(46px,4.5vw,66px);line-height:1.05;letter-spacing:-.045em}
-  .contact-intro>p{max-width:610px;font-size:19px;line-height:1.7}
-  .contact-points{display:grid;gap:17px;margin-top:36px}
-  .contact-card{padding:44px;border-radius:20px;box-shadow:0 20px 48px rgba(15,23,42,.07)}
-  .contact-card form{gap:22px}
-  .contact-card input,.contact-card textarea{margin-top:9px}
-  .contact-card textarea{min-height:168px}
-
-  @media(max-width:1000px){.contact-layout{grid-template-columns:1fr;gap:45px}.contact-intro{padding-top:0}}
-  @media(max-width:720px){
-    .profile-panel-heading{min-height:116px;padding:30px 22px 22px}
-    .profile-panel-heading h3{font-size:28px}
-    .profile-panel-heading .profile-intro{font-size:16px}
-    .profile-panel-surface,.profile-subscription-stack{margin:24px 20px 42px}
-    .profile-floating-close{top:20px;right:18px}
-    .contact-reference{padding:64px 0 78px}
-    .contact-card{padding:28px 22px}
-  }
-
-  /* Fact-led homepage hero */
-  .reference-hero{overflow:hidden}
-  .reference-hero-grid{grid-template-columns:1.18fr .82fr;gap:52px}
-  .reference-hero h1{max-width:none;font-size:clamp(44px,4vw,68px);line-height:1.12;letter-spacing:-.045em;text-wrap:balance}
-  .reference-hero h1 .hero-stat{display:inline-block;padding:.07em .2em .1em;border-radius:.16em;color:#fff!important;background:#050505!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#fff}
-  .reference-hero h1 .hero-line{display:block;padding-bottom:.1em;white-space:nowrap;color:#050505!important;background:none!important;background-image:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#050505}
-  .hero-demo-button{min-width:178px}
-  .hero-demo-button .demo-arrow{display:inline-block;margin-left:3px;font-size:29px;font-weight:900;line-height:.8;-webkit-text-stroke:1px currentColor;transform:scaleX(1.22);transform-origin:left center}
-  .hero-media-wrap{isolation:isolate}
-  .hero-media{position:relative;z-index:1;overflow:hidden}
-  .hero-depth-shapes{position:absolute;inset:-1px;z-index:0;pointer-events:none}
-  .depth-circle{position:absolute;display:block;border-radius:50%}
-  .depth-one{width:215px;height:215px;right:64px;top:-72px;background:#dedfe1}
-  .depth-two{width:168px;height:168px;right:-58px;top:92px;background:#09090a}
-  .depth-three{width:148px;height:148px;left:-48px;bottom:-44px;background:#b8b9bc}
-  .depth-four{width:104px;height:104px;right:86px;bottom:-52px;background:#626469}
-  .assistant-badge{z-index:2}
-  @media(max-width:720px){
-    .reference-hero-grid{grid-template-columns:1fr;gap:76px}
-    .reference-hero h1{font-size:clamp(39px,11vw,52px)}
-    .reference-hero h1 .hero-line{white-space:normal}
-    .hero-demo-button{width:100%}
-    .depth-one{width:140px;height:140px;right:28px;top:-48px}
-    .depth-two{width:110px;height:110px;right:-38px;top:76px}
-    .depth-three{width:105px;height:105px;left:-34px;bottom:-31px}
-    .depth-four{width:76px;height:76px;right:45px;bottom:-38px}
-  }
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px}
+  .why-card{position:relative;min-height:440px;border-radius:26px;padding:38px 34px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;color:#fff;isolation:isolate}
+  .why-card::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 90% at 15% -10%,rgba(255,255,255,.14),transparent 55%)}
+  .why-card h3{margin:0 0 12px;font-size:26px;letter-spacing:-.02em;font-weight:800;line-height:1.15}
+  .why-card p{margin:0;max-width:300px;color:rgba(255,255,255,.82);font-size:15px;line-height:1.6}
+  .why-card-1{background:linear-gradient(165deg,#3d434f 0%,#20232b 55%,#0a0c10 100%)}
+  .why-card-2{background:linear-gradient(165deg,#2c2f74 0%,#1b1c3f 55%,#0a0c10 100%)}
+  .why-card-3{background:linear-gradient(165deg,#5a2450 0%,#2c1130 55%,#0a0c10 100%)}
+  .why-widget{background:#fff;color:var(--ink);border-radius:18px;padding:20px 22px 18px;box-shadow:0 24px 50px rgba(0,0,0,.35)}
+  .why-widget-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .why-widget-avatar{width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;background:linear-gradient(120deg,#3b82f6 0%,#a855f7 52%,#ec4899 100%)}
+  .why-widget-name{font-size:15.5px;font-weight:800;letter-spacing:-.01em}
+  .why-widget-status{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12px;font-weight:700;color:#1f9d5c}
+  .why-widget-status i{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block}
+  .why-widget-meta{margin:0 0 14px;color:#6b7484;font-size:12.5px}
+  .why-widget-actions{display:flex;gap:16px}
+  .why-widget-actions span{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;font-weight:800;letter-spacing:.02em;color:#2f6bff;text-transform:uppercase}
+  .why-widget-actions svg{width:17px;height:17px}
+  .why-sync{display:flex;align-items:center;justify-content:center;padding:22px 6px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+  .why-sync-node{width:52px;height:52px;border-radius:14px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16)}
+  .why-sync-node svg{width:24px;height:24px;color:#fff}
+  .why-sync-node.brand{background:linear-gradient(120deg,#3b82f6 0%,#a855f7 52%,#ec4899 100%);border-color:transparent}
+  .why-sync-line{flex:1;height:2px;margin:0 10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 6px,transparent 6px 12px);position:relative}
+  .why-sync-line svg{position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:rgba(255,255,255,.7)}
+  .why-statwrap{border-radius:18px;padding:20px 22px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+  .why-statbadge{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:8px 14px;border-radius:999px;background:#ffe0ef;color:#7a1552;font-weight:800;font-size:15px}
+  .why-statbadge svg{width:13px;height:13px}
+  .why-statcap{margin:0 0 14px;color:rgba(255,255,255,.65);font-size:12px}
+  .why-bars{display:flex;align-items:flex-end;gap:8px;height:56px}
+  .why-bars i{flex:1;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#f472b6,#a855f7)}
+  .why-bars i:nth-child(1){height:34%;opacity:.45}
+  .why-bars i:nth-child(2){height:52%;opacity:.6}
+  .why-bars i:nth-child(3){height:70%;opacity:.78}
+  .why-bars i:nth-child(4){height:88%;opacity:.92}
+  .why-bars i:nth-child(5){height:100%}
+  @media(max-width:1000px){.why-grid{grid-template-columns:1fr}}
 `;
   const tidioInspiredStyles = html2`
   :root { --fise-blue:#0566ff; --fise-blue-deep:#004ac5; --fise-ink:#080f1a;
@@ -4486,13 +4312,13 @@ var WebsiteModule = (() => {
   }
   __name(referenceFooter, "referenceFooter");
   function accountModal() {
-    return html2`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field"><label for="register-username">Username</label><input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"></div><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email or username</label><input id="signin-identifier" name="identifier" autocomplete="username" maxlength="254" required placeholder="Email or username"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a one-time link</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a username and password before continuing.</p><form method="post" action="/api/account/credentials"><label for="setup-username">Username</label><input id="setup-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div><button class="account-setup-skip" type="button" id="account-setup-skip">Remind me later</button></div></section></div>`;
+    return html2`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field"><label for="register-username">Username</label><input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"></div><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email or username</label><input id="signin-identifier" name="identifier" autocomplete="username" maxlength="254" required placeholder="Email or username"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Email me a one-time link</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a username and password before continuing.</p><form method="post" action="/api/account/credentials"><label for="setup-username">Username</label><input id="setup-username" name="username" autocomplete="username" minlength="3" maxlength="40" required placeholder="Your username"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div></div></section></div>`;
   }
   __name(accountModal, "accountModal");
   function profileDrawer() {
     return html2`<div class="profile-layer" id="profile-layer" aria-hidden="true">
     <button class="profile-backdrop" type="button" data-close-profile aria-label="Close profile"></button>
-    <aside class="profile-drawer" aria-label="Fise account settings">
+    <aside class="profile-drawer" aria-labelledby="profile-title">
       <div class="profile-side">
         <a class="profile-brand" href="/"><span class="profile-sidebar-mark" aria-hidden="true">✣</span><span>Fise AI</span></a>
         <div class="profile-side-title"><small>Customer portal</small></div>
@@ -4502,10 +4328,10 @@ var WebsiteModule = (() => {
         <form class="profile-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
       </div>
       <div class="profile-main">
-        <button class="profile-close profile-floating-close" type="button" data-close-profile aria-label="Close profile">×</button>
+        <div class="profile-head"><div><div class="profile-eyebrow">Fise AI account</div><h2 id="profile-title">My profile</h2><p>Manage your account, chatbot and subscription.</p></div><div class="profile-head-actions"><span class="profile-security-badge">Secure account</span><button class="profile-close" type="button" data-close-profile aria-label="Close profile">×</button></div></div>
         <section class="profile-panel active" data-profile-panel="account">
           <div class="profile-panel-heading"><div><h3>Account information</h3><p class="profile-intro">Your personal details and secure sign-in information.</p></div></div>
-          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong><button class="profile-set-password" id="profile-set-password" type="button" hidden>Set a password</button></div><span class="profile-password-message show" id="profile-password-message">Your password is set and cannot be changed unless you reset it.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
+          <div class="profile-panel-surface"><div class="profile-detail-grid"><div class="profile-detail"><small>Email address</small><strong id="profile-email">Loading…</strong></div><div class="profile-detail"><small>Username</small><strong id="profile-name">—</strong></div><div class="profile-detail password-detail"><small>Password</small><div class="profile-password-row"><strong id="profile-password">••••••••••</strong></div><span class="profile-password-message show" id="profile-password-message">Your password is set and cannot be changed unless you reset it.</span></div><div class="profile-detail"><small>Member since</small><strong id="profile-created">—</strong></div></div><div class="profile-security-note"><strong>Your account is protected</strong><span>Your password is stored as a secure one-way hash.</span></div></div>
         </section>
         <section class="profile-panel" data-profile-panel="subscription">
           <div class="profile-panel-heading"><div><h3>Subscription</h3><p class="profile-intro">Your current plan, billing status and testing controls.</p></div></div>
@@ -4594,13 +4420,11 @@ var WebsiteModule = (() => {
   }
   __name(prepareReferenceBody, "prepareReferenceBody");
   function referenceShell(title, description, body, c, bodyClass = "") {
-    const page = html2(_b || (_b = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="', '"><title>', '</title><link rel="stylesheet" href="/reference-styles.css"></head><body class="', '">', "", "", "", "", "<script>", "", "<\/script></body></html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), escapeWebsiteHtml(bodyClass), referenceHeader(), body, referenceFooter(), accountModal(), profileDrawer(), referenceJavascript(), requestedJavascript());
-    return page.replace('<link rel="stylesheet" href="/reference-styles.css">', `<style>${referenceStyles + requestedStyles}</style>`);
+    return html2(_b || (_b = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="', '"><title>', "</title><style>", "", '</style></head><body class="', '">', "", "", "", "", "<script>", "", "<\/script></body></html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), referenceStyles, requestedStyles, escapeWebsiteHtml(bodyClass), referenceHeader(), body, referenceFooter(), accountModal(), profileDrawer(), referenceJavascript(), requestedJavascript());
   }
   __name(referenceShell, "referenceShell");
   function referenceProfilePage() {
-    const page = html2(_c || (_c = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><link rel="stylesheet" href="/reference-styles.css"><style>body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">', "<script>", "<\/script></body></html>"])), profileDrawer(), referenceJavascript());
-    return page.replace('<link rel="stylesheet" href="/reference-styles.css">', `<style>${referenceStyles + requestedStyles}</style>`);
+    return html2(_c || (_c = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><style>', "", 'body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">', "<script>", "<\/script></body></html>"])), referenceStyles, requestedStyles, profileDrawer(), referenceJavascript());
   }
   __name(referenceProfilePage, "referenceProfilePage");
   function visualOverridesJavascript(c) {
@@ -4619,31 +4443,6 @@ var WebsiteModule = (() => {
     const menu=document.getElementById('video-menu');
     const nav=document.getElementById('video-nav');
     menu?.addEventListener('click',()=>nav?.classList.toggle('open'));
-
-    const revealTargets=[...document.querySelectorAll('.reveal')];
-    const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if(revealTargets.length&&'IntersectionObserver' in window&&!reducedMotion){
-      document.documentElement.classList.add('js-reveal');
-      const revealObserver=new IntersectionObserver((entries)=>{
-        for(const entry of entries){
-          if(entry.isIntersecting){
-            entry.target.classList.add('is-visible');
-            revealObserver.unobserve(entry.target);
-          }
-        }
-      },{rootMargin:'0px 0px -10% 0px',threshold:.1});
-      revealTargets.forEach((target)=>revealObserver.observe(target));
-    }
-
-    function openHelpModuleFromHash(){
-      if(!location.hash)return;
-      try{
-        const target=document.querySelector('.help-module'+location.hash);
-        if(target){target.open=true;setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'start'}),50)}
-      }catch{}
-    }
-    openHelpModuleFromHash();
-    window.addEventListener('hashchange',openHelpModuleFromHash);
 
     const reviews=${JSON.stringify(testimonials)};
     const text=document.getElementById('review-text');
@@ -4713,36 +4512,10 @@ var WebsiteModule = (() => {
       const safe=String(message||'The dashboard could not be loaded.').replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
       frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:28px;background:#f3f6fa;color:#102033;font-family:Inter,system-ui,sans-serif}.notice{max-width:520px;padding:28px;border:1px solid #dfe6ef;border-radius:18px;background:#fff;text-align:center}.notice strong{display:block;margin-bottom:9px;font-size:22px}.notice p{margin:0;color:#637083;line-height:1.55}</style></head><body><section class="notice"><strong>Dashboard unavailable</strong><p>'+safe+'</p></section></body></html>';
     }
-    function fitDemoFrame(frame){
-      if(!frame.matches('.demo-dashboard-frame'))return;
-      frame._demoObserver?.disconnect();
-      if(frame._demoResize)window.removeEventListener('resize',frame._demoResize);
-      const doc=frame.contentDocument;
-      if(!doc?.body)return;
-      doc.documentElement.style.overflow='hidden';
-      doc.body.style.minHeight='0';
-      doc.body.style.overflow='visible';
-      frame.style.minHeight='0';
-      const measure=()=>{
-        if(!frame.isConnected||frame.hidden)return;
-        const height=Math.max(520,doc.body.scrollHeight,doc.documentElement.scrollHeight);
-        if(Math.abs(frame.offsetHeight-height)>2)frame.style.height=height+'px';
-      };
-      frame._demoResize=measure;
-      window.addEventListener('resize',measure);
-      if(window.ResizeObserver){
-        frame._demoObserver=new ResizeObserver(()=>requestAnimationFrame(measure));
-        frame._demoObserver.observe(doc.body);
-        frame._demoObserver.observe(doc.documentElement);
-      }
-      requestAnimationFrame(measure);
-      doc.fonts?.ready.then(measure).catch(()=>{});
-    }
     function bindDashboardFrame(frame){
       const doc=frame.contentDocument;
       if(!doc||doc.documentElement.dataset.fiseBound==='true')return;
       doc.documentElement.dataset.fiseBound='true';
-      fitDemoFrame(frame);
       doc.addEventListener('submit',(event)=>{
         const form=event.target.closest('form');
         if(!form)return;
@@ -4797,10 +4570,8 @@ var WebsiteModule = (() => {
         if(finalUrl.pathname==='/login'||response.status===401){
           authenticated=false;
           if(demoLock)demoLock.hidden=false;
-          if(demoFrame)demoFrame.hidden=true;
           closeProfile();
           openAccount();
-          refreshAuthStatus();
           return;
         }
         if(!response.ok)throw new Error('Fise returned error '+response.status+'. Please refresh and try again.');
@@ -4811,7 +4582,6 @@ var WebsiteModule = (() => {
         frame.srcdoc=markup;
         frame.dataset.dashboardLoaded='true';
       }catch(error){
-        if(frame.dataset.navigationId!==navigationId)return;
         dashboardFrameError(frame,error?.message||'Please refresh and try again.');
       }finally{
         if(frame.dataset.navigationId===navigationId)frame.removeAttribute('aria-busy');
@@ -4837,8 +4607,6 @@ var WebsiteModule = (() => {
       profileText('profile-email',data.account?.email);
       profileText('profile-name',data.account?.username||'Not added yet');
       profileText('profile-password',data.account?.password_set?'••••••••••':'Not set');
-      const setPasswordButton=document.getElementById('profile-set-password');
-      if(setPasswordButton)setPasswordButton.hidden=Boolean(data.account?.password_set);
       profileText('profile-created',data.account?.created_at?new Date(data.account.created_at).toLocaleDateString():'—');
       profileText('profile-plan',data.subscription?.plan_code?titleCase(data.subscription.plan_code):'None');
       const subscriptionStatus=document.getElementById('profile-subscription-status');
@@ -4877,15 +4645,6 @@ var WebsiteModule = (() => {
     document.querySelectorAll('[data-close-account]').forEach((button)=>button.addEventListener('click',closeAccount));
     document.querySelectorAll('[data-close-profile]').forEach((button)=>button.addEventListener('click',closeProfile));
     document.querySelectorAll('[data-account-view]').forEach((button)=>button.addEventListener('click',()=>showAccountView(button.dataset.accountView)));
-    document.getElementById('account-setup-skip')?.addEventListener('click',()=>{
-      try{localStorage.setItem('fise-skip-credential-setup','1')}catch{}
-      closeAccount();
-    });
-    document.getElementById('profile-set-password')?.addEventListener('click',()=>{
-      try{localStorage.removeItem('fise-skip-credential-setup')}catch{}
-      closeProfile();
-      showAccountView('setup');
-    });
     document.querySelectorAll('[data-password-toggle]').forEach((button)=>button.addEventListener('click',()=>{
       const input=document.getElementById(button.dataset.passwordToggle);
       if(!input)return;
@@ -4913,9 +4672,7 @@ var WebsiteModule = (() => {
       const button=document.getElementById('profile-plan-save');
       const message=document.getElementById('profile-plan-message');
       if(!select||!button||!message)return;
-      const requestedPlan=select.value;
       button.disabled=true;
-      select.disabled=true;
       message.classList.remove('error');
       message.textContent='Applying test plan…';
       try{
@@ -4923,30 +4680,26 @@ var WebsiteModule = (() => {
           method:'POST',
           credentials:'same-origin',
           headers:{'content-type':'application/json'},
-          body:JSON.stringify({plan:requestedPlan})
+          body:JSON.stringify({plan:select.value})
         });
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||'Could not change the testing plan');
-        profileText('profile-plan',titleCase(data.subscription?.plan_code||requestedPlan));
+        profileText('profile-plan',titleCase(data.subscription?.plan_code||select.value));
         profileText('profile-subscription-status',titleCase(data.subscription?.status||'active'));
         const statusNode=document.getElementById('profile-subscription-status');
         statusNode?.classList.remove('none','inactive');
         statusNode?.classList.add('active');
-        const savedPlanLabel=titleCase(data.subscription?.plan_code||requestedPlan);
+        const savedPlanLabel=titleCase(data.subscription?.plan_code||select.value);
         profileText('profile-plan-summary',savedPlanLabel);
         profileText('profile-billing-state-summary','Testing active');
         profileText('profile-plan-summary-line',savedPlanLabel+' · Active');
-        profileText('profile-provider',titleCase(data.subscription?.provider||'manual'));
-        message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||requestedPlan)+'. No payment was charged.';
-        document.querySelectorAll('.profile-dashboard-frame,[data-dashboard-frame="demo"]').forEach((frame)=>{
-          if(frame.dataset.dashboardLoaded==='true')loadDashboardFrame(frame,frame.dataset.currentUrl||'/dashboard?embed=1');
-        });
+        profileText('profile-provider',titleCase(data.subscription?.provider||'testing'));
+        message.textContent='Plan changed to '+titleCase(data.subscription?.plan_code||select.value)+'. No payment was charged.';
       }catch(error){
         message.classList.add('error');
         message.textContent=error.message||'Could not change the testing plan.';
       }finally{
         button.disabled=false;
-        select.disabled=false;
       }
     });
     document.addEventListener('keydown',(event)=>{if(event.key==='Escape'){closeAccount();closeProfile()}});
@@ -4965,10 +4718,8 @@ var WebsiteModule = (() => {
             if(account){account.textContent='My profile';account.href='#profile';account.dataset.authenticated='true'}
             demoLink?.classList.remove('requires-signin');
             if(demoLock)demoLock.hidden=true;
-            if(demoFrame){demoFrame.hidden=false;if(demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame)}
-            let skipCredentialSetup=false;
-            try{skipCredentialSetup=localStorage.getItem('fise-skip-credential-setup')==='1'}catch{}
-            if(status.credentials_required&&!skipCredentialSetup){
+            if(demoFrame&&demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame);
+            if(status.credentials_required){
               closeProfile();
               showAccountView('setup');
             }else{
@@ -4982,7 +4733,6 @@ var WebsiteModule = (() => {
           }else{
             demoLink?.classList.add('requires-signin');
             if(demoLock)demoLock.hidden=false;
-            if(demoFrame)demoFrame.hidden=true;
             if(location.pathname==='/profile'){location.replace('/login');return}
             if(params.get('sent')==='1'){
               document.getElementById('account-sent')?.classList.add('show');
@@ -5013,19 +4763,19 @@ var WebsiteModule = (() => {
   }
   __name(referenceJavascript, "referenceJavascript");
   function requestedJavascript() {
-    return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
+    return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
   function referenceHome(c) {
     const dots = testimonials.map((_, i) => html2`<button class="carousel-dot${i === 0 ? " active" : ""}" type="button" aria-label="Show review ${i + 1}"></button>`).join("");
-    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("clock")}24/7 availability</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div></div></div></section><section class="customer-stories reveal" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="testimonial-shell"><article class="testimonial-card"><span class="quote-mark">”</span><div class="review-stars">★★★★★</div><blockquote id="review-text">“${escapeWebsiteHtml(testimonials[0][0])}”</blockquote><div class="review-person"><span class="review-avatar" id="review-avatar">${testimonials[0][3]}</span><span><strong id="review-name">${testimonials[0][1]}</strong><span id="review-role">${testimonials[0][2]}</span></span></div></article><div class="carousel-controls"><button class="carousel-arrow" id="review-prev" type="button" aria-label="Previous review">‹</button><span class="carousel-dots">${dots}</span><button class="carousel-arrow" id="review-next" type="button" aria-label="Next review">›</button></div></div></div></section><section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>A practical website assistant</h2><p>Built to give every visitor a helpful answer and a clear next step.</p></div><div class="feature-grid"><article class="feature-card"><div class="feature-icon">${referenceIcon("clock")}</div><h3>Useful answers, around the clock</h3><p>Visitors get accurate answers to common questions any time they visit — day or night.</p></article><article class="feature-card"><div class="feature-icon">${referenceIcon("building")}</div><h3>Built around your business</h3><p>Every response draws on your approved business information and your own brand voice.</p></article><article class="feature-card"><div class="feature-icon">${referenceIcon("chats")}</div><h3>Clearer customer conversations</h3><p>Visitors get guided straight to the information, enquiry or next step that matters most.</p></article></div></div></section><section class="pricing-section reveal" id="pricing"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Pricing</div><h2>Choose the right fit for your business</h2><p>Start simply, then grow as your customer conversations grow.</p></div><div class="pricing-grid"><article class="pricing-card free-plan-card"><h3>Free</h3><p class="price-intro">50 AI conversations per month.</p><p class="video-price">R0<small>/month</small></p><ul class="video-feature-list"><li>50 AI conversations per month</li><li>Customisable dashboard</li><li class="unavailable">Website installation</li></ul><a class="reference-button" href="/login">Start for free <span>→</span></a></article><article class="pricing-card"><h3>Essential</h3><p class="price-intro">250 AI conversations per month.</p><p class="video-price">R500<small>/month</small></p><ul class="video-feature-list"><li>250 AI conversations per month</li><li>Website installation</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article><article class="pricing-card popular"><span class="popular-label">Most popular</span><h3>Grow</h3><p class="price-intro">1,000 AI conversations per month.</p><p class="video-price">R2,000<small>/month</small></p><ul class="video-feature-list"><li>1,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button dark" href="/login">Get started <span>→</span></a></article><article class="pricing-card"><h3>Enterprise</h3><p class="price-intro">5,000 AI conversations per month.</p><p class="video-price">R5,000<small>/month</small></p><ul class="video-feature-list"><li>5,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Advanced lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article></div></div></section><section class="closing-section reveal"><div class="video-container"><div class="closing-card"><h2>Give every visitor a helpful first response</h2><p>See how Fise AI can help your website answer questions, guide customers, and capture better enquiries.</p><div class="closing-actions"><a class="reference-button" href="/login">Get started free <span>→</span></a><a class="reference-button" href="/#features">Explore features</a></div></div></div></section></main>`, c);
+    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><div class="hero-pill">${referenceIcon("spark")}Helpful AI website <span class="keep-brand-font">chatbots</span></div><h1>Turn website visitors into customers — <span>automatically.</span></h1><p class="reference-hero-copy">Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.</p><div class="reference-actions"><a class="reference-button dark" href="/demo">Try the demo <span>→</span></a><a class="reference-button" href="/login">Get started <span>→</span></a></div><div class="hero-trust"><span>${referenceIcon("clock")}24/7 availability</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div><div class="assistant-badge"><span class="assistant-icon">${referenceIcon("chat")}</span><span><strong>Live assistant</strong><small>Replies in seconds</small></span></div></div></div></section><section class="customer-stories" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="testimonial-shell"><article class="testimonial-card"><span class="quote-mark">”</span><div class="review-stars">★★★★★</div><blockquote id="review-text">“${escapeWebsiteHtml(testimonials[0][0])}”</blockquote><div class="review-person"><span class="review-avatar" id="review-avatar">${testimonials[0][3]}</span><span><strong id="review-name">${testimonials[0][1]}</strong><span id="review-role">${testimonials[0][2]}</span></span></div></article><div class="carousel-controls"><button class="carousel-arrow" id="review-prev" type="button" aria-label="Previous review">‹</button><span class="carousel-dots">${dots}</span><button class="carousel-arrow" id="review-next" type="button" aria-label="Next review">›</button></div></div></div></section><section class="features-section" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>A practical website assistant</h2><p>Designed to give visitors helpful answers and a clear next step.</p></div><div class="why-grid"><article class="why-card why-card-1"><div><h3>Always-on<br>answers</h3><p>Instant, accurate answers to common questions — day or night, no wait time.</p></div><div class="why-widget"><div class="why-widget-top"><div class="why-widget-avatar">F</div><div><div class="why-widget-name">Fise AI Assistant</div><div class="why-widget-status"><i></i>Online now</div></div></div><p class="why-widget-meta">Avg. reply time · under 2 seconds</p><div class="why-widget-actions"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Leads</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>24/7</span></div></div></article><article class="why-card why-card-2"><div><h3>Trained on<br>your business</h3><p>Every reply draws on your approved content and matches your brand's voice.</p></div><div class="why-sync"><div class="why-sync-node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6M9 17h6"/></svg></div><div class="why-sync-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div><div class="why-sync-node brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div></div></article><article class="why-card why-card-3"><div><h3>Sharper<br>conversations</h3><p>Visitors get guided straight to the info, form, or next step that matters most.</p></div><div class="why-statwrap"><div class="why-statbadge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 14H4z"/></svg>+38%</div><p class="why-statcap">More resolved conversations</p><div class="why-bars"><i></i><i></i><i></i><i></i><i></i></div></div></article></div></div></section><section class="pricing-section" id="pricing"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Pricing</div><h2>Choose the right fit for your business</h2><p>Start simply, then grow as your customer conversations grow.</p></div><div class="pricing-grid"><article class="pricing-card free-plan-card"><h3>Free</h3><p class="price-intro">50 AI conversations per month.</p><p class="video-price">R0<small>/month</small></p><ul class="video-feature-list"><li>50 AI conversations per month</li><li>Customisable dashboard</li><li class="unavailable">Website installation</li></ul><a class="reference-button" href="/login">Start for free <span>→</span></a></article><article class="pricing-card"><h3>Essential</h3><p class="price-intro">250 AI conversations per month.</p><p class="video-price">R500<small>/month</small></p><ul class="video-feature-list"><li>250 AI conversations per month</li><li>Website installation</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article><article class="pricing-card popular"><span class="popular-label">Most popular</span><h3>Grow</h3><p class="price-intro">1,000 AI conversations per month.</p><p class="video-price">R2,000<small>/month</small></p><ul class="video-feature-list"><li>1,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Email lead collection</li></ul><a class="reference-button dark" href="/login">Get started <span>→</span></a></article><article class="pricing-card"><h3>Enterprise</h3><p class="price-intro">5,000 AI conversations per month.</p><p class="video-price">R5,000<small>/month</small></p><ul class="video-feature-list"><li>5,000 AI conversations per month</li><li>Website installation</li><li>Export leads to CSV</li><li>Customisable AI dashboard</li><li>Advanced lead collection</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article></div></div></section><section class="closing-section"><div class="video-container"><div class="closing-card"><h2>Give every visitor a helpful first response</h2><p>See how Fise AI can help your website answer questions, guide customers, and capture better enquiries.</p><div class="closing-actions"><a class="reference-button" href="/login">Get started free <span>→</span></a><a class="reference-button" href="/#features">Explore features</a></div></div></div></section></main>`, c);
   }
   __name(referenceHome, "referenceHome");
   function referenceDemo(c) {
     return referenceShell(
       "Live demo | Fise AI",
       "Try the Fise AI platform yourself. Sign in to open the live assistant dashboard and see how a Fise AI chatbot works.",
-      html2`<main class="demo-page"><section class="demo-section" id="demo"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Live demo</div><h2>Try the Fise AI platform</h2><p>Sign in to open the assistant dashboard right here, without leaving the page.</p></div></div><div class="demo-inline-access" id="demo-lock"><h3>Sign in to access the demo</h3><p>Use your Fise AI account to try the working chatbot dashboard.</p><button class="reference-button dark" id="demo-signin" type="button">Sign in</button></div><iframe class="demo-dashboard-frame" src="about:blank" data-dashboard-frame="demo" title="Fise AI platform demo" loading="eager" scrolling="no" hidden></iframe></section></main>`,
+      html2`<main class="demo-page"><section class="demo-section" id="demo"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Live demo</div><h2>Try the Fise AI platform</h2><p>Sign in to open the assistant dashboard right here, without leaving the page.</p></div></div><iframe class="demo-dashboard-frame" src="/login?embed=1" title="Fise AI platform demo" loading="lazy"></iframe></section></main>`,
       c
     );
   }
@@ -5043,7 +4793,7 @@ var WebsiteModule = (() => {
     return referenceShell(
       "Help centre | Fise AI",
       "Step-by-step guides for setting up and customising your Fise AI chatbot.",
-      html2`<main class="help-reference"><div class="video-container"><div class="help-intro"><div class="reference-eyebrow">Fise AI help centre</div><h1>Guides for every part of Fise AI.</h1><p>Jump to a topic below, or click a module to see its topics. Need something else? <a href="/contact">Contact the Fise AI team</a>.</p></div>${renderHelpToc()}<div class="help-modules">${renderHelpModules()}</div></div></main>`,
+      html2`<main class="help-reference"><div class="video-container"><div class="help-intro"><div class="reference-eyebrow">Fise AI help centre</div><h1>Guides for every part of Fise AI.</h1><p>Click a module to see its topics, then click a topic to open its guide. Need something else? <a href="/contact">Contact the Fise AI team</a>.</p></div><div class="help-modules">${renderHelpModules()}</div></div></main>`,
       c
     );
   }
@@ -5324,7 +5074,7 @@ ${message}`,
   }
   __name(websiteFrameJavascriptLegacy, "websiteFrameJavascriptLegacy");
   function websiteFrameJavascriptV2() {
-    return String.raw`(()=>{const e=v=>{const d=document.createElement('div');d.textContent=String(v||'');return d.innerHTML},on=v=>String(v)!=='false';async function apply(){try{const r=await fetch('/api/website/frame',{headers:{accept:'application/json'}}),c=await r.json();if(!r.ok){const nav=document.getElementById('fise-global-nav');if(nav)nav.style.visibility='visible';return}const nav=document.getElementById('fise-global-nav');if(nav){const links=[];if(on(c.nav_chatbots_enabled))links.push('<a href="/#features">AI Chatbots</a>');links.push('<a href="/demo">'+e(c.nav_demo_label||'Live demo')+'</a>');if(on(c.nav_pricing_enabled))links.push('<a href="/#pricing">Pricing</a>');if(on(c.nav_resources_enabled)){const trigger=on(c.nav_resources_clickable)?'<a href="/blog">'+e(c.nav_resources_label||'Resources')+'</a>':'<a role="button" tabindex="0">'+e(c.nav_resources_label||'Resources')+'</a>';links.push(on(c.nav_resources_dropdown)?'<span class="public-nav-group">'+trigger+'<span class="public-dropdown">'+(on(c.nav_dropdown_about_enabled)?'<a href="/about">About</a>':'')+(on(c.nav_dropdown_blog_enabled)?'<a href="/blog">Blog</a>':'')+'</span></span>':trigger)}if(on(c.nav_about_enabled))links.push('<a href="/about">About</a>');if(on(c.nav_blog_enabled))links.push('<a href="/blog">Blog</a>');if(on(c.nav_signin_enabled))links.push('<a href="/login">Sign in</a>');nav.innerHTML=links.join('')}const product=document.getElementById('fise-global-product-links');if(product){const links=[];if(on(c.nav_chatbots_enabled))links.push('<a href="/#features">AI Chatbots</a>');links.push('<a href="/demo">'+e(c.nav_demo_label||'Live demo')+'</a>');if(on(c.nav_pricing_enabled))links.push('<a href="/#pricing">Pricing</a>');if(on(c.nav_signin_enabled))links.push('<a href="/login">Customer sign in</a>');product.innerHTML='<h3>Product</h3>'+links.join('')}const company=document.getElementById('fise-global-company-links');if(company){const links=[];if(on(c.nav_about_enabled)||on(c.nav_dropdown_about_enabled))links.push('<a href="/about">About</a>');if(on(c.nav_resources_enabled)&&on(c.nav_resources_page_enabled))links.push('<a href="/blog">'+e(c.nav_resources_label||'Resources')+'</a>');if(on(c.nav_blog_enabled)||on(c.nav_dropdown_blog_enabled))links.push('<a href="/blog">Blog</a>');links.push('<a href="/contact">Contact</a>');company.innerHTML='<h3>Company</h3>'+links.join('')}document.querySelectorAll('[data-global-footer-text]').forEach(x=>x.textContent=c.footer_text||'');document.querySelectorAll('[data-global-email]').forEach(x=>{x.textContent=c.contact_email||'';x.href='mailto:'+(c.contact_email||'')});document.documentElement.style.setProperty('--blue',c.theme_primary||'#1769e0');document.documentElement.style.setProperty('--blue2',c.theme_primary||'#0d55bd')}catch{}}apply()})();`;
+    return String.raw`(()=>{const e=v=>{const d=document.createElement('div');d.textContent=String(v||'');return d.innerHTML},on=v=>String(v)!=='false';async function apply(){try{const r=await fetch('/api/website/frame',{headers:{accept:'application/json'}}),c=await r.json();if(!r.ok)return;const nav=document.getElementById('fise-global-nav');if(nav){const links=[];if(on(c.nav_chatbots_enabled))links.push('<a href="/ai-chatbots">AI Chatbots</a>');links.push('<a href="/demo">'+e(c.nav_demo_label||'Live demo')+'</a>');if(on(c.nav_pricing_enabled))links.push('<a href="/pricing">Pricing</a>');if(on(c.nav_resources_enabled)){const trigger=on(c.nav_resources_clickable)?'<a href="/resources">'+e(c.nav_resources_label||'Resources')+'</a>':'<a role="button" tabindex="0">'+e(c.nav_resources_label||'Resources')+'</a>';links.push(on(c.nav_resources_dropdown)?'<span class="public-nav-group">'+trigger+'<span class="public-dropdown">'+(on(c.nav_dropdown_about_enabled)?'<a href="/about">About</a>':'')+(on(c.nav_dropdown_blog_enabled)?'<a href="/blog">Blog</a>':'')+'</span></span>':trigger)}if(on(c.nav_about_enabled))links.push('<a href="/about">About</a>');if(on(c.nav_blog_enabled))links.push('<a href="/blog">Blog</a>');if(on(c.nav_signin_enabled))links.push('<a href="/login">Sign in</a>');nav.innerHTML=links.join('')}const product=document.getElementById('fise-global-product-links');if(product){const links=[];if(on(c.nav_chatbots_enabled))links.push('<a href="/ai-chatbots">AI Chatbots</a>');links.push('<a href="/demo">'+e(c.nav_demo_label||'Live demo')+'</a>');if(on(c.nav_pricing_enabled))links.push('<a href="/pricing">Pricing</a>');if(on(c.nav_signin_enabled))links.push('<a href="/login">Customer sign in</a>');product.innerHTML='<h3>Product</h3>'+links.join('')}const company=document.getElementById('fise-global-company-links');if(company){const links=[];if(on(c.nav_about_enabled)||on(c.nav_dropdown_about_enabled))links.push('<a href="/about">About</a>');if(on(c.nav_resources_enabled)&&on(c.nav_resources_page_enabled))links.push('<a href="/resources">'+e(c.nav_resources_label||'Resources')+'</a>');if(on(c.nav_blog_enabled)||on(c.nav_dropdown_blog_enabled))links.push('<a href="/blog">Blog</a>');links.push('<a href="/contact">Contact</a>');company.innerHTML='<h3>Company</h3>'+links.join('')}document.querySelectorAll('[data-global-footer-text]').forEach(x=>x.textContent=c.footer_text||'');document.querySelectorAll('[data-global-email]').forEach(x=>{x.textContent=c.contact_email||'';x.href='mailto:'+(c.contact_email||'')});document.documentElement.style.setProperty('--blue',c.theme_primary||'#1769e0');document.documentElement.style.setProperty('--blue2',c.theme_primary||'#0d55bd')}catch{}}apply()})();`;
   }
   __name(websiteFrameJavascriptV2, "websiteFrameJavascriptV2");
   function websiteFrameJavascript2() {
@@ -5337,7 +5087,7 @@ ${message}`,
     );
   }
   __name(websiteFrameJavascript2, "websiteFrameJavascript");
-  return { WEBSITE_DEFAULTS, escapeWebsiteHtml, handlePublicWebsite: handlePublicWebsite2, readWebsiteContent: readWebsiteContent2, saveWebsiteContent, updateWebsiteContent: updateWebsiteContent2, websiteFrameJavascript: websiteFrameJavascript2, submitContactRequest: submitContactRequest2, referenceStyles, requestedStyles };
+  return { WEBSITE_DEFAULTS, escapeWebsiteHtml, handlePublicWebsite: handlePublicWebsite2, readWebsiteContent: readWebsiteContent2, saveWebsiteContent, updateWebsiteContent: updateWebsiteContent2, websiteFrameJavascript: websiteFrameJavascript2, submitContactRequest: submitContactRequest2 };
 })();
 var StudioModule = (() => {
   const { WEBSITE_DEFAULTS, escapeWebsiteHtml: esc, readWebsiteContent: readWebsiteContent2, saveWebsiteContent, handlePublicWebsite: handlePublicWebsite2 } = WebsiteModule;
@@ -5731,7 +5481,7 @@ var StudioModule = (() => {
   function loadPreview(){const frame=$('#preview');selected=null;if(mode==='website')frame.src='/dashboard/website/preview?path='+encodeURIComponent($('#page').value);else if(bot)frame.src='/widget/test?key='+encodeURIComponent(bot.public_key)+'&embed=1&studio=1';else frame.src='about:blank';bindFrame()}
   function chatbotLeft(){return '<label class="field">Chatbot<select id="bot-select">'+S.chatbots.map(b=>'<option value="'+b.id+'" '+(bot?.id===b.id?'selected':'')+'>'+esc(b.name)+'</option>').join('')+'</select></label><div class="nav-list">'+[['appearance','Appearance'],['brain','Brain & behaviour'],['automations','Automations'],['developer','Developer & functions']].map(([id,n])=>'<button data-section="'+id+'" class="'+(section===id?'active':'')+'">'+n+'</button>').join('')+'</div>'}
   function botField(key,label,type='text'){const v=bot?.[key]??'';if(type==='check')return '<label class="check"><input data-bot="'+key+'" type="checkbox" '+(Number(v)?'checked':'')+'>'+label+'</label>';return '<label class="field">'+label+(type==='textarea'?'<textarea data-bot="'+key+'">'+esc(v)+'</textarea>':'<input data-bot="'+key+'" type="'+type+'" value="'+esc(v)+'">')+'</label>'}
-  function chatbotRight(){if(!bot)return '<div class="empty">Create a chatbot in the dashboard first.</div>';if(section==='appearance')return '<div class="card"><h3>Appearance</h3>'+botField('name','Assistant name')+botField('business_name','Business name')+botField('primary_colour','Primary colour','color')+botField('greeting','Greeting','textarea')+'<label class="field">Widget version<select data-bot="widget_version"><option value="1" '+(botVersion()==='1'?'selected':'')+'>Version 1.1</option><option value="2" '+(botVersion()==='2'?'selected':'')+'>Version 2.1</option></select></label><label class="field">Default size<select data-bot="default_size"><option>standard</option><option>large</option></select></label>'+botField('allow_files','Allow files','check')+botField('allow_voice','Allow voice','check')+'</div>';if(section==='brain')return '<div class="card"><h3>Brain & behaviour</h3>'+botField('model','AI model')+botField('instructions','Core instructions','textarea')+botField('system_prompt_append','Advanced system prompt','textarea')+'<label class="field">Answer length<select data-bot="answer_length"><option>short</option><option>standard</option><option>detailed</option></select></label><label class="field">Formality<select data-bot="formality"><option>friendly</option><option>professional</option><option>formal</option></select></label>'+botField('popular_questions_json','Popular questions JSON','textarea')+'<div class="divider"></div><h3>Lead capture</h3>'+botField('lead_capture_enabled','Enable lead capture','check')+botField('lead_cta_label','Lead button label')+botField('lead_destination_email','Notification email','email')+botField('google_sheets_webhook','Google Sheets webhook')+'</div>';if(section==='automations')return automationPanel();return '<div class="card"><h3>Developer</h3><p>Safe declarative functions can describe integrations. Arbitrary server-side JavaScript is deliberately not executed.</p>'+botField('widget_css','Widget CSS','textarea')+botField('functions_json','Functions JSON','textarea')+'</div>'}
+  function chatbotRight(){if(!bot)return '<div class="empty">Create a chatbot in the dashboard first.</div>';if(section==='appearance')return '<div class="card"><h3>Appearance</h3>'+botField('name','Assistant name')+botField('business_name','Business name')+botField('primary_colour','Primary colour','color')+botField('greeting','Greeting','textarea')+'<label class="field">Widget version<select data-bot="widget_version"><option value="1" '+(botVersion()==='1'?'selected':'')+'>Version 1</option><option value="2" '+(botVersion()==='2'?'selected':'')+'>Version 2</option></select></label><label class="field">Default size<select data-bot="default_size"><option>standard</option><option>large</option></select></label>'+botField('allow_files','Allow files','check')+botField('allow_voice','Allow voice','check')+'</div>';if(section==='brain')return '<div class="card"><h3>Brain & behaviour</h3>'+botField('model','AI model')+botField('instructions','Core instructions','textarea')+botField('system_prompt_append','Advanced system prompt','textarea')+'<label class="field">Answer length<select data-bot="answer_length"><option>short</option><option>standard</option><option>detailed</option></select></label><label class="field">Formality<select data-bot="formality"><option>friendly</option><option>professional</option><option>formal</option></select></label>'+botField('popular_questions_json','Popular questions JSON','textarea')+'<div class="divider"></div><h3>Lead capture</h3>'+botField('lead_capture_enabled','Enable lead capture','check')+botField('lead_cta_label','Lead button label')+botField('lead_destination_email','Notification email','email')+botField('google_sheets_webhook','Google Sheets webhook')+'</div>';if(section==='automations')return automationPanel();return '<div class="card"><h3>Developer</h3><p>Safe declarative functions can describe integrations. Arbitrary server-side JavaScript is deliberately not executed.</p>'+botField('widget_css','Widget CSS','textarea')+botField('functions_json','Functions JSON','textarea')+'</div>'}
   function botVersion(){try{return JSON.parse(bot.ui_settings_json||'{}').widget_version==='2'?'2':'1'}catch{return'1'}}
   function automationPanel(){return '<div class="card"><h3>Automations</h3><p>Run a webhook, email or audit record when a conversation starts, a message arrives, or a lead is captured.</p><button class="btn small" id="add-auto">Add automation</button></div><div class="automation-list">'+(autos.length?autos.map((a,i)=>{const cfg=typeof a.config_json==='string'?a.config_json:JSON.stringify(a.config_json||{});return '<div class="automation" data-auto="'+i+'"><input data-a="name" value="'+esc(a.name||'Automation')+'"><label class="field">Trigger<select data-a="trigger_event"><option>conversation_started</option><option>message_received</option><option>lead_captured</option></select></label><label class="field">Action<select data-a="action_type"><option>record</option><option>webhook</option><option>email</option></select></label><label class="field">Configuration JSON<textarea data-a="config_json">'+esc(cfg)+'</textarea></label><label class="check"><input data-a="enabled" type="checkbox" '+(a.enabled!==false&&Number(a.enabled)!==0?'checked':'')+'>Enabled</label><button class="btn small ghost" data-remove-auto="'+i+'">Remove</button></div>'}).join(''):'<div class="empty">No automations yet</div>')+'</div>'}
   function renderLeft(){$('#rail-title').textContent=mode==='website'?'Website':'Chatbot';$('#left').innerHTML=mode==='website'?websiteLeft():chatbotLeft();bindCommon()}
@@ -6488,7 +6238,7 @@ ${JSON.stringify(finalState)}`,
 })();
 var { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
 var { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript } = ChatModule;
-var { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript, submitContactRequest, referenceStyles, requestedStyles } = WebsiteModule;
+var { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript, submitContactRequest } = WebsiteModule;
 var { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 var html = String.raw;
 async function isFiseStudioAdmin(user, env) {
@@ -6527,7 +6277,6 @@ var CHATBOT_DELETE_REQUEST_LIMIT = 3;
 var DIRECT_EMAIL_LOGIN = false;
 var PASSWORD_ITERATIONS = 5e4;
 var sharedStyles = html`
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   :root { color-scheme:light; --blue:#1769e0; --blue2:#0d55bd; --dark:#102033;
   --muted:#637083; --line:#dfe6ef; --soft:#f4f7fb; --ok:#167044;
   --danger:#a52b2b; } * { box-sizing:border-box; } body { margin:0;
@@ -6621,10 +6370,6 @@ var sharedStyles = html`
   color:var(--blue); background:#eaf2ff; font-size:21px; } .settings-group[open]
   summary::after { content:"−"; } .settings-group[open] summary {
   border-bottom:1px solid var(--line); } .settings-group-body { padding:20px; }
-  .settings-group { transition:box-shadow .2s ease,border-color .2s ease; }
-  .settings-group summary { transition:background .16s ease; }
-  .settings-group summary:hover { background:rgba(23,105,224,.04); }
-  .settings-group summary::after { transition:background .16s ease,color .16s ease; }
   .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px;
   align-items:start; } .setting-section { padding:22px; border:1px solid
   var(--line); border-radius:17px; background:rgba(255,255,255,.96);
@@ -6654,44 +6399,13 @@ var sharedStyles = html`
   font-size:11px; text-transform:uppercase; letter-spacing:.05em; } .lead-table
   td { overflow-wrap:anywhere; } .table-wrap { overflow:auto; } .top-actions {
   display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin:0 0 20px; }
-  .version-settings-control { position:relative; z-index:20; }
-  .version-settings-control .version-picker { position:relative; }
-  .version-settings-control .version-picker summary { min-width:158px; height:46px;
-  display:flex; align-items:center; justify-content:space-between; gap:18px;
-  padding:0 16px; border:1px solid #d7d9dd; border-radius:13px; list-style:none;
-  color:#202124; background:#fff; box-shadow:0 8px 24px rgba(17,24,39,.08);
-  font-size:14px; font-weight:750; cursor:pointer; user-select:none; }
-  .version-settings-control .version-picker summary::-webkit-details-marker { display:none; }
-  .version-settings-control .version-picker summary:focus-visible { outline:3px solid
-  rgba(26,115,232,.2); outline-offset:2px; }
-  .version-settings-control .version-picker-chevron { width:8px; height:8px;
-  border-right:2px solid #868b93; border-bottom:2px solid #868b93;
-  transform:translateY(-2px) rotate(45deg); transition:transform .16s ease; }
-  .version-settings-control .version-picker[open] .version-picker-chevron {
-  transform:translateY(2px) rotate(225deg); }
-  .version-settings-control .version-picker-menu { position:absolute;
-  top:calc(100% + 10px); left:0; width:340px; max-width:calc(100vw - 40px);
-  padding:10px; border:1px solid #d4d6da; border-radius:18px; background:#fff;
-  box-shadow:0 18px 48px rgba(17,24,39,.18); animation:versionMenuIn .16s ease-out; }
-  .version-settings-control .version-picker-option { width:100%; min-height:70px;
-  display:flex; align-items:center; justify-content:space-between; gap:16px;
-  padding:12px 13px; border:0; border-radius:12px; color:#202124;
-  background:transparent; text-align:left; cursor:pointer; }
-  .version-settings-control .version-picker-option:hover,
-  .version-settings-control .version-picker-option:focus-visible { background:#f5f6f7;
-  outline:none; }
-  .version-settings-control .version-picker-option strong,
-  .version-settings-control .version-picker-option small { display:block; }
-  .version-settings-control .version-picker-option strong { font-size:16px;
-  line-height:1.3; font-weight:500; }
-  .version-settings-control .version-picker-option small { margin-top:3px;
-  color:#8b8d91; font-size:14px; line-height:1.35; }
-  .version-settings-control .version-picker-check { display:none; color:#1a73e8;
-  font-size:24px; font-weight:700; }
-  .version-settings-control .version-picker-option[data-selected="selected"]
-  .version-picker-check { display:block; }
-  @keyframes versionMenuIn { from { opacity:0; transform:translateY(-5px); }
-  to { opacity:1; transform:translateY(0); } } .save-bar {
+  .version-settings-control { display:flex; align-items:center; gap:9px; min-height:46px;
+  padding:5px 7px 5px 12px; border:1px solid #dfe3e8; border-radius:11px;
+  color:#687181; background:#f1f3f5; } .version-settings-control label { margin:0;
+  color:#687181; font-size:12px; font-weight:800; } .version-settings-control select {
+  width:auto; min-width:112px; height:34px; padding:0 31px 0 10px; border:0;
+  border-radius:8px; color:#20242a; background:#e4e7eb; font-size:12px;
+  font-weight:850; cursor:pointer; } .save-bar {
   display:flex; align-items:center; justify-content:space-between; gap:15px; }
   .save-bar .btn { min-width:160px; } .embed-code { display:block;
   margin-top:12px; padding:11px; overflow-wrap:anywhere; border-radius:9px;
@@ -6766,16 +6480,9 @@ var sharedStyles = html`
   .install-locked{padding:17px;border:1px solid #f0d1d1;border-radius:12px;background:#fff8f8}.install-locked strong{display:block;color:#8f2525;font-size:15px}.install-locked p{margin:6px 0 13px;color:#637083;font-size:12px;line-height:1.5}.install-locked .btn{min-height:38px;font-size:12px}
   .advanced-body .delete-tools{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:18px;padding:16px;border-color:#f0d4d4;background:#fffafa}.advanced-body .delete-tools p{margin:4px 0 0}.advanced-body .delete-tools form{flex:0 0 auto}
   .onboarding-card{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr);gap:38px;padding:34px;border-radius:20px;box-shadow:0 18px 50px rgba(28,52,84,.08)}
-  .onboarding-copy .eyebrow{display:inline-flex;align-items:center;min-height:28px;margin-bottom:16px;padding:0 11px;border-radius:8px;color:#fff;background:#050505}.onboarding-copy>p{color:#637083;line-height:1.6}
-  .setup-wizard .setup-steps>div.completed{color:#354256}.setup-wizard .setup-steps>div.completed span{background:#111}
-  .setup-stage-card{padding:26px;border:1px solid #dfe6ee;border-radius:16px;background:#f9fbfd}.setup-stage-card h2{margin-bottom:7px}.setup-stage-card>p{margin-bottom:20px;color:#637083;line-height:1.55}
-  .setup-site-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;padding:14px 16px;border:1px solid #dfe6ee;border-radius:12px;background:#fff}.setup-site-summary small{display:block;margin-bottom:4px;color:#748092}.setup-site-summary strong{overflow-wrap:anywhere}
-  .setup-scan-progress{padding:18px;border:1px solid #dce4ed;border-radius:13px;background:#fff}.setup-scan-progress-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:11px}.setup-scan-progress-head small{display:block;margin-top:4px;color:#637083}.setup-scan-progress .progress{height:10px;overflow:hidden;border-radius:999px;background:#e7ebf0}.setup-scan-progress .progress span{display:block;height:100%;min-width:5%;border-radius:inherit;background:#050505;transition:width .3s ease}.scan-percent{font-weight:900}
-  .setup-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.setup-form-grid .full-field{grid-column:1/-1}.setup-form-grid label{margin:0;color:#3e4c5f;font-size:12px}.setup-form-grid label input,.setup-form-grid label textarea,.setup-form-grid label select{margin-top:7px}.setup-form-grid textarea{min-height:105px}.setup-checks{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;grid-column:1/-1}.setup-checks label{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #dfe6ee;border-radius:11px;background:#fff}.setup-checks input{width:auto;margin:0}
-  .setup-stage-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:20px}.setup-stage-actions .btn{background:#050505}.setup-stage-actions .btn:hover{background:#202020}.setup-error{margin:0 0 14px;padding:11px 13px;border:1px solid #efcaca;border-radius:10px;color:#8f2525;background:#fff5f5;font-size:12px}
-  @media (max-width:700px){.setup-form-grid{grid-template-columns:1fr}.setup-form-grid .full-field{grid-column:auto}.setup-checks{grid-template-columns:1fr;grid-column:auto}.setup-site-summary,.setup-scan-progress-head,.setup-stage-actions{align-items:stretch;flex-direction:column}.setup-stage-actions .btn{width:100%}}
-  .setup-steps{display:grid;gap:4px;margin-top:26px}.setup-steps>div{display:grid;grid-template-columns:30px 1fr;column-gap:11px;padding:12px;border-radius:11px;color:#738094}.setup-steps>div.active{color:#102033;background:#eef5ff}.setup-steps span{width:30px;height:30px;display:grid;grid-row:1/3;place-items:center;border-radius:9px;color:#fff;background:#9aa8ba;font-size:12px;font-weight:900}.setup-steps .active span{background:#050505}.setup-steps strong{font-size:13px}.setup-steps small{margin-top:3px;font-size:11px;line-height:1.4}
-  .create-bot-form{padding:24px;border:1px solid #e0e6ed;border-radius:16px;background:#f9fbfd}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.create-bot-form label{margin:0;color:#3e4c5f;font-size:12px}.create-bot-form label input,.create-bot-form label textarea{margin-top:7px}.full-field{grid-column:1/-1}.colour-field{grid-column:1/-1}.colour-field input[type="color"]{width:62px;height:44px;padding:5px}.create-bot-form .btn.full{margin-top:18px;background:#050505}.create-bot-form .btn.full:hover{background:#202020}.form-assurance{margin:11px 0 0;color:#748092;text-align:center;font-size:11px}
+  .onboarding-copy>p{color:#637083;line-height:1.6}
+  .setup-steps{display:grid;gap:4px;margin-top:26px}.setup-steps>div{display:grid;grid-template-columns:30px 1fr;column-gap:11px;padding:12px;border-radius:11px;color:#738094}.setup-steps>div.active{color:#102033;background:#eef5ff}.setup-steps span{width:30px;height:30px;display:grid;grid-row:1/3;place-items:center;border-radius:9px;color:#fff;background:#9aa8ba;font-size:12px;font-weight:900}.setup-steps .active span{background:#1769e0}.setup-steps strong{font-size:13px}.setup-steps small{margin-top:3px;font-size:11px;line-height:1.4}
+  .create-bot-form{padding:24px;border:1px solid #e0e6ed;border-radius:16px;background:#f9fbfd}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.create-bot-form label{margin:0;color:#3e4c5f;font-size:12px}.create-bot-form label input,.create-bot-form label textarea{margin-top:7px}.full-field{grid-column:1/-1}.colour-field{grid-column:1/-1}.colour-field input[type="color"]{width:62px;height:44px;padding:5px}.create-bot-form .btn.full{margin-top:18px}.form-assurance{margin:11px 0 0;color:#748092;text-align:center;font-size:11px}
   @media (max-width:820px) {
   .grid,.settings-grid,.workspace-grid,.onboarding-card{grid-template-columns:1fr}.usage-strip{grid-template-columns:1fr}.usage-count{white-space:normal}.setting-section.full{grid-column:auto}.dashboard-head{align-items:flex-start;flex-direction:column}.details{grid-template-columns:1fr}.public-links{display:none}.public-foot-grid{grid-template-columns:1fr
   1fr} } @media (max-width:560px) { main{padding:38px 0
@@ -7051,128 +6758,23 @@ var sharedStyles = html`
   .dashboard-account-tab.active{background:#171c26!important;color:#fff!important;border-color:#171c26!important}
   .dashboard-account-tab.active .dashboard-account-tab-icon{color:#fff!important}
   .dashboard-account-tab.active::before{display:none}
-  .dashboard-account-foot{margin-top:14px;display:flex;flex:1;flex-direction:column;justify-content:flex-end;gap:14px}
-  .dashboard-account-signout{margin-top:0}
-  .dashboard-account-signout button{display:flex;width:100%;align-items:center;gap:10px;min-height:44px;padding:0 13px;border:1px solid transparent;border-radius:999px;color:#2b2e32;background:transparent;font-size:16px;font-weight:700;text-align:left;cursor:pointer}
-  .dashboard-account-signout button:hover{border-color:#dddde0;background:#ededee}
-  .dashboard-account-signout button:focus-visible{outline:2px solid #171c26;outline-offset:2px}
-  .dashboard-account-signout button svg{width:18px;height:18px;flex:0 0 18px}
-  @media(min-width:721px){
-    body.dashboard-account-page{overflow-x:hidden}
-    .dashboard-account-layout{width:90.909091%;min-height:90.909091vh;zoom:1.1}
-    .dashboard-account-side{height:90.909091vh}
-  }
-  .dash-knowledge-head form{display:block}
-  .dash-update-knowledge{min-height:42px;padding:0 18px;border-color:#050505!important;color:#fff!important;background:#050505!important;font-size:10px;box-shadow:0 7px 16px rgba(5,5,5,.14);transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
-  .dash-update-knowledge:hover{transform:translateY(-2px);background:#000!important;box-shadow:0 11px 22px rgba(5,5,5,.22)}
-  .dash-knowledge-body{grid-template-columns:1fr}
-  .dash-management-grid{grid-template-columns:1fr}
-  .install-block>small{color:#050505!important;font-weight:850}
-  .install-block .embed-code{padding:14px 16px;color:#fff!important;background:#0b0b0c!important;font-size:10px;line-height:1.55}
-  .dash-delete-card{padding:17px 18px}
-  .dash-delete-card .dash-delete-trigger{min-height:42px;padding:0 19px;border:1px solid #c71920;border-radius:7px;color:#fff;background:#dc2626;box-shadow:0 7px 16px rgba(185,28,28,.16);cursor:pointer;font-size:10px;font-weight:850;transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
-  .dash-delete-card .dash-delete-trigger:hover{transform:translateY(-2px) scale(1.025);background:#c71920;box-shadow:0 12px 24px rgba(185,28,28,.25)}
-  .dash-delete-dialog{width:min(430px,calc(100% - 32px));padding:0;border:0;border-radius:14px;color:#111;background:#fff;box-shadow:0 28px 80px rgba(0,0,0,.24)}
-  .dash-delete-dialog::backdrop{background:rgba(13,13,14,.54);backdrop-filter:blur(3px)}
-  .dash-delete-dialog-card{position:relative;padding:27px}
-  .dash-delete-dialog-close{position:absolute;top:14px;right:14px;width:31px;height:31px;border:1px solid #e0e0e1;border-radius:50%;color:#3d3d42;background:#f7f7f7;cursor:pointer;font-size:18px;line-height:1}
-  .dash-delete-dialog-icon{width:43px;height:43px;display:grid;place-items:center;margin-bottom:18px;border-radius:12px;color:#b42318;background:#feeceb;font-size:20px;font-weight:900}
-  .dash-delete-dialog-kicker{display:block;margin:0 0 6px;color:#b42318;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-  .dash-delete-dialog h2{margin:0 34px 8px 0;color:#0c0c0d;font-size:21px;letter-spacing:-.025em}
-  .dash-delete-dialog p{margin:0;color:#68686e;font-size:12px;line-height:1.55}
-  .dash-delete-dialog-actions{display:flex;margin-top:24px;align-items:center;justify-content:flex-end;gap:9px}
-  .dash-delete-dialog-actions form{margin:0}
-  .dash-delete-cancel,.dash-delete-confirm,.dash-delete-done{min-height:40px;padding:0 15px;border-radius:7px;cursor:pointer;font-size:10px;font-weight:850}
-  .dash-delete-cancel{border:1px solid #d8d8da;color:#242427;background:#fff}
-  .dash-delete-confirm{border:1px solid #c71920;color:#fff;background:#dc2626}
-  .dash-delete-confirm:disabled{cursor:wait;opacity:.68}
-  .dash-delete-error{margin-top:12px!important;padding:9px 11px;border-radius:7px;color:#a61b22!important;background:#fff0f0;font-weight:700}
-  .dash-delete-success{text-align:center}
-  .dash-delete-success .dash-delete-dialog-icon{margin:0 auto 17px;color:#167044;background:#eaf8ef}
-  .dash-delete-success h2{margin-right:0}
-  .dash-delete-done{margin-top:22px;border:1px solid #111;color:#fff;background:#111}
-  @media(max-width:720px){
-    .dash-delete-dialog-actions{align-items:stretch;flex-direction:column-reverse}
-    .dash-delete-dialog-actions form,.dash-delete-cancel,.dash-delete-confirm{width:100%}
-  }
-  @media(max-width:720px){.dashboard-account-layout{grid-template-columns:1fr!important}.dashboard-account-side{position:relative;height:auto;min-height:0;padding:18px}.dashboard-account-foot{flex:0}.dashboard-workspace-state{margin-top:14px}}
-
-  /* Shared landing-page footer used across every Fise page with a footer. */
-  .reference-footer{padding:92px 0 35px;color:#071126;background:#f4f4f4;font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-  .reference-footer .video-container{width:min(1640px,calc(100% - 96px));margin:auto}
-  .reference-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:60px}
-  .reference-footer h3{margin:8px 0 29px;color:#071126;font-size:17px}
-  .reference-footer a{display:block;margin:0 0 23px;color:#7d8795;font-size:16px;text-decoration:none}
-  .reference-footer a:hover{color:#111}
-  .footer-demo-cta{display:flex;justify-content:center;margin:10px 0 52px}
-  .reference-footer .video-demo-pill{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:999px;color:#1f2733!important;background:#e9ebee;font-weight:800;text-decoration:none}
-  .reference-footer .video-demo-pill:hover{background:#dee1e6}
-  .reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:20px;padding-top:33px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:14px}
-
-  /* Requested account and chatbot-page refinements. */
-  .dash-topbar-actions{display:none!important}
-  .dashboard-account-foot{gap:0!important}
-  .dashboard-account-signout button{min-height:43px!important;gap:12px!important}
-  .dashboard-account-tab-icon img{display:block;width:18px;height:18px;object-fit:contain}
-  .chatbot-settings-page .eyebrow,.leads-page .eyebrow{color:#050505!important}
-  .settings-page-header-actions{display:grid;min-width:178px;gap:10px}
-  .settings-page-header-actions .btn{width:100%}
-  .settings-save-top,.settings-preview-button,.leads-download{border-color:#050505!important;color:#fff!important;background:#050505!important}
-  .settings-save-top:hover,.settings-preview-button:hover,.leads-download:hover{background:#000!important}
-  .chatbot-settings-page .save-bar{display:none!important}
-
-  @media(max-width:1000px){
-    .reference-footer .video-container{width:min(100% - 42px,1640px)}
-    .reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}
-  }
-  @media(max-width:720px){
-    .reference-footer .video-container{width:min(100% - 28px,1640px)}
-    .reference-footer-grid{grid-template-columns:1fr;gap:28px}
-    .reference-footer-bottom{align-items:flex-start;flex-direction:column}
-    .settings-page-header-actions{width:100%}
-  }
+  .dashboard-account-foot{margin-top:auto;display:flex;flex-direction:column;gap:14px}
+  .dashboard-account-signout button{display:flex;width:100%;align-items:center;gap:10px;min-height:44px;padding:0 13px;border:1px solid var(--border-strong,#dededb);border-radius:10px;color:#111;background:#fff;font-size:13px;font-weight:700;cursor:pointer}
+  .dashboard-account-signout button:hover{background:#f2f2f3}
+  .dashboard-account-signout button svg{width:17px;height:17px;flex:0 0 auto}
 `;
 function escapeHtml(value = "") {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 __name(escapeHtml, "escapeHtml");
-function titleCase(value) {
-  return String(value || "").replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-__name(titleCase, "titleCase");
-function fiseLandingFooter() {
-  return `<footer class="reference-footer"><div class="video-container"><div class="reference-footer-grid"><div><h3>Product</h3><a href="/#features">Features</a><a href="/#clients">Our Clients</a><a href="/#pricing">Pricing</a></div><div><h3>Company</h3><a href="/about">About</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/help">Help</a></div><div><h3>Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener">T&amp;C's</a></div></div><div class="footer-demo-cta"><a class="video-demo-pill" href="/demo">Demo</a></div><div class="reference-footer-bottom"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
-}
-__name(fiseLandingFooter, "fiseLandingFooter");
-function fiseEmailFooter(origin) {
-  const base = String(origin || "").replace(/\/$/, "");
-  const link = (path, label) => '<a href="' + escapeHtml(base + path) + '" style="display:block;margin:0 0 10px;color:#7d8795;text-decoration:none">' + label + '</a>';
-  return '<div style="margin-top:34px;padding:34px 30px 24px;background:#f4f4f4;color:#071126"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/demo") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#1f2733;background:#e9ebee;font-weight:bold;text-decoration:none">Demo</a></p><div style="padding-top:20px;border-top:1px solid #e2e6ea;color:#9aa3af;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
-}
-__name(fiseEmailFooter, "fiseEmailFooter");
 var _d;
 function documentPage(title, body) {
-  const page = html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), body, (/* @__PURE__ */ new Date()).getFullYear());
-  let rendered = page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/<footer class="public-foot">[\s\S]*?<\/footer>/, fiseLandingFooter());
-  if (String(title).startsWith("Customize ")) {
-    rendered = rendered.replace('<main class="wrap">', '<main class="wrap chatbot-settings-page">').replace('<a class="btn ghost" href="/dashboard">Back to dashboard</a>', '<div class="settings-page-header-actions"><a class="btn ghost" href="/dashboard">Back to dashboard</a><button class="btn settings-save-top" type="submit" form="chatbot-settings-form">Save changes</button></div>').replace('class="btn"\n          href="/widget/test?', 'class="btn settings-preview-button"\n          href="/widget/test?').replace('<form\n        method="post"\n        action="/api/chatbots/', '<form\n        id="chatbot-settings-form"\n        method="post"\n        action="/api/chatbots/').replace(/\s*<section class="setting-section full save-bar">[\s\S]*?<\/section>/, "");
-  } else if (String(title).startsWith("Leads for ")) {
-    rendered = rendered.replace('<main class="wrap">', '<main class="wrap leads-page">').replace('class="btn"\n          href="/api/chatbots/', 'class="btn leads-download"\n          href="/api/chatbots/');
-  }
-  return rendered;
+  return html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <style>\n          ", '\n        </style>\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), sharedStyles, body, (/* @__PURE__ */ new Date()).getFullYear());
 }
 __name(documentPage, "documentPage");
-function deletionDocumentPage(title, body) {
-  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>
-    body.deletion-page{min-height:100vh;display:flex;flex-direction:column;background:#f5f7fa}.deletion-page main{flex:1}.deletion-page .shell{background:#fff}
-  </style></head><body class="deletion-page"><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard">Chatbot</a></div></header>${body}${fiseLandingFooter()}</body></html>`;
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
-}
-__name(deletionDocumentPage, "deletionDocumentPage");
 var _e;
 function embeddedDocumentPage(title, body) {
-  const page = html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <link rel=\"stylesheet\" href=\"/site.css\">\n        <style>\n          body { background:#f3f6fa; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), body);
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <style>\n          ", "\n          body { background:#f3f6fa; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), sharedStyles, body);
 }
 __name(embeddedDocumentPage, "embeddedDocumentPage");
 function dashboardAccountSidebar() {
@@ -7186,6 +6788,7 @@ function dashboardAccountSidebar() {
       ${renderAccountNav({ activeKey: "chatbot", tabClass: "dashboard-account-tab", iconClass: "dashboard-account-tab-icon", linkMode: true })}
     </nav>
     <div class="dashboard-account-foot">
+      <div class="dashboard-workspace-state">Workspace active · Fise AI</div>
       <form class="dashboard-account-signout" method="post" action="/logout"><button type="submit">${accountSignOutIcon()}<span>Sign out</span></button></form>
     </div>
   </aside>`;
@@ -7193,8 +6796,7 @@ function dashboardAccountSidebar() {
 __name(dashboardAccountSidebar, "dashboardAccountSidebar");
 var _f;
 function dashboardDocumentPage(title, body) {
-  const page = html(_f || (_f = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body class="dashboard-account-page">\n        <div class="dashboard-account-layout">\n          ', '\n          <div class="dashboard-account-main">', '</div>\n        </div>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), dashboardAccountSidebar(), body);
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/\s*<div class="dash-topbar-actions">[\s\S]*?<\/div>/, "");
+  return html(_f || (_f = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <style>", '</style>\n      </head>\n      <body class="dashboard-account-page">\n        <div class="dashboard-account-layout">\n          ', '\n          <div class="dashboard-account-main">', '</div>\n        </div>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), sharedStyles, dashboardAccountSidebar(), body);
 }
 __name(dashboardDocumentPage, "dashboardDocumentPage");
 function loginPage(message = "", isError = false, embedded = false) {
@@ -7252,7 +6854,9 @@ function renderDashboardKnowledge(bot, embedded = false) {
   const complete = ["completed", "completed_with_errors"].includes(status);
   const failed = status === "failed";
   const percent = complete ? 100 : found ? Math.min(100, Math.round(processed / found * 100)) : active ? 5 : 0;
+  const actionLabel = active ? "Restart scan" : complete ? "Rescan website" : "Start website scan";
   const stateLabel = active ? "Scan in progress" : complete ? "Knowledge ready" : failed ? "Needs attention" : "Ready to scan";
+  const detail = failed ? escapeHtml(bot.scan_error || "Fise could not read usable website pages.") : active ? "New pages are added to the queue as they are found." : complete ? "Your website knowledge is current and ready for your chatbot." : "Start a scan to prepare your website information.";
   return html`<section class="dash-knowledge-card" id="website-knowledge">
     <div class="dash-knowledge-head">
       <div>
@@ -7262,7 +6866,8 @@ function renderDashboardKnowledge(bot, embedded = false) {
       </div>
       <form method="post" action="${scanAction}">
         <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
-        <button class="dash-primary-button dash-update-knowledge" type="submit">Update knowledge</button>
+        <button class="dash-secondary-button" type="submit">Update knowledge</button>
+        <button class="dash-primary-button" type="submit">${actionLabel}</button>
       </form>
     </div>
     <div class="dash-knowledge-body">
@@ -7277,70 +6882,26 @@ function renderDashboardKnowledge(bot, embedded = false) {
           <div><small>Processing</small><strong>${processed} processed</strong></div>
         </div>
       </div>
+      <aside class="dash-scan-summary">
+        <strong>Scan completion</strong>
+        <small>Automatic progress updates</small>
+        <p>${detail}</p>
+        <div><span>${failed ? "Issue detected" : "No errors detected"}</span><button type="submit" form="dash-retry-${escapeHtml(bot.id)}">Retry scan</button></div>
+        <small>Last updated just now</small>
+      </aside>
+      <form id="dash-retry-${escapeHtml(bot.id)}" method="post" action="${scanAction}">
+        <input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}">
+      </form>
     </div>
   </section>`;
 }
 __name(renderDashboardKnowledge, "renderDashboardKnowledge");
 var _g;
-function renderSetupWizard(bot, stage, embedded = false) {
-  const activeStep = stage === "customise" ? 3 : 2;
-  const scanStatusValue = bot.scan_status || (bot.status === "scanning" ? "running" : "not_started");
-  const scanActive = ["queued", "discovering", "running", "indexing"].includes(scanStatusValue);
-  const scanFailed = scanStatusValue === "failed";
-  const found = Number(bot.pages_found || 0);
-  const processed = Number(bot.pages_processed || 0);
-  const percent = found ? Math.min(100, Math.round(processed / found * 100)) : scanActive ? 5 : 0;
-  const ui = uiSettings(bot.ui_settings_json);
-  let questions = [];
-  try {
-    const parsed = JSON.parse(bot.popular_questions_json || "[]");
-    if (Array.isArray(parsed)) questions = parsed;
-  } catch {}
-  if (!questions.length && Array.isArray(bot.setup_suggested_questions)) questions = bot.setup_suggested_questions;
-  if (!questions.length) questions = ["What do you offer?", "What are your prices?", "How can I contact you?"];
-  const steps = html`<div class="setup-steps">
-    <div class="${activeStep > 1 ? "completed" : "active"}"><span>1</span><strong>Business details</strong><small>Name your chatbot and add your website.</small></div>
-    <div class="${activeStep === 2 ? "active" : activeStep > 2 ? "completed" : ""}"><span>2</span><strong>Scan website</strong><small>Fise securely prepares up to 100 useful pages.</small></div>
-    <div class="${activeStep === 3 ? "active" : ""}"><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div>
-  </div>`;
-  let stageContent = "";
-  if (activeStep === 2) {
-    const scanAction = embedded ? "/api/scans/start?embed=1&setup=1" : "/api/scans/start?setup=1";
-    const progress = scanActive ? html`<div class="setup-scan-progress" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
-      <div class="setup-scan-progress-head"><div><strong>Scanning your website</strong><small class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</small></div><span class="scan-percent">${percent}%</span></div>
-      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${Math.max(5, percent)}%"></span></div>
-    </div>` : html`${scanFailed && bot.scan_error ? `<p class="setup-error">${escapeHtml(bot.scan_error)}</p>` : ""}<form method="post" action="${scanAction}"><input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}"><button class="btn full" type="submit">${scanFailed ? "Try website scan again" : "Scan website"}</button></form>`;
-    stageContent = html`<div class="setup-stage-card"><h2>Scan your website</h2><p>Fise will securely read your public pages and prepare the knowledge your chatbot needs. This normally takes a few minutes.</p><div class="setup-site-summary"><div><small>Website to scan</small><strong>${escapeHtml(bot.website_url || "")}</strong></div><span>${scanActive ? "Scan in progress" : scanFailed ? "Scan needs attention" : "Ready to scan"}</span></div>${progress}</div>`;
-  } else {
-    const finishAction = `/api/chatbots/${encodeURIComponent(bot.id)}/finish-setup${embedded ? "?embed=1" : ""}`;
-    stageContent = html`<form class="setup-stage-card" method="post" action="${finishAction}">
-      <h2>Customise and launch</h2><p>Choose the essential appearance and conversation settings. You can change any of these later.</p>
-      <div class="setup-form-grid">
-        <label>Opening message<textarea name="greeting" maxlength="500" required>${escapeHtml(bot.greeting || "Hi! How can I help you today?")}</textarea></label>
-        <label>Chatbot guidance <span class="muted">(optional)</span><textarea name="instructions" maxlength="2000" placeholder="Be friendly, concise and helpful.">${escapeHtml(bot.instructions || "")}</textarea></label>
-        <label class="full-field">Popular questions <span class="muted">(one per line, up to four)</span><textarea name="popular_questions" maxlength="800" required>${escapeHtml(questions.slice(0, 4).join("\n"))}</textarea></label>
-        <label>Chatbot version<select name="widget_version"><option value="1" ${selected(ui.widget_version, "1")}>Version 1.1</option><option value="2" ${selected(ui.widget_version, "2")}>Version 2.1</option></select></label>
-        <label>Brand colour<input name="primary_colour" type="color" value="${escapeHtml(bot.primary_colour || "#1769e0")}" required></label>
-        <label>Answer length<select name="answer_length"><option value="short" ${selected(bot.answer_length || "short", "short")}>Short</option><option value="standard" ${selected(bot.answer_length, "standard")}>Medium</option><option value="detailed" ${selected(bot.answer_length, "detailed")}>Long</option></select></label>
-        <label>Tone<select name="formality"><option value="friendly" ${selected(bot.formality || "friendly", "friendly")}>Friendly</option><option value="professional" ${selected(bot.formality, "professional")}>Professional</option><option value="formal" ${selected(bot.formality, "formal")}>Formal</option></select></label>
-        <label>Opening size<select name="default_size"><option value="standard" ${selected(bot.default_size || "standard", "standard")}>Standard</option><option value="large" ${selected(bot.default_size, "large")}>Large</option></select></label>
-        <div class="setup-checks">
-          <label><input type="checkbox" name="allow_files" value="1" ${checked(bot.allow_files)}> Allow attachments</label>
-          <label><input type="checkbox" name="allow_voice" value="1" ${checked(bot.allow_voice)}> Allow voice messages</label>
-          <label><input type="checkbox" name="allow_emoji" value="1" ${checked(ui.allow_emoji)}> Allow emoji picker</label>
-        </div>
-      </div>
-      <div class="setup-stage-actions"><button class="btn" type="submit">Finish setup and open dashboard</button></div>
-    </form>`;
-  }
-  return html`<section class="card onboarding-card setup-wizard"><div class="onboarding-copy"><div class="eyebrow">Quick setup</div><h2>Set up your chatbot</h2><p>Complete all three steps here. Your dashboard will open when the chatbot is ready.</p>${steps}</div>${stageContent}</section>`;
-}
-__name(renderSetupWizard, "renderSetupWizard");
-function dashboardPage(user, chatbots, platformOrigin, message = "", isError = false, embedded = false, setupStage = "") {
+function dashboardPage(user, chatbots, platformOrigin, message = "", isError = false, embedded = false) {
   const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}">
         ${escapeHtml(message)}
       </div>` : "";
-  const botList = chatbots.length && !setupStage ? chatbots.map(
+  const botList = chatbots.length ? chatbots.map(
     (bot) => {
       const planCode = normalizedPlanCode(bot.plan_code);
       const conversationLimit = Number(bot.conversation_limit || planConversationLimit(planCode));
@@ -7379,13 +6940,19 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
               ${renderDashboardKnowledge(bot, embedded)}
 
               <div class="dash-management-grid">
+                <section class="dash-private-card" id="private-ai-knowledge">
+                  <div class="dash-private-head"><span class="dash-icon"><svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2V6Z"/></svg></span><span class="dash-connected">${bot.vector_store_id ? "Connected" : "Preparing"}</span></div>
+                  <h2>Private AI Knowledge</h2>
+                  <p>Your secure vector store is connected and ready to supply private context to your chatbot.</p>
+                  <a class="dash-secondary-button" href="#website-knowledge">Manage knowledge</a>
+                </section>
                 <section class="dash-management-card" id="chatbot-management">
                   <div class="dash-section-heading"><div><small>Operations</small><h2>Chatbot Management</h2></div><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2.1-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2.1 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.2l-2 1.6 2 3.4 2.3-1a7 7 0 0 0 2.1 1.2L10 21h4l.5-2.6a7 7 0 0 0 2.1-1.2l2.3 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z"/></svg></span></div>
                   <div class="dash-action-grid">
                     <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings"><span><svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h-1"/><circle cx="13" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span><strong>Customise chatbot</strong><small>Voice, appearance and behaviour</small><b>↗</b></a>
                     <a href="/widget/test?key=${encodeURIComponent(bot.public_key)}"><span><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span><strong>Open live preview</strong><small>Test the current experience</small><b>↗</b></a>
                     <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6 20v-1.5A5.5 5.5 0 0 1 11.5 13h1A5.5 5.5 0 0 1 18 18.5V20"/></svg></span><strong>View captured leads</strong><small>Review your latest enquiries</small><b>↗</b></a>
-                    <a href="#technical-info-${escapeHtml(bot.id)}" data-technical-toggle="technical-info-${escapeHtml(bot.id)}"><span><svg viewBox="0 0 24 24"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg></span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>⌄</b></a>
+                    <a href="#technical-info-${escapeHtml(bot.id)}" data-technical-toggle="technical-info-${escapeHtml(bot.id)}"><span>{ }</span><strong>Installation &amp; technical info</strong><small>Embed and configuration guidance</small><b>⌄</b></a>
                   </div>
                 </section>
               </div>
@@ -7404,41 +6971,18 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
 
               <section class="dash-delete-card">
                 <div><h2>Delete chatbot</h2><p>Secure email confirmation is required before this chatbot can be deleted.</p></div>
-                <button class="dash-delete-trigger" type="button" data-delete-open="delete-dialog-${escapeHtml(bot.id)}">Delete chatbot</button>
+                <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}">
+                  <button type="submit">Delete chatbot</button>
+                </form>
               </section>
-              <dialog class="dash-delete-dialog" id="delete-dialog-${escapeHtml(bot.id)}" aria-labelledby="delete-title-${escapeHtml(bot.id)}">
-                <div class="dash-delete-dialog-card">
-                  <div class="dash-delete-dialog-body">
-                    <button class="dash-delete-dialog-close" type="button" data-delete-close aria-label="Close deletion confirmation">×</button>
-                    <div class="dash-delete-dialog-icon" aria-hidden="true">!</div>
-                    <small class="dash-delete-dialog-kicker">Permanent action</small>
-                    <h2 id="delete-title-${escapeHtml(bot.id)}">Delete ${escapeHtml(bot.name)}?</h2>
-                    <p>We’ll email you a secure confirmation link. Your chatbot will remain active until you open that email and confirm the deletion.</p>
-                    <p class="dash-delete-error" data-delete-error hidden></p>
-                    <div class="dash-delete-dialog-actions">
-                      <button class="dash-delete-cancel" type="button" data-delete-close>Keep chatbot</button>
-                      <form method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/delete-request${embedded ? "?embed=1" : ""}" data-delete-form>
-                        <button class="dash-delete-confirm" type="submit">Send confirmation email</button>
-                      </form>
-                    </div>
-                  </div>
-                  <div class="dash-delete-success" data-delete-success hidden>
-                    <div class="dash-delete-dialog-icon" aria-hidden="true">✓</div>
-                    <small class="dash-delete-dialog-kicker">Email sent</small>
-                    <h2>Check your inbox</h2>
-                    <p>We sent a secure deletion confirmation link to ${escapeHtml(user.email)}. Nothing will be deleted unless you confirm it from that email.</p>
-                    <button class="dash-delete-done" type="button" data-delete-close>Done</button>
-                  </div>
-                </div>
-              </dialog>
             </div>`;
     }
   ).join("") : "";
-  const createPanel = chatbots.length ? setupStage ? renderSetupWizard(chatbots[0], setupStage, embedded) : "" : html`<section class="card onboarding-card">
+  const createPanel = chatbots.length ? "" : html`<section class="card onboarding-card">
         <div class="onboarding-copy">
           <div class="eyebrow">Quick setup</div>
           <h2>Create your chatbot</h2>
-          <p>Complete all three steps here. Your dashboard will open when the chatbot is fully set up.</p>
+          <p>Start with the essentials. You can customise every detail after your website has been scanned.</p>
           <div class="setup-steps"><div class="active"><span>1</span><strong>Business details</strong><small>Name your chatbot and add your website.</small></div><div><span>2</span><strong>Scan website</strong><small>Fise securely prepares up to 100 useful pages.</small></div><div><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div></div>
         </div>
         <form class="create-bot-form" method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
@@ -7446,8 +6990,11 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
             <label>Business name<input id="business_name" name="business_name" maxlength="100" required placeholder="Example Company" /></label>
             <label>Chatbot name<input id="name" name="name" maxlength="80" required placeholder="Example Assistant" /></label>
             <label class="full-field">Website URL<input id="website_url" name="website_url" type="url" maxlength="500" required placeholder="https://example.com" /></label>
+            <label class="full-field">Opening greeting<input id="greeting" name="greeting" maxlength="240" value="Hi! How can I help you today?" required /></label>
+            <label class="colour-field">Brand colour<input id="primary_colour" name="primary_colour" type="color" value="#1769e0" required /></label>
+            <label class="full-field">Chatbot guidance <span class="muted">(optional)</span><textarea id="instructions" name="instructions" maxlength="2000" placeholder="Be friendly, concise and helpful."></textarea></label>
           </div>
-          <button class="btn full" type="submit">Continue to website scan</button>
+          <button class="btn full" type="submit">Create chatbot</button>
           <p class="form-assurance">Your website remains unchanged until you install the finished chatbot.</p>
         </form>
       </section>`;
@@ -7516,14 +7063,7 @@ function cookieValue(request, name) {
   const cookies = request.headers.get("cookie") || "";
   for (const item of cookies.split(";")) {
     const [key, ...parts] = item.trim().split("=");
-    if (key === name) {
-      try {
-        return decodeURIComponent(parts.join("="));
-      } catch (error) {
-        console.error("Malformed cookie value; treating as absent", error);
-        return "";
-      }
-    }
+    if (key === name) return decodeURIComponent(parts.join("="));
   }
   return "";
 }
@@ -7641,11 +7181,8 @@ function validPassword(value) {
 __name(validPassword, "validPassword");
 function dashboardReturnUrl(request, values = {}) {
   const params = new URLSearchParams();
-  const requestUrl = new URL(request.url);
-  if (requestUrl.searchParams.get("embed") === "1")
+  if (new URL(request.url).searchParams.get("embed") === "1")
     params.set("embed", "1");
-  if (requestUrl.searchParams.get("setup") === "1")
-    params.set("setup", "scan");
   for (const [key, value] of Object.entries(values)) {
     if (value !== void 0 && value !== null && value !== "")
       params.set(key, String(value));
@@ -7696,19 +7233,14 @@ async function currentUser(request, env) {
   if (!token) return null;
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1e3);
-  try {
-    return await env.DB.prepare(
-      `
-      SELECT users.id, users.email, users.name, users.username, users.created_at,
-        CASE WHEN users.password_hash IS NOT NULL AND users.password_hash != '' THEN 1 ELSE 0 END AS password_set
-      FROM sessions JOIN users ON users.id = sessions.user_id
-      WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'
+  return env.DB.prepare(
     `
-    ).bind(tokenHash, now).first();
-  } catch (error) {
-    console.error("Session lookup failed; treating request as signed out", error);
-    return null;
-  }
+    SELECT users.id, users.email, users.name, users.username, users.created_at,
+      CASE WHEN users.password_hash IS NOT NULL AND users.password_hash != '' THEN 1 ELSE 0 END AS password_set
+    FROM sessions JOIN users ON users.id = sessions.user_id
+    WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'
+  `
+  ).bind(tokenHash, now).first();
 }
 __name(currentUser, "currentUser");
 async function createUserSession(userId, env, destination) {
@@ -7974,7 +7506,7 @@ async function ensureChatbotDeletionSchema(env) {
 __name(ensureChatbotDeletionSchema, "ensureChatbotDeletionSchema");
 function chatbotDeletionMessage(title, message, status = 200) {
   return htmlResponse(
-    deletionDocumentPage(
+    documentPage(
       title,
       '<main class="wrap"><section class="shell"><h1>' + escapeHtml(title) + '</h1><p class="lead">' + escapeHtml(message) + '</p><a class="btn ghost" href="/dashboard">Return to dashboard</a></section></main>'
     ),
@@ -8020,7 +7552,7 @@ async function requestChatbotDeletion(request, env, chatbotId) {
   const origin = new URL(request.url).origin;
   const confirmationUrl = origin + "/chatbot-deletion/confirm?token=" + encodeURIComponent(token);
   const safeName = escapeHtml(bot.name || "Fise chatbot");
-  const emailHtml = '<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:28px;color:#102033"><h1 style="font-size:28px;margin:0 0 14px">Confirm chatbot deletion</h1><p style="line-height:1.6">A permanent deletion was requested for <strong>' + safeName + '</strong>. Opening this email does not delete it. Review the details and press the final confirmation button.</p><p style="margin:28px 0"><a href="' + escapeHtml(confirmationUrl) + '" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#a52b2b;color:white;text-decoration:none;font-weight:bold">Review deletion request</a></p><p style="color:#637083;font-size:13px;line-height:1.5">This secure link expires in 30 minutes and can only be used once. If you did not request this, ignore the email and the chatbot will remain unchanged.</p>' + fiseEmailFooter(origin) + '</div>';
+  const emailHtml = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#102033"><h1 style="font-size:28px;margin:0 0 14px">Confirm chatbot deletion</h1><p style="line-height:1.6">A permanent deletion was requested for <strong>' + safeName + '</strong>. Opening this email does not delete it. Review the details and press the final confirmation button.</p><p style="margin:28px 0"><a href="' + escapeHtml(confirmationUrl) + '" style="display:inline-block;padding:13px 20px;border-radius:9px;background:#a52b2b;color:white;text-decoration:none;font-weight:bold">Review deletion request</a></p><p style="color:#637083;font-size:13px;line-height:1.5">This secure link expires in 30 minutes and can only be used once. If you did not request this, ignore the email and the chatbot will remain unchanged.</p></div>';
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -8076,7 +7608,7 @@ async function showChatbotDeletionConfirmation(request, env) {
       400
     );
   const content = '<main class="wrap"><section class="shell"><div class="eyebrow">Final security check</div><h1>Permanently delete ' + escapeHtml(pending.name) + '?</h1><p class="lead">This cannot be undone. The chatbot, knowledge sources, conversations, messages, leads, settings and OpenAI knowledge store will be removed. Your Fise account and subscription will remain.</p><div class="details"><div><small>Account</small><code>' + escapeHtml(pending.email) + "</code></div><div><small>Website</small><code>" + escapeHtml(pending.website_url || "Not set") + '</code></div></div><form method="post" action="/chatbot-deletion/confirm"><input type="hidden" name="token" value="' + escapeHtml(token) + '"><button class="btn full danger" type="submit">Permanently delete chatbot</button></form><p class="fine"><a href="/dashboard">Cancel and return to dashboard</a></p></section></main>';
-  return htmlResponse(deletionDocumentPage("Confirm chatbot deletion", content));
+  return htmlResponse(documentPage("Confirm chatbot deletion", content));
 }
 __name(showChatbotDeletionConfirmation, "showChatbotDeletionConfirmation");
 async function removeChatbotVectorStore(env, vectorStoreId) {
@@ -8205,12 +7737,6 @@ async function completeChatbotDeletion(request, env) {
   );
 }
 __name(completeChatbotDeletion, "completeChatbotDeletion");
-async function ensureTestingPlanSchema(env) {
-  await env.DB.prepare(
-    "CREATE TABLE IF NOT EXISTS testing_plan_overrides (user_id TEXT PRIMARY KEY,plan_code TEXT NOT NULL,updated_at TEXT NOT NULL)"
-  ).run();
-}
-__name(ensureTestingPlanSchema, "ensureTestingPlanSchema");
 async function changeTestingPlan(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -8221,54 +7747,37 @@ async function changeTestingPlan(request, env) {
   const allowedPlans = /* @__PURE__ */ new Set(["free", "essential", "grow", "enterprise"]);
   if (!allowedPlans.has(plan))
     return json({ error: "Choose a valid testing plan" }, 400);
-  try {
-    await ensureTestingPlanSchema(env);
-    const now = (/* @__PURE__ */ new Date()).toISOString();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const existing = await env.DB.prepare(
+    "SELECT id FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1"
+  ).bind(user.id).first();
+  if (existing?.id) {
     await env.DB.prepare(
-      `INSERT INTO testing_plan_overrides (user_id,plan_code,updated_at)
-       VALUES (?,?,?)
-       ON CONFLICT(user_id) DO UPDATE SET plan_code=excluded.plan_code,updated_at=excluded.updated_at`
-    ).bind(user.id, plan, now).run();
-    const [saved, billing] = await Promise.all([
-      env.DB.prepare(
-        "SELECT plan_code,updated_at FROM testing_plan_overrides WHERE user_id=?"
-      ).bind(user.id).first(),
-      env.DB.prepare(
-        "SELECT provider FROM subscriptions WHERE user_id=? ORDER BY updated_at DESC,id DESC LIMIT 1"
-      ).bind(user.id).first()
-    ]);
-    if (!saved || saved.plan_code !== plan)
-      throw new Error("Testing plan override did not persist");
-    return json({
-      subscription: {
-        plan_code: saved.plan_code,
-        status: "active",
-        provider: billing?.provider || "manual",
-        updated_at: saved.updated_at
-      }
-    });
-  } catch (error) {
-    console.error("Could not save testing plan", error);
-    return json({ error: "Your testing plan could not be saved. Please try again." }, 503);
+      "UPDATE subscriptions SET plan_code=?,status='active',provider='testing',updated_at=? WHERE id=?"
+    ).bind(plan, now, existing.id).run();
+  } else {
+    await env.DB.prepare(
+      "INSERT INTO subscriptions (id,user_id,provider,plan_code,status,created_at,updated_at) VALUES (?,?,'testing',?,'active',?,?)"
+    ).bind(crypto.randomUUID(), user.id, plan, now, now).run();
   }
+  return json({
+    subscription: {
+      plan_code: plan,
+      status: "active",
+      provider: "testing",
+      updated_at: now
+    }
+  });
 }
 __name(changeTestingPlan, "changeTestingPlan");
 async function accountProfile(request, env) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: "Sign in again" }, 401);
-  try {
-    await ensureTestingPlanSchema(env);
-  } catch (error) {
-    console.error("Testing plan schema check failed; continuing without it", error);
-  }
-  const [testingPlan, billingSubscription, chatbotResult, website] = await Promise.all([
-    env.DB.prepare(
-      `SELECT plan_code,updated_at FROM testing_plan_overrides WHERE user_id = ?`
-    ).bind(user.id).first(),
+  const [subscription, chatbotResult, website] = await Promise.all([
     env.DB.prepare(
       `SELECT plan_code,status,provider,created_at,updated_at
        FROM subscriptions WHERE user_id = ?
-       ORDER BY updated_at DESC,id DESC LIMIT 1`
+       ORDER BY updated_at DESC LIMIT 1`
     ).bind(user.id).first(),
     env.DB.prepare(
       `SELECT id,name,business_name,status,model
@@ -8276,19 +7785,6 @@ async function accountProfile(request, env) {
     ).bind(user.id).all(),
     readWebsiteContent(env)
   ]);
-  // A testing plan override is stored in its own table, independent of the
-  // subscriptions table. A user who has only ever used the free testing-plan
-  // selector (never a real subscription) has no subscriptions row at all, so
-  // this must not require one to exist before the override can be shown —
-  // that previously made the profile page (and its plan dropdown) silently
-  // fall back to "Free" on every reload even though the override was saved.
-  const subscription = testingPlan || billingSubscription ? {
-    plan_code: testingPlan?.plan_code || billingSubscription?.plan_code || null,
-    status: testingPlan ? "active" : billingSubscription?.status || null,
-    provider: billingSubscription?.provider || null,
-    created_at: billingSubscription?.created_at || null,
-    updated_at: testingPlan?.updated_at || billingSubscription?.updated_at || null
-  } : null;
   const rawSubscriptionStatus = String(subscription?.status || "").toLowerCase();
   const subscriptionWithDisplay = subscription ? {
     ...subscription,
@@ -8318,20 +7814,12 @@ async function showDashboard(request, env) {
     return redirect(
       embeddedRequest ? "/login?embed=1" : "/login"
     );
-  try {
-    await ensureTestingPlanSchema(env);
-  } catch (error) {
-    console.error("Testing plan schema check failed; continuing without it", error);
-  }
   let result;
   try {
     result = await env.DB.prepare(
       `
-      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,
-        COALESCE(cs.answer_length,'short') AS answer_length,COALESCE(cs.formality,'friendly') AS formality,
-        COALESCE(cs.popular_questions_json,'[]') AS popular_questions_json,COALESCE(cs.default_size,'standard') AS default_size,
-        COALESCE(cs.allow_files,1) AS allow_files,COALESCE(cs.allow_voice,1) AS allow_voice,COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,
-        CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
+      SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,
+        CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,
         (SELECT CAST(COUNT(*) / ${CONVERSATION_MESSAGE_GROUP_SIZE} AS INTEGER)
          FROM messages m JOIN conversations mc ON mc.id=m.conversation_id
          WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
@@ -8340,18 +7828,12 @@ async function showDashboard(request, env) {
         (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
         (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
         (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
-      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
-      LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
+      FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id
       WHERE c.user_id = ? ORDER BY c.created_at DESC`
     ).bind(monthStartIso(), user.id).all();
   } catch (error) {
     console.error("Dashboard detail query failed; using safe fallback", error);
-    try {
-      result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,COALESCE(cs.answer_length,'short') AS answer_length,COALESCE(cs.formality,'friendly') AS formality,COALESCE(cs.popular_questions_json,'[]') AS popular_questions_json,COALESCE(cs.default_size,'standard') AS default_size,COALESCE(cs.allow_files,1) AS allow_files,COALESCE(cs.allow_voice,1) AS allow_voice,COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,CASE WHEN tpo.user_id IS NOT NULL THEN tpo.plan_code WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1) LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
-    } catch (fallbackError) {
-      console.error("Dashboard fallback query also failed; showing an empty dashboard", fallbackError);
-      result = { results: [] };
-    }
+    result = await env.DB.prepare(`SELECT c.id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,CASE WHEN s.status IN ('active','trialing') THEN COALESCE(s.plan_code,'starter') ELSE 'starter' END AS plan_code,0 AS conversations_used,0 AS lead_count,NULL AS scan_status,NULL AS pages_found,NULL AS pages_processed,NULL AS scan_error FROM chatbots c LEFT JOIN subscriptions s ON s.user_id=c.user_id WHERE c.user_id=? ORDER BY c.created_at DESC`).bind(user.id).all();
   }
   const url = requestedUrl;
   let message = "";
@@ -8365,8 +7847,6 @@ async function showDashboard(request, env) {
     message = "Check your email for the secure chatbot deletion link. It expires in 30 minutes.";
   if (url.searchParams.get("deleted") === "1")
     message = "The chatbot and its related data were permanently deleted.";
-  if (url.searchParams.get("onboarding") === "complete")
-    message = "Your chatbot is fully set up and ready to use.";
   if (url.searchParams.get("error")) {
     message = url.searchParams.get("error");
     isError = true;
@@ -8392,45 +7872,13 @@ async function showDashboard(request, env) {
       conversation_limit: planConversationLimit(bot.plan_code)
     };
   }));
-  let setupStage = "";
-  const setupBot = dashboardBots[0];
-  if (setupBot) {
-    let rawUi = {};
-    try {
-      const parsed = JSON.parse(setupBot.ui_settings_json || "{}");
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) rawUi = parsed;
-    } catch {}
-    const requestedSetup = url.searchParams.get("setup") || "";
-    const legacyIncomplete = ["setup", "scanning"].includes(String(setupBot.status || ""));
-    const guidedIncomplete = rawUi.onboarding_complete === false;
-    if (requestedSetup || legacyIncomplete || guidedIncomplete) {
-      const status = setupBot.scan_status || (setupBot.status === "scanning" ? "running" : "not_started");
-      const scanComplete = ["completed", "completed_with_errors"].includes(status) || setupBot.status === "ready";
-      setupStage = requestedSetup === "customise" || scanComplete ? "customise" : "scan";
-      if (setupStage === "customise") {
-        try {
-          const fullBot = await ownedChatbot(env, user.id, setupBot.id);
-          if (fullBot) Object.assign(setupBot, fullBot);
-          let existingQuestions = [];
-          try {
-            const parsedQuestions = JSON.parse(setupBot.popular_questions_json || "[]");
-            if (Array.isArray(parsedQuestions)) existingQuestions = parsedQuestions;
-          } catch {}
-          if (!existingQuestions.length) setupBot.setup_suggested_questions = await tailoredPopularQuestions(env, setupBot);
-        } catch (error) {
-          console.error("Could not prepare final onboarding suggestions", error);
-        }
-      }
-    }
-  }
   const content = dashboardPage(
     user,
     dashboardBots,
     new URL(request.url).origin,
     message,
     isError,
-    embedded,
-    setupStage
+    embedded
   );
   return embedded ? embeddedHtmlResponse(content) : htmlResponse(content);
 }
@@ -8451,43 +7899,6 @@ function dashboardProgressJavascript() {
       const query = search.value.trim().toLowerCase();
       document.querySelectorAll('.dash-action-grid a').forEach((action) => {
         action.style.opacity = !query || action.textContent.toLowerCase().includes(query) ? '1' : '.28';
-      });
-    });
-    document.querySelectorAll('[data-delete-open]').forEach((trigger) => {
-      const dialog = document.getElementById(trigger.dataset.deleteOpen || '');
-      if (!dialog || typeof dialog.showModal !== 'function') return;
-      trigger.addEventListener('click', () => dialog.showModal());
-      dialog.querySelectorAll('[data-delete-close]').forEach((button) => {
-        button.addEventListener('click', () => dialog.close());
-      });
-      dialog.addEventListener('click', (event) => {
-        if (event.target === dialog) dialog.close();
-      });
-      const form = dialog.querySelector('[data-delete-form]');
-      if (!form) return;
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const button = form.querySelector('button[type="submit"]');
-        const error = dialog.querySelector('[data-delete-error]');
-        if (button) { button.disabled = true; button.textContent = 'Sending…'; }
-        if (error) error.hidden = true;
-        try {
-          const response = await fetch(form.action, { method: 'POST', credentials: 'same-origin', headers: { accept: 'text/html' } });
-          const destination = new URL(response.url, location.href);
-          if (response.ok && destination.searchParams.get('delete_email') === 'sent') {
-            const body = dialog.querySelector('.dash-delete-dialog-body');
-            const success = dialog.querySelector('[data-delete-success]');
-            if (body) body.hidden = true;
-            if (success) success.hidden = false;
-            return;
-          }
-          const message = destination.searchParams.get('error') || (destination.pathname === '/login' ? 'Please sign in again before requesting deletion.' : 'The email could not be sent. Please try again.');
-          if (error) { error.textContent = message; error.hidden = false; }
-        } catch {
-          if (error) { error.textContent = 'The email could not be sent. Check your connection and try again.'; error.hidden = false; }
-        } finally {
-          if (button) { button.disabled = false; button.textContent = 'Send confirmation email'; }
-        }
       });
     });
     const boxes = [...document.querySelectorAll('[data-scan-progress]')];
@@ -8560,11 +7971,6 @@ function planHasLeadCapture(bot) {
 }
 __name(planHasLeadCapture, "planHasLeadCapture");
 async function ownedChatbot(env, userId, chatbotId) {
-  try {
-    await ensureTestingPlanSchema(env);
-  } catch (error) {
-    console.error("Testing plan schema check failed; continuing without it", error);
-  }
   return env.DB.prepare(
     `
     SELECT c.id,c.user_id,c.name,c.business_name,c.website_url,c.status,c.public_key,c.vector_store_id,c.model,c.primary_colour,c.greeting,c.instructions,
@@ -8579,12 +7985,11 @@ async function ownedChatbot(env, userId, chatbotId) {
       COALESCE(cs.lead_destination_email,'') AS lead_destination_email,
       COALESCE(cs.google_sheets_webhook,'') AS google_sheets_webhook,
       COALESCE(cs.ui_settings_json,'{}') AS ui_settings_json,
-      COALESCE(tpo.plan_code,s.plan_code,'starter') AS plan_code,
-      CASE WHEN tpo.user_id IS NOT NULL THEN 'active' ELSE COALESCE(s.status,'inactive') END AS subscription_status
+      COALESCE(s.plan_code,'starter') AS plan_code,
+      COALESCE(s.status,'inactive') AS subscription_status
     FROM chatbots c
     LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
-    LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
-    LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
+    LEFT JOIN subscriptions s ON s.user_id=c.user_id
     WHERE c.id=? AND c.user_id=? LIMIT 1
   `
   ).bind(chatbotId, userId).first();
@@ -8686,14 +8091,14 @@ function settingsPage(user, bot, origin, message = "", isError = false, suggeste
       </div>` : "";
   return documentPage(
     `Customize ${bot.name}`,
-    html(_h || (_h = __template([' <main class="wrap">\n      <div class="dashboard-head">\n        <div>\n          <div class="eyebrow">Simple chatbot setup</div>\n          <h1>Customize ', '</h1>\n          <p class="muted">\n            Change the chatbot without touching its installation code.\n          </p>\n        </div>\n        <a class="btn ghost" href="/dashboard">Back to dashboard</a>\n      </div>\n      ', '\n      <div class="top-actions">\n        <form method="post" action="/api/chatbots/', '/version" class="version-settings-control">\n          <input type="hidden" name="return_to" value="settings" />\n          <details class="version-picker">\n            <summary aria-label="Choose chatbot version">\n              <span class="version-picker-title">Version ', '</span>\n              <span class="version-picker-chevron" aria-hidden="true"></span>\n            </summary>\n            <div class="version-picker-menu" role="menu">\n              <button type="submit" name="widget_version" value="1" class="version-picker-option" data-selected="', '" role="menuitem">\n                <span><strong>Version 1.1</strong><small>Original branded layout and controls</small></span>\n                <span class="version-picker-check" aria-hidden="true">✓</span>\n              </button>\n              <button type="submit" name="widget_version" value="2" class="version-picker-option" data-selected="', '" role="menuitem">\n                <span><strong>Version 2.1</strong><small>Clean modern layout and smoother interactions</small></span>\n                <span class="version-picker-check" aria-hidden="true">✓</span>\n              </button>\n            </div>\n          </details>\n        </form>\n        <a\n          class="btn"\n          href="/widget/test?key=', '"\n          >Open live preview</a\n        >\n        <a\n          class="btn ghost"\n          href="/dashboard/chatbots/', '/leads"\n          >View leads</a\n        >\n      </div>\n      <form\n        method="post"\n        action="/api/chatbots/', '/settings"\n        enctype="multipart/form-data"\n      >\n        <input type="hidden" name="widget_version" value="', '" />\n        <div class="settings-stack">\n          <details class="settings-group" open>\n            <summary>1. Appearance</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section">\n                  <h2>Identity</h2>\n                  <p>Choose the chatbot name shown to visitors.</p>\n                  <label for="name"\n                    >Chatbot name\n                    ', '</label\n                  >\n                  <input\n                    id="name"\n                    name="name"\n                    maxlength="80"\n                    required\n                    value="', '"\n                  />\n                  <p class="fine">', '</p>\n                </section>\n                <section class="setting-section" style="', '">\n                  <h2>Colour and header pattern</h2>\n                  <p>\n                    The pattern automatically uses a lighter or darker shade of\n                    the selected colour.\n                  </p>\n                  <label for="primary_colour"\n                    >Brand colour\n                    ', '</label\n                  >\n                  <input\n                    id="primary_colour"\n                    name="primary_colour"\n                    type="color"\n                    value="', '"\n                    required\n                  />\n                  <label for="header_pattern"\n                    >Header pattern\n                    ', '</label\n                  >\n                  <select id="header_pattern" name="header_pattern">\n                    <option value="none" ', '>\n                      None \u2014 plain colour\n                    </option>\n                    <option\n                      value="circles"\n                      ', '\n                    >\n                      Circles\n                    </option>\n                    <option\n                      value="pluses"\n                      ', '\n                    >\n                      Plus signs\n                    </option>\n                    <option\n                      value="crosses"\n                      ', '\n                    >\n                      X shapes\n                    </option>\n                    <option\n                      value="lines"\n                      ', '\n                    >\n                      Lines\n                    </option>\n                  </select>\n                  <label for="pattern_intensity"\n                    >Shape strength\n                    ', '</label\n                  >\n                  <input\n                    id="pattern_intensity"\n                    name="pattern_intensity"\n                    type="range"\n                    min="0"\n                    max="100"\n                    step="5"\n                    value="', '"\n                  />\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="header_gradient"\n                      value="1"\n                      ', "\n                    />\n                    Use a soft header gradient\n                    ", '</label\n                  >\n                </section>\n                <section class="setting-section" style="', '">\n                  <h2>Version 2 appearance</h2>\n                  <p>Version 2 uses a clean white interface, soft grey secondary surfaces and black text.</p>\n                  <div class="locked"><strong>Included automatically</strong><br />Gradient chatbot icon, smooth message motion, centred chatbot name and direct Standard, Large and Full-screen controls.</div>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group" open>\n            <summary>2. Conversation</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section full" style="', '">\n                  <h2>Opening line</h2>\n                  <p>\n                    Use your own message or let Fise suggest one from the\n                    scanned website.\n                  </p>\n                  <label for="greeting"\n                    >Opening message\n                    ', '</label\n                  >\n                  <textarea\n                    id="greeting"\n                    name="greeting"\n                    maxlength="500"\n                    required\n                  >\n', '</textarea>\n                  <div class="suggest-row">\n                    <button\n                      class="btn ghost suggest-greeting"\n                      type="button"\n                      data-url="/api/chatbots/', '/suggest-greeting"\n                    >\n                      Suggest a message</button\n                    ><span class="suggest-status" aria-live="polite"></span>\n                  </div>\n                </section>\n                <section class="setting-section full" style="', '">\n                  <h2>Starting prompt</h2>\n                  <p>Version 2 does not show an opening greeting. It starts with <strong>\u201CAsk ', ` for help with\u2026\u201D</strong> and the chatbot's website-specific popular questions.</p>
+    html(_h || (_h = __template([' <main class="wrap">\n      <div class="dashboard-head">\n        <div>\n          <div class="eyebrow">Simple chatbot setup</div>\n          <h1>Customize ', '</h1>\n          <p class="muted">\n            Change the chatbot without touching its installation code.\n          </p>\n        </div>\n        <a class="btn ghost" href="/dashboard">Back to dashboard</a>\n      </div>\n      ', '\n      <div class="top-actions">\n        <form method="post" action="/api/chatbots/', '/version" class="version-settings-control">\n          <input type="hidden" name="return_to" value="settings" />\n          <label for="settings-widget-version">Chatbot version</label>\n          <select id="settings-widget-version" name="widget_version" data-version-select>\n            <option value="1" ', '>Version 1</option>\n            <option value="2" ', '>Version 2</option>\n          </select>\n        </form>\n        <a\n          class="btn"\n          href="/widget/test?key=', '"\n          >Open live preview</a\n        >\n        <a\n          class="btn ghost"\n          href="/dashboard/chatbots/', '/leads"\n          >View leads</a\n        >\n      </div>\n      <form\n        method="post"\n        action="/api/chatbots/', '/settings"\n        enctype="multipart/form-data"\n      >\n        <input type="hidden" name="widget_version" value="', '" />\n        <div class="settings-stack">\n          <details class="settings-group" open>\n            <summary>1. Appearance</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section">\n                  <h2>Identity</h2>\n                  <p>Choose the chatbot name shown to visitors.</p>\n                  <label for="name"\n                    >Chatbot name\n                    ', '</label\n                  >\n                  <input\n                    id="name"\n                    name="name"\n                    maxlength="80"\n                    required\n                    value="', '"\n                  />\n                  <p class="fine">', '</p>\n                </section>\n                <section class="setting-section" style="', '">\n                  <h2>Colour and header pattern</h2>\n                  <p>\n                    The pattern automatically uses a lighter or darker shade of\n                    the selected colour.\n                  </p>\n                  <label for="primary_colour"\n                    >Brand colour\n                    ', '</label\n                  >\n                  <input\n                    id="primary_colour"\n                    name="primary_colour"\n                    type="color"\n                    value="', '"\n                    required\n                  />\n                  <label for="header_pattern"\n                    >Header pattern\n                    ', '</label\n                  >\n                  <select id="header_pattern" name="header_pattern">\n                    <option value="none" ', '>\n                      None \u2014 plain colour\n                    </option>\n                    <option\n                      value="circles"\n                      ', '\n                    >\n                      Circles\n                    </option>\n                    <option\n                      value="pluses"\n                      ', '\n                    >\n                      Plus signs\n                    </option>\n                    <option\n                      value="crosses"\n                      ', '\n                    >\n                      X shapes\n                    </option>\n                    <option\n                      value="lines"\n                      ', '\n                    >\n                      Lines\n                    </option>\n                  </select>\n                  <label for="pattern_intensity"\n                    >Shape strength\n                    ', '</label\n                  >\n                  <input\n                    id="pattern_intensity"\n                    name="pattern_intensity"\n                    type="range"\n                    min="0"\n                    max="100"\n                    step="5"\n                    value="', '"\n                  />\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="header_gradient"\n                      value="1"\n                      ', "\n                    />\n                    Use a soft header gradient\n                    ", '</label\n                  >\n                </section>\n                <section class="setting-section" style="', '">\n                  <h2>Version 2 appearance</h2>\n                  <p>Version 2 uses a clean white interface, soft grey secondary surfaces and black text.</p>\n                  <div class="locked"><strong>Included automatically</strong><br />Gradient chatbot icon, smooth message motion, centred chatbot name and direct Standard, Large and Full-screen controls.</div>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group" open>\n            <summary>2. Conversation</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section full" style="', '">\n                  <h2>Opening line</h2>\n                  <p>\n                    Use your own message or let Fise suggest one from the\n                    scanned website.\n                  </p>\n                  <label for="greeting"\n                    >Opening message\n                    ', '</label\n                  >\n                  <textarea\n                    id="greeting"\n                    name="greeting"\n                    maxlength="500"\n                    required\n                  >\n', '</textarea>\n                  <div class="suggest-row">\n                    <button\n                      class="btn ghost suggest-greeting"\n                      type="button"\n                      data-url="/api/chatbots/', '/suggest-greeting"\n                    >\n                      Suggest a message</button\n                    ><span class="suggest-status" aria-live="polite"></span>\n                  </div>\n                </section>\n                <section class="setting-section full" style="', '">\n                  <h2>Starting prompt</h2>\n                  <p>Version 2 does not show an opening greeting. It starts with <strong>\u201CAsk ', ` for help with\u2026\u201D</strong> and the chatbot's website-specific popular questions.</p>
                 </section>
                 <section class="setting-section">
                   <h2>Answer style</h2>
                   <p>Keep replies consistent and easy to read.</p>
                   <label for="answer_length"
                     >Answer length
-                    `, '</label\n                  ><select id="answer_length" name="answer_length">\n                    <option\n                      value="short"\n                      ', '\n                    >\n                      Short \u2014 under 50 words\n                    </option>\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Medium \u2014 under 100 words\n                    </option>\n                    <option\n                      value="detailed"\n                      ', '\n                    >\n                      Long \u2014 75 to 175 words\n                    </option>\n                  </select>\n                  <label for="formality"\n                    >Tone\n                    ', '</label\n                  ><select id="formality" name="formality">\n                    <option\n                      value="friendly"\n                      ', '\n                    >\n                      Friendly\n                    </option>\n                    <option\n                      value="professional"\n                      ', '\n                    >\n                      Professional\n                    </option>\n                    <option value="formal" ', '>\n                      Formal\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Extra guidance</h2>\n                  <p>\n                    Optional instructions for how the chatbot should respond.\n                  </p>\n                  <label for="instructions"\n                    >Instructions\n                    ', '</label\n                  >\n                  <textarea\n                    id="instructions"\n                    name="instructions"\n                    maxlength="2000"\n                    placeholder="For example: Always mention our free consultation."\n                  >\n', '</textarea>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>3. Features</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section">\n                  <h2>Popular questions</h2>\n                  <p>Enter up to four. Put one question on each line.</p>\n                  <label\n                    >Question list\n                    ', '</label\n                  ><textarea\n                    name="popular_questions"\n                    maxlength="800"\n                    style="min-height:190px"\n                  >\n', '</textarea>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_question_icons_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show relevant icons beside popular questions\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_questions_bold"\n                      value="1"\n                      ', "\n                    />\n                    Use bold question text\n                    ", '</label\n                  >\n                  <label for="popular_question_border"\n                    >Question border\n                    ', '</label\n                  >\n                  <select\n                    id="popular_question_border"\n                    name="popular_question_border"\n                  >\n                    <option\n                      value="bold"\n                      ', '\n                    >\n                      Bold border\n                    </option>\n                    <option\n                      value="normal"\n                      ', '\n                    >\n                      Normal border\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Visitor tools</h2>\n                  <p>', '</p>\n                  <label for="default_size"\n                    >Opening size\n                    ', '</label\n                  >\n                  <select id="default_size" name="default_size">\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Standard\n                    </option>\n                    <option\n                      value="large"\n                      ', '\n                    >\n                      Large\n                    </option>\n                  </select>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_files"\n                      value="1"\n                      ', "\n                    />\n                    Allow document attachments\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_voice"\n                      value="1"\n                      ', "\n                    />\n                    Allow voice messages\n                    ", '</label\n                  >\n                  <label class="check" style="', '"\n                    ><input\n                      type="checkbox"\n                      name="allow_emoji"\n                      value="1"\n                      ', "\n                    />\n                    Allow emoji picker\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="helpful_pages_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show the separate Helpful pages list\n                    ", '</label\n                  >\n                  <p class="fine">\n                    Helpful pages are off by default. Relevant links inside\n                    answers still remain clickable.\n                  </p>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>4. Lead capture</summary>\n            <div class="settings-group-body">\n              <section class="setting-section full">\n                <h2>\n                  Contact survey\n                  <span class="plan-badge">Public during testing</span>\n                </h2>\n                ', '\n              </section>\n            </div>\n          </details>\n\n          <section class="setting-section full save-bar">\n            <div>\n              <strong>Ready to update the chatbot?</strong>\n              <div class="fine">\n                The existing website embed code does not change.\n              </div>\n            </div>\n            <button class="btn" type="submit">Save changes</button>\n          </section>\n        </div>\n      </form>\n      <script src="/dashboard-settings.js" defer><\/script>\n    </main>'])), escapeHtml(bot.name), notice, encodeURIComponent(bot.id), ui.widget_version === "2" ? "2.1" : "1.1", selected(ui.widget_version, "1"), selected(ui.widget_version, "2"), encodeURIComponent(bot.public_key), encodeURIComponent(bot.id), encodeURIComponent(bot.id), escapeHtml(ui.widget_version), info("The name customers see inside the chatbot."), escapeHtml(bot.name), ui.widget_version === "2" ? "Version 2 shows the chatbot name in bold black text in the centre of the top banner." : "Version 1 shows the chatbot name with its existing branded header.", ui.widget_version === "2" ? "display:none" : "", info("Changes buttons, the header and highlights."), escapeHtml(bot.primary_colour), info("Adds small shapes to the coloured header. Choose None for a plain header."), selected(ui.header_pattern, "none"), selected(ui.header_pattern, "circles"), selected(ui.header_pattern, "pluses"), selected(ui.header_pattern, "crosses"), selected(ui.header_pattern, "lines"), info("Move left for softer shapes or right for darker shapes."), escapeHtml(ui.pattern_intensity), checked(ui.header_gradient), info("Adds gentle light and shade to the header."), ui.widget_version === "2" ? "" : "display:none", ui.widget_version === "2" ? "display:none" : "", info("The first message a visitor sees when chat opens."), escapeHtml(bot.greeting), encodeURIComponent(bot.id), ui.widget_version === "2" ? "" : "display:none", escapeHtml(bot.name), info("Controls how short or detailed each answer is."), selected(bot.answer_length, "short"), selected(bot.answer_length, "standard"), selected(bot.answer_length, "detailed"), info("Changes how friendly or formal the chatbot sounds."), selected(bot.formality, "friendly"), selected(bot.formality, "professional"), selected(bot.formality, "formal"), info("Add one simple rule the chatbot should follow."), escapeHtml(bot.instructions || ""), info("Put one common customer question on each line."), escapeHtml(questions.slice(0, 4).join("\n")), checked(ui.popular_question_icons_enabled), info("Turn this off to remove every popular-question icon."), checked(ui.popular_questions_bold), info("Makes the popular questions easier to notice."), info("Choose a normal or stronger outline around each question."), selected(ui.popular_question_border, "bold"), selected(ui.popular_question_border, "normal"), ui.widget_version === "2" ? "Files and Voice appear together below the message box." : "Choose what visitors are allowed to use.", info("Choose how large the chatbot is when opened."), selected(bot.default_size, "standard"), selected(bot.default_size, "large"), checked(bot.allow_files), info("Visitors can upload a document for the chatbot to read."), checked(bot.allow_voice), info("Visitors can speak instead of typing."), ui.widget_version === "2" ? "display:none" : "", checked(ui.allow_emoji), info("Adds a simple emoji button beside the message box."), checked(ui.helpful_pages_enabled), info("Adds website page links below an answer. Off by default."), growth ? html` <p>
+                    `, '</label\n                  ><select id="answer_length" name="answer_length">\n                    <option\n                      value="short"\n                      ', '\n                    >\n                      Short \u2014 under 50 words\n                    </option>\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Medium \u2014 under 100 words\n                    </option>\n                    <option\n                      value="detailed"\n                      ', '\n                    >\n                      Long \u2014 75 to 175 words\n                    </option>\n                  </select>\n                  <label for="formality"\n                    >Tone\n                    ', '</label\n                  ><select id="formality" name="formality">\n                    <option\n                      value="friendly"\n                      ', '\n                    >\n                      Friendly\n                    </option>\n                    <option\n                      value="professional"\n                      ', '\n                    >\n                      Professional\n                    </option>\n                    <option value="formal" ', '>\n                      Formal\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Extra guidance</h2>\n                  <p>\n                    Optional instructions for how the chatbot should respond.\n                  </p>\n                  <label for="instructions"\n                    >Instructions\n                    ', '</label\n                  >\n                  <textarea\n                    id="instructions"\n                    name="instructions"\n                    maxlength="2000"\n                    placeholder="For example: Always mention our free consultation."\n                  >\n', '</textarea>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>3. Features</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section">\n                  <h2>Popular questions</h2>\n                  <p>Enter up to four. Put one question on each line.</p>\n                  <label\n                    >Question list\n                    ', '</label\n                  ><textarea\n                    name="popular_questions"\n                    maxlength="800"\n                    style="min-height:190px"\n                  >\n', '</textarea>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_question_icons_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show relevant icons beside popular questions\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_questions_bold"\n                      value="1"\n                      ', "\n                    />\n                    Use bold question text\n                    ", '</label\n                  >\n                  <label for="popular_question_border"\n                    >Question border\n                    ', '</label\n                  >\n                  <select\n                    id="popular_question_border"\n                    name="popular_question_border"\n                  >\n                    <option\n                      value="bold"\n                      ', '\n                    >\n                      Bold border\n                    </option>\n                    <option\n                      value="normal"\n                      ', '\n                    >\n                      Normal border\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Visitor tools</h2>\n                  <p>', '</p>\n                  <label for="default_size"\n                    >Opening size\n                    ', '</label\n                  >\n                  <select id="default_size" name="default_size">\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Standard\n                    </option>\n                    <option\n                      value="large"\n                      ', '\n                    >\n                      Large\n                    </option>\n                  </select>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_files"\n                      value="1"\n                      ', "\n                    />\n                    Allow document attachments\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_voice"\n                      value="1"\n                      ', "\n                    />\n                    Allow voice messages\n                    ", '</label\n                  >\n                  <label class="check" style="', '"\n                    ><input\n                      type="checkbox"\n                      name="allow_emoji"\n                      value="1"\n                      ', "\n                    />\n                    Allow emoji picker\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="helpful_pages_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show the separate Helpful pages list\n                    ", '</label\n                  >\n                  <p class="fine">\n                    Helpful pages are off by default. Relevant links inside\n                    answers still remain clickable.\n                  </p>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>4. Lead capture</summary>\n            <div class="settings-group-body">\n              <section class="setting-section full">\n                <h2>\n                  Contact survey\n                  <span class="plan-badge">Public during testing</span>\n                </h2>\n                ', '\n              </section>\n            </div>\n          </details>\n\n          <section class="setting-section full save-bar">\n            <div>\n              <strong>Ready to update the chatbot?</strong>\n              <div class="fine">\n                The existing website embed code does not change.\n              </div>\n            </div>\n            <button class="btn" type="submit">Save changes</button>\n          </section>\n        </div>\n      </form>\n      <script src="/dashboard-settings.js" defer><\/script>\n    </main>'])), escapeHtml(bot.name), notice, encodeURIComponent(bot.id), selected(ui.widget_version, "1"), selected(ui.widget_version, "2"), encodeURIComponent(bot.public_key), encodeURIComponent(bot.id), encodeURIComponent(bot.id), escapeHtml(ui.widget_version), info("The name customers see inside the chatbot."), escapeHtml(bot.name), ui.widget_version === "2" ? "Version 2 shows the chatbot name in bold black text in the centre of the top banner." : "Version 1 shows the chatbot name with its existing branded header.", ui.widget_version === "2" ? "display:none" : "", info("Changes buttons, the header and highlights."), escapeHtml(bot.primary_colour), info("Adds small shapes to the coloured header. Choose None for a plain header."), selected(ui.header_pattern, "none"), selected(ui.header_pattern, "circles"), selected(ui.header_pattern, "pluses"), selected(ui.header_pattern, "crosses"), selected(ui.header_pattern, "lines"), info("Move left for softer shapes or right for darker shapes."), escapeHtml(ui.pattern_intensity), checked(ui.header_gradient), info("Adds gentle light and shade to the header."), ui.widget_version === "2" ? "" : "display:none", ui.widget_version === "2" ? "display:none" : "", info("The first message a visitor sees when chat opens."), escapeHtml(bot.greeting), encodeURIComponent(bot.id), ui.widget_version === "2" ? "" : "display:none", escapeHtml(bot.name), info("Controls how short or detailed each answer is."), selected(bot.answer_length, "short"), selected(bot.answer_length, "standard"), selected(bot.answer_length, "detailed"), info("Changes how friendly or formal the chatbot sounds."), selected(bot.formality, "friendly"), selected(bot.formality, "professional"), selected(bot.formality, "formal"), info("Add one simple rule the chatbot should follow."), escapeHtml(bot.instructions || ""), info("Put one common customer question on each line."), escapeHtml(questions.slice(0, 4).join("\n")), checked(ui.popular_question_icons_enabled), info("Turn this off to remove every popular-question icon."), checked(ui.popular_questions_bold), info("Makes the popular questions easier to notice."), info("Choose a normal or stronger outline around each question."), selected(ui.popular_question_border, "bold"), selected(ui.popular_question_border, "normal"), ui.widget_version === "2" ? "Files and Voice appear together below the message box." : "Choose what visitors are allowed to use.", info("Choose how large the chatbot is when opened."), selected(bot.default_size, "standard"), selected(bot.default_size, "large"), checked(bot.allow_files), info("Visitors can upload a document for the chatbot to read."), checked(bot.allow_voice), info("Visitors can speak instead of typing."), ui.widget_version === "2" ? "display:none" : "", checked(ui.allow_emoji), info("Adds a simple emoji button beside the message box."), checked(ui.helpful_pages_enabled), info("Adds website page links below an answer. Off by default."), growth ? html` <p>
                           Fise captures name, email, phone and the visitor's
                           query. Leads remain in the dashboard and can also go
                           to email and Google Sheets.
@@ -8951,47 +8356,6 @@ function googleSheetsWebhook(value) {
   return null;
 }
 __name(googleSheetsWebhook, "googleSheetsWebhook");
-async function finishChatbotSetup(request, env, chatbotId) {
-  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
-  const user = await currentUser(request, env);
-  if (!user) return redirect("/login");
-  const bot = await ownedChatbot(env, user.id, chatbotId);
-  if (!bot) return redirect(dashboardReturnUrl(request, { error: "Chatbot not found.", setup: "customise" }));
-  const form = await request.formData();
-  const greeting = String(form.get("greeting") || "").trim().slice(0, 500);
-  const instructions = String(form.get("instructions") || "").trim().slice(0, 2000);
-  const colour = String(form.get("primary_colour") || "").trim().toLowerCase();
-  const answerLength = ["short", "standard", "detailed"].includes(String(form.get("answer_length"))) ? String(form.get("answer_length")) : "short";
-  const formality = ["friendly", "professional", "formal"].includes(String(form.get("formality"))) ? String(form.get("formality")) : "friendly";
-  const defaultSize = ["standard", "large"].includes(String(form.get("default_size"))) ? String(form.get("default_size")) : "standard";
-  const questions = [...new Set(String(form.get("popular_questions") || "").split(/\r?\n/).map((item) => item.trim().slice(0, 120)).filter(Boolean))].slice(0, 4);
-  if (!greeting || !/^#[0-9a-f]{6}$/i.test(colour) || !questions.length) return redirect(dashboardReturnUrl(request, { error: "Complete the opening message, brand colour and at least one popular question.", setup: "customise" }));
-  const allowFiles = form.get("allow_files") === "1" ? 1 : 0;
-  const allowVoice = form.get("allow_voice") === "1" ? 1 : 0;
-  let storedUi = {};
-  try {
-    const parsed = JSON.parse(bot.ui_settings_json || "{}");
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) storedUi = parsed;
-  } catch {}
-  const normalUi = uiSettings(bot.ui_settings_json);
-  const nextUi = { ...storedUi, ...normalUi, widget_version: String(form.get("widget_version")) === "2" ? "2" : "1", allow_emoji: form.get("allow_emoji") === "1", onboarding_complete: true };
-  const now = new Date().toISOString();
-  await env.DB.batch([
-    env.DB.prepare("UPDATE chatbots SET primary_colour=?,greeting=?,instructions=?,updated_at=? WHERE id=? AND user_id=?").bind(colour, greeting, instructions, now, chatbotId, user.id),
-    env.DB.prepare(`
-      INSERT INTO chatbot_settings
-        (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-      ON CONFLICT(chatbot_id) DO UPDATE SET
-        answer_length=excluded.answer_length,formality=excluded.formality,popular_questions_json=excluded.popular_questions_json,
-        default_size=excluded.default_size,allow_files=excluded.allow_files,allow_voice=excluded.allow_voice,
-        ui_settings_json=excluded.ui_settings_json,updated_at=excluded.updated_at
-    `).bind(chatbotId, answerLength, formality, JSON.stringify(questions), defaultSize, allowFiles, allowVoice, Number(bot.lead_capture_enabled || 0), bot.lead_cta_label || "Talk to us", bot.lead_destination_email || "", bot.google_sheets_webhook || "", JSON.stringify(nextUi), now, now),
-    env.DB.prepare("DELETE FROM response_cache WHERE chatbot_id=?").bind(chatbotId)
-  ]);
-  return redirect(dashboardReturnUrl(request, { onboarding: "complete" }));
-}
-__name(finishChatbotSetup, "finishChatbotSetup");
 async function updateChatbotSettings(request, env, chatbotId) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -9288,9 +8652,9 @@ async function createChatbot(request, env) {
   const form = await request.formData();
   const businessName = String(form.get("business_name") || "").trim().slice(0, 100);
   const name = String(form.get("name") || "").trim().slice(0, 80);
-  const greeting = String(form.get("greeting") || "Hi! How can I help you today?").trim().slice(0, 240);
+  const greeting = String(form.get("greeting") || "").trim().slice(0, 240);
   const instructions = String(form.get("instructions") || "").trim().slice(0, 2e3);
-  const colour = String(form.get("primary_colour") || "#1769e0").trim();
+  const colour = String(form.get("primary_colour") || "").trim();
   const websiteInput = String(form.get("website_url") || "").trim().slice(0, 500);
   let website;
   try {
@@ -9331,26 +8695,6 @@ async function createChatbot(request, env) {
       nowIso,
       nowIso
     ).run();
-    await env.DB.prepare(`
-      INSERT INTO chatbot_settings
-        (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).bind(
-      chatbotId,
-      "short",
-      "friendly",
-      "[]",
-      "standard",
-      1,
-      1,
-      0,
-      "Talk to us",
-      "",
-      "",
-      JSON.stringify({ allow_emoji: false, onboarding_complete: false }),
-      nowIso,
-      nowIso
-    ).run();
   } catch (error) {
     if (vectorStoreId) await deleteVectorStore(env, vectorStoreId);
     console.error("Create chatbot error", error);
@@ -9358,7 +8702,7 @@ async function createChatbot(request, env) {
       dashboardReturnUrl(request, { error: error.message || "The chatbot could not be created." })
     );
   }
-  return redirect(dashboardReturnUrl(request, { created: "1", setup: "scan" }));
+  return redirect(dashboardReturnUrl(request, { created: "1" }));
 }
 __name(createChatbot, "createChatbot");
 async function logout(request, env) {
@@ -9373,29 +8717,10 @@ async function logout(request, env) {
   return redirect("/", { "set-cookie": cookie });
 }
 __name(logout, "logout");
-async function personalisePublicWebsiteForChatbotOwner(request, env, response) {
-  if (!String(response.headers.get("content-type") || "").includes("text/html")) return response;
-  let user;
-  try { user = await currentUser(request, env); } catch { return response; }
-  if (!user) return response;
-  let bot;
-  try { bot = await env.DB.prepare("SELECT id FROM chatbots WHERE user_id=? LIMIT 1").bind(user.id).first(); } catch { return response; }
-  if (!bot) return response;
-  let markup = await response.text();
-  markup = markup
-    .replaceAll('href="/demo">Demo</a>', 'href="/dashboard">Chatbot</a>')
-    .replaceAll('href="/demo">Demo <span', 'href="/dashboard">Chatbot <span')
-    .replaceAll('<div class="reference-eyebrow">Live demo</div>', '<div class="reference-eyebrow">Chatbot</div>')
-    .replaceAll("Live demo | Fise AI", "Chatbot | Fise AI")
-    .replaceAll("Sign in to access the Demo", "Open your Chatbot")
-    .replaceAll('title="Fise AI platform demo"', 'title="Fise AI chatbot"')
-    .replaceAll('href="/demo"', 'href="/dashboard"');
-  const headers = new Headers(response.headers);
-  headers.delete("content-length");
-  return new Response(markup, { status: response.status, statusText: response.statusText, headers });
-}
-__name(personalisePublicWebsiteForChatbotOwner, "personalisePublicWebsiteForChatbotOwner");
-async function routeFiseRequest(request, env, url) {
+var index_default = {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    try {
       if (url.pathname === "/api/health" && request.method === "GET") {
         try {
           await env.DB.prepare("SELECT 1 AS ok").first();
@@ -9458,25 +8783,7 @@ async function routeFiseRequest(request, env, url) {
         return new Response(websiteFrameJavascript(), {
           headers: {
             "content-type": "application/javascript; charset=utf-8",
-            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
-            "x-content-type-options": "nosniff"
-          }
-        });
-      }
-      if (url.pathname === "/site.css" && request.method === "GET") {
-        return new Response(sharedStyles, {
-          headers: {
-            "content-type": "text/css; charset=utf-8",
-            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
-            "x-content-type-options": "nosniff"
-          }
-        });
-      }
-      if (url.pathname === "/reference-styles.css" && request.method === "GET") {
-        return new Response(referenceStyles + requestedStyles, {
-          headers: {
-            "content-type": "text/css; charset=utf-8",
-            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+            "cache-control": "no-store",
             "x-content-type-options": "nosniff"
           }
         });
@@ -9545,8 +8852,7 @@ async function routeFiseRequest(request, env, url) {
       if (url.pathname === "/api/contact" && request.method === "POST")
         return submitContactRequest(request, env);
       const publicWebsiteResponse = await handlePublicWebsite(request, env);
-      if (publicWebsiteResponse)
-        return personalisePublicWebsiteForChatbotOwner(request, env, publicWebsiteResponse);
+      if (publicWebsiteResponse) return publicWebsiteResponse;
       if (url.pathname === "/api/auth/status" && request.method === "GET") {
         const user = await currentUser(request, env);
         return json({
@@ -9628,15 +8934,6 @@ async function routeFiseRequest(request, env, url) {
           env,
           decodeURIComponent(settingsPageMatch[1])
         );
-      const finishSetupMatch = url.pathname.match(
-        /^\/api\/chatbots\/([^/]+)\/finish-setup$/
-      );
-      if (finishSetupMatch && request.method === "POST")
-        return finishChatbotSetup(
-          request,
-          env,
-          decodeURIComponent(finishSetupMatch[1])
-        );
       const settingsApiMatch = url.pathname.match(
         /^\/api\/chatbots\/([^/]+)\/settings$/
       );
@@ -9690,13 +8987,6 @@ async function routeFiseRequest(request, env, url) {
       if (url.pathname === "/logout" && request.method === "POST")
         return logout(request, env);
       return json({ error: "Not found" }, 404);
-}
-__name(routeFiseRequest, "routeFiseRequest");
-var index_default = {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    try {
-      return await routeFiseRequest(request, env, url);
     } catch (error) {
       console.error("Unhandled request error", error);
       return htmlResponse(
