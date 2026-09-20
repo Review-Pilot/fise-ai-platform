@@ -5,7 +5,6 @@ var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __f
 
 var ACCOUNT_SIDEBAR_ITEMS = [
   { key: "account", label: "Profile", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6.5 20v-2.5a5.5 5.5 0 0 1 11 0V20"/></svg>' },
-  { key: "chatbot", label: "Chatbot", icon: '<svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.8 4V16h-.7A2.5 2.5 0 0 1 4 13.5v-8Z"/><path d="M8.5 8.5h7M8.5 11.5h4.5"/></svg>' },
   { key: "subscription", label: "Subscription", icon: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M4 10h16"/></svg>' },
   { key: "affiliate", label: "Affiliate", icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r=".7"/></svg>' }
 ];
@@ -18,10 +17,6 @@ function renderAccountNav(options) {
     const active = item.key === activeKey ? " active" : "";
     const iconSpan = `<span class="${iconClass}" aria-hidden="true">${item.icon}</span>`;
     const label = `<span>${item.label}</span>`;
-    if (item.key === "chatbot") {
-      const current = activeKey === "chatbot" ? ' aria-current="page"' : "";
-      return `<a class="${tabClass}${active}" href="/dashboard"${current}>${iconSpan}${label}</a>`;
-    }
     if (linkMode) {
       return `<a class="${tabClass}${active}" href="/profile?tab=${item.key}">${iconSpan}${label}</a>`;
     }
@@ -3741,12 +3736,12 @@ var WebsiteModule = (() => {
   .review-byline strong { display:block; color:#0a0a0a; font-size:15px; }
   .review-byline span { display:block; margin-top:4px; color:#202020;
     font-size:13px; }
-  .reference-footer { background:#f4f4f4; }
+  .reference-footer { background:#000; }
   .reference-footer-grid { grid-template-columns:repeat(3,1fr); }
   .reference-footer-bottom { align-items:center; }
   .footer-legal-links { display:flex; align-items:center; justify-content:center;
     flex-wrap:wrap; gap:10px; }
-  .footer-legal-links a { display:inline; margin:0; color:#202020; }
+  .footer-legal-links a { display:inline; margin:0; color:#fff; }
   .footer-legal-links span { color:#3a3a3a; }
   .legal-reference { padding:88px 0 110px; background:#fafafa; }
   .legal-document { max-width:980px; margin:auto; padding:58px 64px;
@@ -4387,6 +4382,8 @@ var WebsiteModule = (() => {
   .feature-dark-copy p{margin:0;color:#b7b7bb;font-size:13px;line-height:1.6}
   .mini-chat-card{width:100%;max-width:260px;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.06);backdrop-filter:blur(6px)}
   .mini-chat-head{display:flex;align-items:center;gap:10px}
+  .mini-chat-avatar{position:relative;display:grid;flex:0 0 auto;width:34px;height:34px;place-items:center;border-radius:50%;background:linear-gradient(135deg,#8b5cf6 0%,#4f7cff 100%);color:#fff;font-size:14px;font-weight:850;box-shadow:0 6px 16px rgba(124,92,255,.35)}
+  .mini-chat-avatar .mini-chat-dot{position:absolute;right:-2px;bottom:-2px;box-shadow:0 0 0 2px #141416}
   .mini-chat-head strong{display:block;color:#fff;font-size:13px}
   .mini-chat-head small{display:block;margin-top:2px;color:#8a8a8f;font-size:10px}
   .mini-chat-dot{width:9px;height:9px;flex:0 0 auto;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px rgba(74,222,128,.18)}
@@ -4394,14 +4391,16 @@ var WebsiteModule = (() => {
   .mini-chat-tags span{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid rgba(255,255,255,.14);border-radius:999px;color:#e4e4e6;font-size:10px;font-weight:800}
   .mini-chat-tags svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8}
   .doc-connector{display:flex;align-items:center;gap:10px;width:100%;max-width:260px}
-  .doc-chip,.doc-bubble{display:grid;flex:0 0 auto;width:44px;height:44px;place-items:center;border:1px solid rgba(255,255,255,.14);border-radius:12px;color:#fff;background:rgba(255,255,255,.06)}
+  .doc-chip{display:grid;flex:0 0 auto;width:44px;height:44px;place-items:center;border:none;border-radius:12px;color:#fff;background:linear-gradient(135deg,#7c5cff 0%,#4f7cff 100%);box-shadow:0 8px 18px rgba(79,124,255,.3)}
+  .doc-bubble{display:grid;flex:0 0 auto;width:44px;height:44px;place-items:center;border:none;border-radius:12px;color:#fff;background:linear-gradient(135deg,#c14ee0 0%,#8b5cf6 100%);box-shadow:0 8px 18px rgba(193,78,224,.3)}
   .doc-chip svg,.doc-bubble svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  .doc-connector-line{flex:1 1 auto;color:#5a5a5f}
+  .doc-connector-line{flex:1 1 auto;color:#9d7bff}
   .doc-connector-line svg{display:block;width:100%;height:8px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .doc-connector-line svg path:first-child{stroke-dasharray:4 4}
   .stat-scene{display:flex;width:100%;max-width:260px;flex-direction:column;gap:18px}
-  .stat-pill{align-self:flex-start;padding:7px 12px;border-radius:999px;color:#0a0a0a;background:#fff;font-size:11px;font-weight:850}
+  .stat-pill{align-self:flex-start;padding:7px 12px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#ff5cb3 0%,#9c5cff 100%);font-size:11px;font-weight:850;box-shadow:0 8px 18px rgba(156,92,255,.3)}
   .stat-bars{display:flex;height:70px;align-items:flex-end;gap:10px}
-  .stat-bars span{flex:1 1 auto;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#fff,#8a8a8f)}
+  .stat-bars span{flex:1 1 auto;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#ff5cb3,#8b5cf6)}
   @media(max-width:900px){.feature-grid-dark{grid-template-columns:1fr}}
 `;
   const tidioInspiredStyles = html2`
@@ -4466,18 +4465,18 @@ var WebsiteModule = (() => {
   .video-feature-list li.unavailable:before { color:#e1475d; }
   .closing-card { border-radius:20px; background:linear-gradient(118deg,#202020,#202020); box-shadow:0 22px 45px rgba(32,32,32,.2); }
   .closing-actions .reference-button:first-child { color:#082018; background:var(--fise-green); border-color:var(--fise-green); }
-  .reference-footer { padding:74px 0 30px; background:var(--fise-blue); }
+  .reference-footer { padding:74px 0 30px; background:#000; }
   .reference-footer-grid { grid-template-columns:1.25fr repeat(3,.72fr); gap:56px; }
   .reference-footer .video-logo { color:#fff; }
-  .reference-footer .video-logo-mark { color:var(--fise-blue); background:#fff; box-shadow:none; }
-  .reference-footer .video-logo span[style] { color:#e4e4e4!important; }
-  .reference-footer-summary { color:#eeeeee; }
+  .reference-footer .video-logo-mark { color:#000; background:#fff; box-shadow:none; }
+  .reference-footer .video-logo span[style] { color:#fff!important; }
+  .reference-footer-summary { color:#fff; }
   .reference-footer h3 { color:#fff; font-size:14px; }
-  .reference-footer a { color:#eeeeee; font-size:14px; }
-  .reference-footer a:hover { color:#fff; }
+  .reference-footer a { color:#fff; font-size:14px; }
+  .reference-footer a:hover { color:#fff; text-decoration:underline; }
   .footer-start-link { display:inline-flex!important; margin-top:22px!important; padding:10px 13px; border:1px solid rgba(255,255,255,.36);
     border-radius:8px; color:#fff!important; font-weight:800; }
-  .reference-footer-bottom { margin-top:54px; border-color:rgba(255,255,255,.25); color:#e3e3e3; }
+  .reference-footer-bottom { margin-top:54px; border-color:rgba(255,255,255,.25); color:#fff; }
   .contact-reference { min-height:calc(100vh - 300px); padding:92px 0 120px; background:var(--fise-pale); }
   .contact-layout { display:grid; grid-template-columns:.86fr 1.14fr; gap:60px; align-items:start; }
   .contact-intro h1 { max-width:560px; margin:0 0 18px; color:var(--fise-ink); font-size:clamp(44px,5vw,68px); line-height:1.03; letter-spacing:-.05em; }
@@ -4539,12 +4538,12 @@ var WebsiteModule = (() => {
     const bg = story.videoUrl ? html2`<video class="story-media" autoplay muted loop playsinline preload="metadata" src="${escapeWebsiteHtml(story.videoUrl)}"></video>` : html2`<div class="story-media story-media-fallback"></div>`;
     const playButton = story.videoUrl ? html2`<button class="story-play" type="button" data-story-play aria-label="Play ${escapeWebsiteHtml(story.business)} story">${referenceIcon("play")}</button>` : "";
     const cta = story.href ? html2`<a class="story-cta" href="${story.href}" target="_blank" rel="noopener">Read customer story ${referenceIcon("external")}</a>` : "";
-    return html2`<article class="story-card" style="--story-tint:${story.color}">${bg}<div class="story-scrim"></div><div class="story-top"><span class="story-logo-chip"><img src="${story.logo}" alt="${escapeWebsiteHtml(story.business)}" loading="lazy"></span>${playButton}</div><div class="story-bottom"><blockquote>\u201c${escapeWebsiteHtml(story.quote)}\u201d</blockquote><div class="story-byline"><strong>${escapeWebsiteHtml(story.name)}</strong><span>${escapeWebsiteHtml(story.business)}</span></div>${cta}</div></article>`;
+    return html2`<article class="story-card" style="--story-tint:${story.color}">${bg}<div class="story-scrim"></div><div class="story-top"><span class="story-logo-chip"><img src="${story.logo}" alt="${escapeWebsiteHtml(story.business)}" loading="lazy"></span>${playButton}</div><div class="story-bottom"><blockquote>&ldquo;${escapeWebsiteHtml(story.quote)}&rdquo;</blockquote><div class="story-byline"><strong>${escapeWebsiteHtml(story.name)}</strong><span>${escapeWebsiteHtml(story.business)}</span></div>${cta}</div></article>`;
   }
   __name(storyCard, "storyCard");
   function storyCarousel() {
     const cards = CUSTOMER_STORIES.map((s) => storyCard(s)).join("");
-    return html2`<section class="customer-stories reveal" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="story-carousel"><div class="story-track" id="story-track">${cards}</div></div><div class="carousel-controls"><button class="carousel-arrow" id="story-prev" type="button" aria-label="Previous story">\u2039</button><button class="carousel-arrow" id="story-next" type="button" aria-label="Next story">\u203a</button></div></div></section>`;
+    return html2`<section class="customer-stories reveal" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>Trusted by growing teams</h2><p>Businesses use Fise AI to give every visitor a helpful first response.</p></div><div class="story-carousel"><div class="story-track" id="story-track">${cards}</div></div><div class="carousel-controls"><button class="carousel-arrow" id="story-prev" type="button" aria-label="Previous story">&lsaquo;</button><button class="carousel-arrow" id="story-next" type="button" aria-label="Next story">&rsaquo;</button></div></div></section>`;
   }
   __name(storyCarousel, "storyCarousel");
   const TRUSTED_BUSINESSES = [
@@ -4583,8 +4582,8 @@ var WebsiteModule = (() => {
   __name(trustedBusinessStrip, "trustedBusinessStrip");
   function realisticFeatures() {
     return html2`<section class="features-section features-dark" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid feature-grid-dark">
-    <article class="feature-card-dark"><div class="feature-dark-scene"><div class="mini-chat-card"><div class="mini-chat-head"><span class="mini-chat-dot"></span><div><strong>Fise AI Assistant</strong><small>Online now</small></div></div><div class="mini-chat-tags"><span><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.8 4V16h-.7A2.5 2.5 0 0 1 4 13.5v-8Z"/></svg>Chat</span><span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6 20v-1.5A5.5 5.5 0 0 1 11.5 13h1A5.5 5.5 0 0 1 18 18.5V20"/></svg>Leads</span><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>24/7</span></div></div></div><div class="feature-dark-copy"><h3>Always-on answers</h3><p>Give every visitor an immediate, useful response — even after hours or while your team is busy.</p></div></article>
-    <article class="feature-card-dark"><div class="feature-dark-scene"><div class="doc-connector"><span class="doc-chip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg></span><span class="doc-connector-line"><svg viewBox="0 0 64 8" preserveAspectRatio="none"><path d="M0 4h58M52 1l6 3-6 3"/></svg></span><span class="doc-bubble" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.8 4V16h-.7A2.5 2.5 0 0 1 4 13.5v-8Z"/></svg></span></div></div><div class="feature-dark-copy"><h3>Trained on your business</h3><p>Scan up to 100 website pages and add approved files so answers stay relevant and accurate.</p></div></article>
+    <article class="feature-card-dark"><div class="feature-dark-scene"><div class="mini-chat-card"><div class="mini-chat-head"><span class="mini-chat-avatar" aria-hidden="true">F<span class="mini-chat-dot"></span></span><div><strong>Fise AI Assistant</strong><small>Online now</small></div></div><div class="mini-chat-tags"><span><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.8 4V16h-.7A2.5 2.5 0 0 1 4 13.5v-8Z"/></svg>Chat</span><span><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6 20v-1.5A5.5 5.5 0 0 1 11.5 13h1A5.5 5.5 0 0 1 18 18.5V20"/></svg>Leads</span><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>24/7</span></div></div></div><div class="feature-dark-copy"><h3>Always-on answers</h3><p>Give every visitor an immediate, useful response — even after hours or while your team is busy.</p></div></article>
+    <article class="feature-card-dark"><div class="feature-dark-scene"><div class="doc-connector"><span class="doc-chip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg></span><span class="doc-connector-line"><svg viewBox="0 0 64 8" preserveAspectRatio="none"><path d="M0 4h52"/><path d="M52 1l6 3-6 3"/></svg></span><span class="doc-bubble" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.8 4V16h-.7A2.5 2.5 0 0 1 4 13.5v-8Z"/></svg></span></div></div><div class="feature-dark-copy"><h3>Trained on your business</h3><p>Scan up to 100 website pages and add approved files so answers stay relevant and accurate.</p></div></article>
     <article class="feature-card-dark"><div class="feature-dark-scene"><div class="stat-scene"><span class="stat-pill">+38% More resolved conversations</span><div class="stat-bars"><span style="height:35%"></span><span style="height:55%"></span><span style="height:78%"></span><span style="height:100%"></span></div></div></div><div class="feature-dark-copy"><h3>Sharper conversations</h3><p>Popular questions and clear guidance help visitors reach the right answer faster.</p></div></article>
   </div></div></section>`;
   }
@@ -4604,7 +4603,7 @@ var WebsiteModule = (() => {
   }
   __name(videoCustomerStories, "videoCustomerStories");
   function referenceHeader() {
-    return html2`<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/">${referenceLogo()}</a><nav class="video-links" id="video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a href="/#pricing">Pricing</a><a class="video-demo-pill" id="demo-link" href="/demo">Demo</a><a class="video-get-started" id="account-button" href="/login">Sign in</a></nav><button class="video-menu" id="video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
+    return html2`<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/">${referenceLogo()}</a><nav class="video-links" id="video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a href="/#pricing">Pricing</a><a class="video-demo-pill" id="demo-link" href="/dashboard">Chatbot</a><a class="video-get-started" id="account-button" href="/login">Sign in</a></nav><button class="video-menu" id="video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
   }
   __name(referenceHeader, "referenceHeader");
   function referenceFooter() {
@@ -5158,7 +5157,7 @@ var WebsiteModule = (() => {
   }
   __name(requestedJavascript, "requestedJavascript");
   function referenceHome(c) {
-    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><div class="hero-play">${referenceIcon("play")}</div><div class="hero-media-label">Add your product video here</div></div></div></div></section>${storyCarousel()}<section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
+    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><video class="hero-product-video" src="/fise-signup-demo.mp4" autoplay muted loop playsinline controls preload="metadata" aria-label="Fise AI signup walkthrough"></video></div></div></div></section>${storyCarousel()}<section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
     <article class="feature-card"><div class="feature-media"><img src="https://images.unsplash.com/photo-1626863905121-3b0c0ed7b94c?auto=format&amp;fit=crop&amp;w=900&amp;q=82" alt="Customer support team helping clients" loading="lazy"></div><div class="feature-copy"><span class="feature-kicker">Always available</span><h3>Helpful answers, 24/7</h3><p>Give every visitor an immediate, useful response—even after hours or while your team is busy.</p></div></article>
     <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="knowledge-window"><div class="mini-window-top"><i></i><i></i><i></i></div><div class="knowledge-row"><b>1</b>Website pages scanned</div><div class="knowledge-row"><b>2</b>Files and FAQs added</div><div class="knowledge-row"><b>3</b>Private knowledge ready</div><span class="knowledge-ready">Ready</span></div></div></div><div class="feature-copy"><span class="feature-kicker">Business knowledge</span><h3>Trained on your information</h3><p>Scan up to 100 website pages and add approved files so answers stay relevant to your business.</p></div></article>
     <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="brand-window"><div class="brand-controls"><span class="brand-swatch"></span><span class="brand-swatch"></span><span class="brand-swatch"></span></div><div class="brand-chat"><span></span><span></span><span></span></div></div></div></div><div class="feature-copy"><span class="feature-kicker">Your look and voice</span><h3>Made for your brand</h3><p>Choose the colours, chatbot name, greeting, tone and popular questions from your dashboard.</p></div></article>
@@ -6871,12 +6870,12 @@ var sharedStyles = html`
   .public-dropdown{opacity:1;visibility:visible;transform:none}.public-cta{display:inline-flex;min-height:42px;padding:0
   24px;align-items:center;justify-content:center;border-radius:11px;color:#fff!important;background:#0a0a0a;font-weight:850;text-decoration:none}.public-foot{padding:62px
   0
-  25px;color:#cdcdcd;background:#0a0a0a}.public-foot-grid{display:grid;grid-template-columns:1.6fr
+  25px;color:#fff;background:#000}.public-foot-grid{display:grid;grid-template-columns:1.6fr
   1fr 1fr 1fr;gap:35px}.public-foot h3{margin:0 0
   15px;color:#fff;font-size:14px}.public-foot a{display:block;margin:9px
-  0;color:#cdcdcd;text-decoration:none;font-size:13px}.public-foot
-  a:hover{color:#fff}.public-foot-bottom{display:flex;justify-content:space-between;gap:20px;margin-top:45px;padding-top:22px;border-top:1px
-  solid #141414;font-size:12px}
+  0;color:#fff;text-decoration:none;font-size:13px}.public-foot
+  a:hover{color:#fff;text-decoration:underline}.public-foot-bottom{display:flex;justify-content:space-between;gap:20px;margin-top:45px;padding-top:22px;border-top:1px
+  solid #141414;font-size:12px;color:#fff}
   .dashboard-main{width:min(1180px,calc(100% - 40px));padding-top:42px}
   .dashboard-hero{align-items:center;margin-bottom:24px;padding:0 2px}
   .dashboard-hero h1{margin-bottom:8px;font-size:clamp(32px,4vw,46px)}
@@ -7268,16 +7267,16 @@ var sharedStyles = html`
   @media(max-width:720px){.dashboard-account-layout{grid-template-columns:1fr!important}.dashboard-account-side{position:relative;height:auto;min-height:0;padding:18px}.dashboard-account-foot{flex:0}.dashboard-workspace-state{margin-top:14px}}
 
   /* Shared landing-page footer used across every Fise page with a footer. */
-  .reference-footer{padding:92px 0 35px;color:#0a0a0a;background:#f4f4f4;font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .reference-footer{padding:92px 0 35px;color:#fff;background:#000;font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
   .reference-footer .video-container{width:min(1640px,calc(100% - 96px));margin:auto}
   .reference-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:60px}
-  .reference-footer h3{margin:8px 0 29px;color:#0a0a0a;font-size:17px}
-  .reference-footer a{display:block;margin:0 0 23px;color:#202020;font-size:16px;text-decoration:none}
-  .reference-footer a:hover{color:#111}
+  .reference-footer h3{margin:8px 0 29px;color:#fff;font-size:17px}
+  .reference-footer a{display:block;margin:0 0 23px;color:#fff;font-size:16px;text-decoration:none}
+  .reference-footer a:hover{color:#fff;text-decoration:underline}
   .footer-demo-cta{display:flex;justify-content:center;margin:10px 0 52px}
-  .reference-footer .video-demo-pill{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:999px;color:#0a0a0a!important;background:#ececec;font-weight:800;text-decoration:none}
+  .reference-footer .video-demo-pill{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:999px;color:#000!important;background:#fff;font-weight:800;text-decoration:none}
   .reference-footer .video-demo-pill:hover{background:#e2e2e2}
-  .reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:20px;padding-top:33px;border-top:1px solid #e6e6e6;color:#3a3a3a;font-size:14px}
+  .reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:20px;padding-top:33px;border-top:1px solid rgba(255,255,255,.25);color:#fff;font-size:14px}
 
   /* Requested account and chatbot-page refinements. */
   .dash-topbar-actions{display:none!important}
@@ -7311,13 +7310,13 @@ function titleCase(value) {
 }
 __name(titleCase, "titleCase");
 function fiseLandingFooter() {
-  return `<footer class="reference-footer"><div class="video-container"><div class="reference-footer-grid"><div><h3>Product</h3><a href="/#features">Features</a><a href="/#clients">Our Clients</a><a href="/#pricing">Pricing</a></div><div><h3>Company</h3><a href="/about">About</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/help">Help</a></div><div><h3>Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener">T&amp;C's</a></div></div><div class="reference-footer-bottom"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
+  return `<footer class="reference-footer" style="background:#000;color:#fff"><div class="video-container"><div class="reference-footer-grid"><div><h3 style="color:#fff">Product</h3><a href="/#features" style="color:#fff">Features</a><a href="/#clients" style="color:#fff">Our Clients</a><a href="/#pricing" style="color:#fff">Pricing</a></div><div><h3 style="color:#fff">Company</h3><a href="/about" style="color:#fff">About</a><a href="/blog" style="color:#fff">Blog</a><a href="/contact" style="color:#fff">Contact</a><a href="/help" style="color:#fff">Help</a></div><div><h3 style="color:#fff">Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener" style="color:#fff">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener" style="color:#fff">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener" style="color:#fff">T&amp;C's</a></div></div><div class="reference-footer-bottom" style="color:#fff"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
 }
 __name(fiseLandingFooter, "fiseLandingFooter");
 function fiseEmailFooter(origin) {
   const base = String(origin || "").replace(/\/$/, "");
-  const link = (path, label) => '<a href="' + escapeHtml(base + path) + '" style="display:block;margin:0 0 10px;color:#202020;text-decoration:none">' + label + '</a>';
-  return '<div style="margin-top:34px;padding:34px 30px 24px;background:#f4f4f4;color:#0a0a0a"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/demo") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#0a0a0a;background:#ececec;font-weight:bold;text-decoration:none">Demo</a></p><div style="padding-top:20px;border-top:1px solid #e6e6e6;color:#3a3a3a;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
+  const link = (path, label) => '<a href="' + escapeHtml(base + path) + '" style="display:block;margin:0 0 10px;color:#fff;text-decoration:none">' + label + '</a>';
+  return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
 var _d;
@@ -7410,7 +7409,7 @@ function loginPage(message = "", isError = false, embedded = false) {
 __name(loginPage, "loginPage");
 function verificationPage(success = true, message = "You're signed in. The tab where you signed in will continue automatically.") {
   const script = success ? html`<script>try{localStorage.setItem('fise-magic-link-verified',String(Date.now()))}catch{}<\/script>` : "";
-  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#0a0a0a;background:#f6f6f6;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #e7e7e7;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(10,10,10,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#0a0a0a" : "#202020"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#202020;line-height:1.6}.verify-fine{margin-top:10px;color:#68686e;font-size:12px;line-height:1.5}.open-dashboard{display:inline-flex;min-height:46px;margin-top:22px;padding:0 19px;align-items:center;border-radius:10px;color:#fff;background:#0a0a0a;text-decoration:none;font-weight:800}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "\u2713" : "\u2013"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p>${success ? html`<a class="open-dashboard" href="/dashboard">Open dashboard</a><p class="verify-fine">You can also close this tab and return to the one where you signed in \u2014 it will open your dashboard on its own.</p>` : ""}</main>${script}</body></html>`;
+  return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#0a0a0a;background:#f6f6f6;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #e7e7e7;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(10,10,10,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#0a0a0a" : "#202020"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#202020;line-height:1.6}.verify-fine{margin-top:10px;color:#68686e;font-size:12px;line-height:1.5}.open-dashboard{display:inline-flex;min-height:46px;margin-top:22px;padding:0 19px;align-items:center;border-radius:10px;color:#fff;background:#0a0a0a;text-decoration:none;font-weight:800}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "\u2713" : "\u2013"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p>${success ? html`<a class="open-dashboard" href="/dashboard">Open dashboard</a><p class="verify-fine">You can also close this tab and return to the one where you signed in &mdash; it will open your dashboard on its own.</p>` : ""}</main>${script}</body></html>`;
 }
 __name(verificationPage, "verificationPage");
 function renderDashboardKnowledge(bot, embedded = false) {
@@ -7632,8 +7631,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
     </main>`
     );
   }
-  const page = embedded ? embeddedDocumentPage : dashboardDocumentPage;
-  return page(
+  return embeddedDocumentPage(
     "Dashboard",
     html(_g || (_g = __template([' <div class="dash-account-topbar">\n      <div><small>Account centre</small><h1>Chatbot Dashboard</h1><span>Profile</span></div>\n      <div class="dash-topbar-actions">\n        <label class="dash-action-search"><span aria-hidden="true">\u2315</span><input type="search" placeholder="Search actions" aria-label="Search dashboard actions"></label>\n        <button type="button" aria-label="Notifications">\u25CC</button>\n        <span class="dash-user-avatar" aria-label="', '">', '</span>\n      </div>\n    </div>\n    <main class="wrap dashboard-main">\n      ', '\n      <div class="dashboard-shell">', "", '</div>\n      <script src="/dashboard-progress.js" defer><\/script>\n    </main>'])), escapeHtml(user.email), escapeHtml(String(user.email || "F").charAt(0).toUpperCase()), notice, botList, createPanel)
   );
@@ -9707,6 +9705,8 @@ async function routeFiseRequest(request, env, url) {
         }
       }
       if (url.pathname === "/fise-product-walkthrough.mp4" && request.method === "GET" && env.ASSETS)
+        return env.ASSETS.fetch(request);
+      if (url.pathname === "/fise-signup-demo.mp4" && request.method === "GET" && env.ASSETS)
         return env.ASSETS.fetch(request);
       if (url.pathname === "/widget.js" && request.method === "GET")
         return serveWidgetScript();
