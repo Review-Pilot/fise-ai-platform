@@ -5169,7 +5169,7 @@ var WebsiteModule = (() => {
   }
   __name(requestedJavascript, "requestedJavascript");
   function referenceHome(c) {
-    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><video class="hero-product-video" style="display:block;width:100%;height:100%;object-fit:cover" src="/fise-signup-demo.mp4" autoplay muted loop playsinline controls preload="auto" aria-label="Fise AI signup walkthrough"></video></div></div></div></section>${storyCarousel()}<section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
+    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><iframe class="hero-product-video" src="https://streamable.com/e/imldid?autoplay=1&muted=1&nocontrols=0" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen aria-label="Fise AI signup walkthrough" style="display:block;width:100%;height:100%;border:0"></iframe></div></div></div></section>${storyCarousel()}<section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
     <article class="feature-card"><div class="feature-media"><img src="https://images.unsplash.com/photo-1626863905121-3b0c0ed7b94c?auto=format&amp;fit=crop&amp;w=900&amp;q=82" alt="Customer support team helping clients" loading="lazy"></div><div class="feature-copy"><span class="feature-kicker">Always available</span><h3>Helpful answers, 24/7</h3><p>Give every visitor an immediate, useful response—even after hours or while your team is busy.</p></div></article>
     <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="knowledge-window"><div class="mini-window-top"><i></i><i></i><i></i></div><div class="knowledge-row"><b>1</b>Website pages scanned</div><div class="knowledge-row"><b>2</b>Files and FAQs added</div><div class="knowledge-row"><b>3</b>Private knowledge ready</div><span class="knowledge-ready">Ready</span></div></div></div><div class="feature-copy"><span class="feature-kicker">Business knowledge</span><h3>Trained on your information</h3><p>Scan up to 100 website pages and add approved files so answers stay relevant to your business.</p></div></article>
     <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="brand-window"><div class="brand-controls"><span class="brand-swatch"></span><span class="brand-swatch"></span><span class="brand-swatch"></span></div><div class="brand-chat"><span></span><span></span><span></span></div></div></div></div><div class="feature-copy"><span class="feature-kicker">Your look and voice</span><h3>Made for your brand</h3><p>Choose the colours, chatbot name, greeting, tone and popular questions from your dashboard.</p></div></article>
@@ -6941,11 +6941,7 @@ var sharedStyles = html`
   .setup-scan-progress{padding:18px;border:1px solid #e4e4e4;border-radius:13px;background:#fff}.setup-scan-progress-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:11px}.setup-scan-progress-head small{display:block;margin-top:4px;color:#202020}.setup-scan-progress .progress{height:10px;overflow:hidden;border-radius:999px;background:#ececec}.setup-scan-progress .progress span{display:block;height:100%;min-width:0;border-radius:inherit;background:#050505;transition:width .3s ease}.scan-percent{font-weight:900}
   .setup-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.setup-form-grid .full-field{grid-column:1/-1}.setup-form-grid label{margin:0;color:#141414;font-size:12px}.setup-form-grid label input,.setup-form-grid label textarea,.setup-form-grid label select{margin-top:7px}.setup-form-grid textarea{min-height:105px}.setup-checks{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;grid-column:1/-1}.setup-checks label{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #e6e6e6;border-radius:11px;background:#fff}.setup-checks input{width:auto;margin:0}
   .brand-colour-field{display:grid;gap:12px;margin-top:7px}
-  .brand-colour-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .brand-colour-row input[type="color"]{width:48px;height:40px;padding:2px;border:1px solid #d8d8da;border-radius:8px;background:#fff;cursor:pointer}
-  .brand-colour-presets{display:flex;flex-wrap:wrap;gap:6px}
-  .brand-colour-preset{width:26px;height:26px;padding:0;border:2px solid #fff;outline:1px solid #ddd;border-radius:50%;cursor:pointer}
-  .brand-colour-preset.active{outline:2px solid #0a0a0a;outline-offset:1px}
+  .brand-colour-field>input[type="color"]{width:48px;height:40px;padding:2px;border:1px solid #d8d8da;border-radius:8px;background:#fff;cursor:pointer}
   .brand-colour-codes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .brand-colour-codes label{display:flex;flex-direction:column;gap:4px;margin:0!important;color:#5c5c5c;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
   .brand-colour-codes input{margin-top:0!important;padding:8px 10px;border:1px solid #d8d8da;border-radius:8px;color:#0a0a0a;background:#fbfbfb;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -7367,7 +7363,10 @@ function embeddedDocumentPage(title, body) {
 }
 __name(embeddedDocumentPage, "embeddedDocumentPage");
 function dashboardStandalonePage(title, body) {
-  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>body{background:#f6f6f6}main{padding:48px 0 64px}</style></head><body><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard" aria-current="page">Chatbot</a></div></header>${body}<script src="/website-frame.js" defer><\/script></body></html>`;
+  const dashboardHeaderCss = `.video-container{width:min(1640px,calc(100% - 96px))}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #ebebeb;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:#0a0a0a;font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 11px 25px rgba(32,32,32,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#0a0a0a;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#202020}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#0a0a0a;font-weight:800!important;box-shadow:0 8px 20px rgba(10,10,10,.1)}.video-demo-pill{display:inline-flex;min-height:54px;padding:0 25px;align-items:center;justify-content:center;border-radius:999px;color:#0a0a0a!important;background:#fff;border:2.5px solid #0a0a0a;font-weight:800!important;text-decoration:none}.video-demo-pill:hover{background:#f2f2f2}.video-menu{display:none;width:44px;height:44px;border:1px solid #e7e7e7;border-radius:10px;background:#fff;color:#0a0a0a;font-size:24px}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}}@media(max-width:720px){.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid #e7e7e7}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.video-container{width:min(100% - 28px,1640px)}}`;
+  const header = `<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/"><span class="video-logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span style="color:#202020">AI</span></span></a><nav class="video-links" id="dashboard-video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a href="/#pricing">Pricing</a><a class="video-demo-pill" href="/dashboard" aria-current="page">Chatbot</a><a class="video-get-started" href="/profile">My profile</a></nav><button class="video-menu" id="dashboard-video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
+  const menuScript = `(()=>{const menu=document.getElementById('dashboard-video-menu');const nav=document.getElementById('dashboard-video-nav');menu?.addEventListener('click',()=>nav?.classList.toggle('open'));})();`;
+  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>body{background:#f6f6f6}main{padding:48px 0 64px}${dashboardHeaderCss}</style></head><body>${header}${body}<script>${menuScript}<\/script><script src="/website-frame.js" defer><\/script></body></html>`;
   return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
 }
 __name(dashboardStandalonePage, "dashboardStandalonePage");
@@ -7435,7 +7434,7 @@ function loginPage(message = "", isError = false, embedded = false) {
 }
 __name(loginPage, "loginPage");
 function verificationPage(success = true, message = "You're signed in. The tab where you signed in will continue automatically.") {
-  const script = success ? html`<script>try{localStorage.setItem('fise-magic-link-verified',String(Date.now()))}catch{}<\/script>` : "";
+  const script = success ? html`<script>try{localStorage.setItem('fise-magic-link-verified',String(Date.now()))}catch{}</script>` : "";
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#0a0a0a;background:#f6f6f6;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #e7e7e7;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(10,10,10,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#0a0a0a" : "#202020"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#202020;line-height:1.6}.verify-fine{margin-top:10px;color:#68686e;font-size:12px;line-height:1.5}.open-dashboard{display:inline-flex;min-height:46px;margin-top:22px;padding:0 19px;align-items:center;border-radius:10px;color:#fff;background:#0a0a0a;text-decoration:none;font-weight:800}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "\u2713" : "\u2013"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p>${success ? html`<a class="open-dashboard" href="/dashboard">Open dashboard</a><p class="verify-fine">You can also close this tab and return to the one where you signed in &mdash; it will open your dashboard on its own.</p>` : ""}</main>${script}</body></html>`;
 }
 __name(verificationPage, "verificationPage");
@@ -7654,7 +7653,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
       html`<main class="wrap dashboard-main dashboard-wizard-only">
       ${notice}
       <div class="dashboard-shell">${createPanel}</div>
-      <script src="/dashboard-progress.js" defer><\/script>
+      <script src="/dashboard-progress.js" defer></script>
     </main>`
     );
   }
@@ -8906,13 +8905,8 @@ function info(text) {
 __name(info, "info");
 function brandColourField(id, value) {
   const safeValue = /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#1769e0";
-  const presets = ["#0a0a0a", "#1769e0", "#0ea5a6", "#16a34a", "#7c3aed", "#db2777", "#ea580c", "#dc2626", "#64748b", "#f5f5f5"];
-  const swatches = presets.map((hex) => `<button type="button" class="brand-colour-preset" style="background:${hex}" data-colour="${hex}" aria-label="Use ${hex}"></button>`).join("");
   return html`<div class="brand-colour-field" data-brand-colour-field>
-    <div class="brand-colour-row">
-      <input id="${escapeHtml(id)}" name="primary_colour" type="color" value="${escapeHtml(safeValue)}" required data-colour-input>
-      <div class="brand-colour-presets" role="group" aria-label="Preset brand colours">${swatches}</div>
-    </div>
+    <input id="${escapeHtml(id)}" name="primary_colour" type="color" value="${escapeHtml(safeValue)}" required data-colour-input>
     <div class="brand-colour-codes">
       <label>Hex<input type="text" class="brand-colour-hex" value="${escapeHtml(safeValue)}" maxlength="7" spellcheck="false" autocomplete="off"></label>
       <label>RGB<input type="text" class="brand-colour-rgb" readonly tabindex="-1"></label>
@@ -8926,7 +8920,6 @@ function brandColourField(id, value) {
       const hexField=field.querySelector('.brand-colour-hex');
       const rgbField=field.querySelector('.brand-colour-rgb');
       const hslField=field.querySelector('.brand-colour-hsl');
-      const presetButtons=[...field.querySelectorAll('.brand-colour-preset')];
       function apply(hex,updateInput){
         const rgb=hexToRgb(hex);if(!rgb)return;
         if(updateInput)colourInput.value=hex;
@@ -8934,13 +8927,11 @@ function brandColourField(id, value) {
         rgbField.value='rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')';
         const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
         hslField.value='hsl('+hsl.h+', '+hsl.s+'%, '+hsl.l+'%)';
-        presetButtons.forEach((btn)=>btn.classList.toggle('active',btn.dataset.colour.toLowerCase()===hex.toLowerCase()));
       }
       colourInput.addEventListener('input',()=>apply(colourInput.value,false));
       hexField.addEventListener('input',()=>{const v=hexField.value.trim();if(/^#[0-9a-fA-F]{6}$/.test(v))apply(v,true)});
-      presetButtons.forEach((btn)=>btn.addEventListener('click',()=>apply(btn.dataset.colour,true)));
       apply(colourInput.value,false);
-    })();<\/script>
+    })();</script>
   </div>`;
 }
 __name(brandColourField, "brandColourField");
