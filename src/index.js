@@ -535,6 +535,11 @@ var ScannerModule = /* @__PURE__ */ (() => {
           "sec-fetch-mode": "navigate",
           "sec-fetch-dest": "document",
           "sec-fetch-site": "none",
+          "sec-fetch-user": "?1",
+          "sec-ch-ua": '"Chromium";v="131", "Not_A Brand";v="24", "Google Chrome";v="131"',
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": '"Windows"',
+          "cache-control": "max-age=0",
           accept: acceptedTypes
         }
       });
@@ -568,7 +573,20 @@ var ScannerModule = /* @__PURE__ */ (() => {
         current = new URL(location2, current).toString();
         continue;
       }
-      if (!response2.ok) throw new Error(`Website returned HTTP ${response2.status} for ${current}`);
+      if (!response2.ok) {
+        const diagBits = [];
+        for (const headerName of ["server", "cf-ray", "cf-mitigated", "x-wix-request-id", "x-wix-meta-site-id", "via", "x-served-by", "x-sucuri-id", "x-akamai-transformed", "x-cache"]) {
+          const headerValue = response2.headers.get(headerName);
+          if (headerValue) diagBits.push(`${headerName}=${headerValue}`);
+        }
+        let bodySnippet = "";
+        try {
+          bodySnippet = (await response2.clone().text()).replace(/\s+/g, " ").trim().slice(0, 160);
+        } catch {
+        }
+        const diagText = [diagBits.length ? diagBits.join(", ") : "", bodySnippet ? `body: "${bodySnippet}"` : ""].filter(Boolean).join(" | ");
+        throw new Error(`Website returned HTTP ${response2.status} for ${current}${diagText ? ` (${diagText})` : ""}`);
+      }
       const declared = Number(response2.headers.get("content-length") || 0);
       if (declared > MAX_DOWNLOAD_BYTES) throw new Error("Page is too large");
       const bytes = await response2.arrayBuffer();
@@ -6720,7 +6738,7 @@ var sharedStyles = html`
   justify-content:center; min-height:44px; padding:0 18px; border:0;
   border-radius:11px; color:#fff; background:var(--blue); font-weight:800;
   cursor:pointer; text-decoration:none; } .btn:hover { background:var(--blue2);
-  } .btn.full { width:100%; margin-top:20px; } .btn.ghost { color:var(--dark);
+  } .btn.full { width:100%; margin-top:20px; background:#0a0a0a!important; color:#fff!important; } .btn.full:hover { background:#202020!important; } .btn.ghost { color:var(--dark);
   background:#f3f3f3; } .btn.danger { color:#fff; background:var(--danger); }
   .btn.danger:hover { background:#7f1d1d; } .delete-tools { margin-top:14px;
   padding:15px; border:1px solid #edb5b5; border-radius:12px; background:#fff8f8; }
@@ -7505,7 +7523,7 @@ function renderSetupWizard(bot, stage, embedded = false) {
     const progress = scanActive ? html`<div class="setup-scan-progress" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
       <div class="setup-scan-progress-head"><div><strong>Scanning your website</strong><small class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</small></div><span class="scan-percent">${percent}%</span></div>
       <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%" data-fake-progress></span></div>
-    </div>` : html`${scanFailed && bot.scan_error ? `<p class="setup-error">${escapeHtml(bot.scan_error)}</p>` : ""}<form method="post" action="${scanAction}"><input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}"><button class="btn full" type="submit">${scanFailed ? "Try website scan again" : "Scan website"}</button></form>`;
+    </div>` : html`${scanFailed && bot.scan_error ? `<p class="setup-error">${escapeHtml(bot.scan_error)}</p>` : ""}<form method="post" action="${scanAction}"><input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}"><button class="btn full" type="submit" style="background:#0a0a0a!important;color:#fff!important">${scanFailed ? "Try website scan again" : "Scan website"}</button></form>`;
     stageContent = html`<div class="setup-stage-card"><h2>Scan your website</h2><p>Fise will securely read your public pages and prepare the knowledge your chatbot needs. This normally takes a few minutes.</p><div class="setup-site-summary"><div><small>Website to scan</small><strong>${escapeHtml(bot.website_url || "")}</strong></div><span>${scanActive ? "Scan in progress" : scanFailed ? "Scan needs attention" : "Ready to scan"}</span></div>${progress}</div>`;
   } else {
     const finishAction = `/api/chatbots/${encodeURIComponent(bot.id)}/finish-setup${embedded ? "?embed=1" : ""}`;
