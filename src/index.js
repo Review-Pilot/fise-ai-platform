@@ -3011,7 +3011,7 @@ Date: ${lead.created_at}`
     return json2({ error: "Not found" }, 404);
   }
   __name(handleWidgetApi2, "handleWidgetApi");
-  return { handleWidgetApi: handleWidgetApi2, serveWidgetScript: serveWidgetScript2, serveWidgetTest: serveWidgetTest2, tailoredPopularQuestions: tailoredPopularQuestions2, widgetTestJavascript: widgetTestJavascript2 };
+  return { handleWidgetApi: handleWidgetApi2, serveWidgetScript: serveWidgetScript2, serveWidgetTest: serveWidgetTest2, tailoredPopularQuestions: tailoredPopularQuestions2, widgetTestJavascript: widgetTestJavascript2, botForKey };
 })();
 var _a, _b, _c;
 var WebsiteModule = (() => {
@@ -6775,7 +6775,7 @@ ${JSON.stringify(finalState)}`,
   return { handleWebsiteStudioApi: handleWebsiteStudioApi2, serveWebsiteMedia: serveWebsiteMedia2, showWebsiteEditor: showWebsiteEditor2, showStudioWebsitePreview: showStudioWebsitePreview2, websiteQueueHandler: websiteQueueHandler2, websiteStudioJavascript: websiteStudioJavascript2 };
 })();
 var { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
-var { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript } = ChatModule;
+var { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript, botForKey } = ChatModule;
 var { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript, submitContactRequest, referenceStyles, requestedStyles } = WebsiteModule;
 var { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 var html = String.raw;
