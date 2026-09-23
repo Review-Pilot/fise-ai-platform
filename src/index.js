@@ -9845,6 +9845,129 @@ async function createChatbot(request, env) {
   return redirect(dashboardReturnUrl(request, { created: "1", setup: "scan" }));
 }
 __name(createChatbot, "createChatbot");
+const QUICKSTART_PHANTOM_EMAIL = "quickstart-phantom@fise.internal";
+function quickstartAuthorized(request, env) {
+  return Boolean(env.QUICKSTART_ADMIN_TOKEN) && request.headers.get("authorization") === `Bearer ${env.QUICKSTART_ADMIN_TOKEN}`;
+}
+__name(quickstartAuthorized, "quickstartAuthorized");
+async function beginScan(env, chatbotId, websiteUrl, vectorStoreId) {
+  if (!env.SCAN_QUEUE) return { ok: false, error: "The scan queue is not configured." };
+  const jobId = crypto.randomUUID();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.DB.prepare(`
+    INSERT INTO crawl_jobs (id,chatbot_id,root_url,status,pages_found,pages_processed,created_at,updated_at)
+    VALUES (?,?,?,'queued',0,0,?,?)
+  `).bind(jobId, chatbotId, websiteUrl, now, now).run();
+  await env.DB.prepare("UPDATE chatbots SET status = 'scanning', updated_at = ? WHERE id = ?").bind(now, chatbotId).run();
+  try {
+    await env.SCAN_QUEUE.send({ type: "discover", jobId, chatbotId, rootUrl: websiteUrl, vectorStoreId });
+  } catch (error) {
+    await env.DB.prepare("UPDATE crawl_jobs SET status='failed',error_message=?,updated_at=? WHERE id=?").bind(String(error?.message || error).slice(0, 500), now, jobId).run();
+    await env.DB.prepare("UPDATE chatbots SET status='setup',updated_at=? WHERE id=?").bind(now, chatbotId).run();
+    return { ok: false, error: "The website scan could not be queued." };
+  }
+  return { ok: true, jobId };
+}
+__name(beginScan, "beginScan");
+async function quickstartCreate(request, env) {
+  if (!quickstartAuthorized(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (!env.OPENAI_API_KEY) return json({ error: "OpenAI is not configured." }, 503);
+  const phantomUser = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(QUICKSTART_PHANTOM_EMAIL).first();
+  if (!phantomUser) return json({ error: "Quickstart system account not found." }, 500);
+  const body = await request.json().catch(() => ({}));
+  const websiteInput = String(body.website_url || "").trim().slice(0, 500);
+  let website;
+  try {
+    website = new URL(websiteInput);
+  } catch {
+    website = null;
+  }
+  if (!website || !["http:", "https:"].includes(website.protocol) || website.username || website.password)
+    return json({ error: "Enter a valid, public website URL." }, 400);
+  const quickstartHost = website.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!quickstartHost || quickstartHost === "localhost" || quickstartHost.endsWith(".local") || quickstartHost.endsWith(".internal") || quickstartHost.includes(":"))
+    return json({ error: "Enter a valid, public website URL." }, 400);
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(quickstartHost)) {
+    const parts = quickstartHost.split(".").map(Number);
+    const isPrivate = parts.some((part) => part < 0 || part > 255) || parts[0] === 10 || parts[0] === 127 || parts[0] === 0 || parts[0] === 169 && parts[1] === 254 || parts[0] === 192 && parts[1] === 168 || parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31 || parts[0] >= 224;
+    if (isPrivate) return json({ error: "Enter a valid, public website URL." }, 400);
+  }
+  website.hash = "";
+  const businessName = String(body.business_name || website.hostname.replace(/^www\./, "")).trim().slice(0, 100);
+  const name = String(body.name || businessName.split(" ")[0] || "Assistant").trim().slice(0, 80);
+  const greeting = String(body.greeting || "Hi! How can I help you today?").trim().slice(0, 240);
+  const colour = /^#[0-9a-fA-F]{6}$/.test(String(body.primary_colour || "")) ? body.primary_colour : "#1769e0";
+  const chatbotId = crypto.randomUUID();
+  const publicKey = `fise_${randomToken(24)}`;
+  let vectorStoreId = "";
+  try {
+    vectorStoreId = await createVectorStore(env, chatbotId, businessName, name);
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    await env.DB.prepare(`
+      INSERT INTO chatbots
+      (id,user_id,name,business_name,website_url,status,public_key,vector_store_id,model,primary_colour,greeting,instructions,allowed_domains_json,monthly_message_limit,created_at,updated_at)
+      VALUES (?,?,?,?,?,'setup',?,?,'gpt-5-mini',?,?,?,?,500,?,?)
+    `).bind(
+      chatbotId,
+      phantomUser.id,
+      name,
+      businessName,
+      website.toString(),
+      publicKey,
+      vectorStoreId,
+      colour.toLowerCase(),
+      greeting,
+      "",
+      JSON.stringify([website.origin]),
+      nowIso,
+      nowIso
+    ).run();
+    await env.DB.prepare(`
+      INSERT INTO chatbot_settings
+        (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(
+      chatbotId,
+      "short",
+      "friendly",
+      "[]",
+      "large",
+      1,
+      1,
+      0,
+      "Talk to us",
+      "",
+      "",
+      JSON.stringify({ allow_emoji: false, onboarding_complete: true, widget_version: "2" }),
+      nowIso,
+      nowIso
+    ).run();
+  } catch (error) {
+    if (vectorStoreId) await deleteVectorStore(env, vectorStoreId);
+    console.error("Quickstart create chatbot error", error);
+    return json({ error: error.message || "The chatbot could not be created." }, 500);
+  }
+  const started = await beginScan(env, chatbotId, website.toString(), vectorStoreId);
+  if (!started.ok) return json({ error: started.error || "The website scan could not be started." }, 502);
+  return json({ chatbotId, publicKey, chatLink: `${new URL(request.url).origin}/chat/${publicKey}` });
+}
+__name(quickstartCreate, "quickstartCreate");
+async function quickstartStatus(request, env) {
+  if (!quickstartAuthorized(request, env)) return json({ error: "Unauthorized" }, 401);
+  const url = new URL(request.url);
+  const chatbotId = url.searchParams.get("id") || "";
+  const bot = await env.DB.prepare("SELECT id,status,public_key,name,business_name,website_url FROM chatbots WHERE id = ?").bind(chatbotId).first();
+  if (!bot) return json({ error: "Not found." }, 404);
+  const job = await env.DB.prepare("SELECT status,pages_found,pages_processed,error_message FROM crawl_jobs WHERE chatbot_id = ? ORDER BY created_at DESC LIMIT 1").bind(bot.id).first();
+  return json({
+    status: bot.status,
+    publicKey: bot.public_key,
+    businessName: bot.business_name,
+    chatLink: `${url.origin}/chat/${bot.public_key}`,
+    scan: job ? { status: job.status, pagesFound: job.pages_found, pagesProcessed: job.pages_processed, error: job.error_message } : null
+  });
+}
+__name(quickstartStatus, "quickstartStatus");
 async function logout(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -10190,6 +10313,10 @@ async function routeFiseRequest(request, env, url) {
         );
       if (url.pathname === "/api/chatbots" && request.method === "POST")
         return createChatbot(request, env);
+      if (url.pathname === "/api/admin/quickstart" && request.method === "POST")
+        return quickstartCreate(request, env);
+      if (url.pathname === "/api/admin/quickstart/status" && request.method === "GET")
+        return quickstartStatus(request, env);
       if (url.pathname === "/api/scans/start" && request.method === "POST") {
         if (!sameOrigin(request))
           return json({ error: "Invalid request origin" }, 403);
