@@ -2488,7 +2488,7 @@ Date: ${lead.created_at}`
         }
         introSequenceStarted = true;
         let finished = false, started = false;
-        const finishVideo = /* @__PURE__ */ __name(() => {
+        function finishVideo() {
           if (finished) return;
           finished = true;
           if (introVideoFallbackTimer) clearTimeout(introVideoFallbackTimer);
@@ -2499,15 +2499,15 @@ Date: ${lead.created_at}`
             shell.classList.add("hidden");
             startDailyIntro();
           }, 210);
-        }, "finishVideo");
-        const beginPlayback = /* @__PURE__ */ __name(() => {
+        }
+        function beginPlayback() {
           if (started || finished) return;
           started = true;
           video.classList.add("playing");
           video.currentTime = 0;
           const playing = video.play();
           if (playing && typeof playing.catch === "function") playing.catch(finishVideo);
-        }, "beginPlayback");
+        }
         video.addEventListener("ended", finishVideo, { once: true });
         video.addEventListener("error", finishVideo, { once: true });
         if (video.readyState >= 2) beginPlayback();
@@ -2959,7 +2959,12 @@ Date: ${lead.created_at}`
   }
   __name(widgetBootstrapV2Clean, "widgetBootstrapV2Clean");
   function widgetJavascript() {
-    return `(()=>{const __name=(target)=>target;const legacy=${widgetBootstrap.toString()};const modern=${widgetBootstrapV2Clean.toString()};const script=document.currentScript;if(!script||script.dataset.fiseLoaded==="1")return;script.dataset.fiseLoaded="1";const key=script.dataset.chatbotKey||"";if(!key)return;const api=new URL(script.src).origin;fetch(api+"/api/widget/config?key="+encodeURIComponent(key),{mode:"cors"}).then((response)=>response.ok?response.json():Promise.reject(new Error("Unavailable"))).then((config)=>(config.widget_version==="2"?modern:legacy)(config,script)).catch((error)=>console.warn("Fise widget:",error.message));})();`;
+    const legacySrc = widgetBootstrap.toString();
+    const modernSrc = widgetBootstrapV2Clean.toString();
+    const nameHelpers = /* @__PURE__ */ new Set(["__name"]);
+    for (const match of (legacySrc + modernSrc).matchAll(/__name\d*(?=\()/g)) nameHelpers.add(match[0]);
+    const nameShims = Array.from(nameHelpers).map((id) => `const ${id}=(target)=>target;`).join("");
+    return `(()=>{${nameShims}const legacy=${legacySrc};const modern=${modernSrc};const script=document.currentScript;if(!script||script.dataset.fiseLoaded==="1")return;script.dataset.fiseLoaded="1";const key=script.dataset.chatbotKey||"";if(!key)return;const api=new URL(script.src).origin;fetch(api+"/api/widget/config?key="+encodeURIComponent(key),{mode:"cors"}).then((response)=>response.ok?response.json():Promise.reject(new Error("Unavailable"))).then((config)=>(config.widget_version==="2"?modern:legacy)(config,script)).catch((error)=>console.warn("Fise widget:",error.message));})();`;
   }
   __name(widgetJavascript, "widgetJavascript");
   function serveWidgetScript2() {
