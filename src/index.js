@@ -1335,7 +1335,7 @@ ${tone}`;
   }
   __name(answerStyle, "answerStyle");
   function answerTokenLimit(bot) {
-    return { short: 600, standard: 900, detailed: 1600 }[bot.answer_length] || 600;
+    return { short: 900, standard: 1400, detailed: 2200 }[bot.answer_length] || 900;
   }
   __name(answerTokenLimit, "answerTokenLimit");
   function ndjson(data) {
@@ -1392,8 +1392,12 @@ ${tone}`;
       };
     }
     const internalReference = /(?:files? (?:you|the visitor|we) (?:uploaded|provided)|uploaded files?|source files?|scanned (?:files?|documents?|pages?)|knowledge base|training data|missing documents?)/i.test(reply);
-    const unavailableWording = /(?:\bI (?:do not|don't|cannot|can't) have\b|\bI (?:could not|couldn't) find\b|\b(?:information|details|pricing|prices?) (?:is|are) not (?:available|provided|listed|included)\b)/i.test(reply);
-    const supportFallback = internalReference || unavailableWording;
+    const unavailableWording = /(?:\bI (?:do not|don't|cannot|can't) have\b|\bI (?:could not|couldn't) find\b|\b(?:information|details|pricing|prices?) (?:is|are) not (?:available|provided|listed|included)\b)/i;
+    const hasUnavailableWording = unavailableWording.test(reply);
+    const sentences = reply.split(/(?<=[.!?])\s+/).filter(Boolean);
+    const strippedReply = sentences.filter((sentence) => !unavailableWording.test(sentence)).join(" ").trim();
+    const hedgeDominatesReply = hasUnavailableWording && strippedReply.length < 40;
+    const supportFallback = internalReference || hedgeDominatesReply;
     if (supportFallback) {
       const pricingQuestion = /\b(?:price|prices|pricing|plan|plans|cost|costs|fee|fees|rate|rates)\b/i.test(String(userMessage || ""));
       const contactLink = raw.match(/\[([^\]]*(?:contact|support)[^\]]*)\]\((https?:\/\/[^\s)]+)\)/i);
@@ -1401,6 +1405,8 @@ ${tone}`;
       if (contactLink) reply += `
 
 [Contact support](${contactLink[2]})`;
+    } else if (hasUnavailableWording && strippedReply) {
+      reply = strippedReply;
     }
     return {
       reply: reply || "I'm unable to assist with that. Please contact our support team for help.",
@@ -1467,7 +1473,24 @@ ${tone}`;
             }
             if (done) break;
           }
-          const rawReply = outputText(completed || {}) || streamedText;
+          let rawReply = outputText(completed || {}) || streamedText;
+          if (!rawReply.trim() && !streamedText && completed?.status === "incomplete" && completed?.incomplete_details?.reason === "max_output_tokens" && context.basePayload) {
+            console.error("OpenAI stream hit max_output_tokens with no visible text, retrying with a larger budget", completed.incomplete_details);
+            try {
+              const retryResponse = await fetch("https://api.openai.com/v1/responses", {
+                method: "POST",
+                headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, "content-type": "application/json" },
+                body: JSON.stringify({ ...context.basePayload, max_output_tokens: Math.min(context.basePayload.max_output_tokens * 3, 4e3), stream: false })
+              });
+              const retryData = await retryResponse.json().catch(() => ({}));
+              if (retryResponse.ok) {
+                completed = retryData;
+                rawReply = outputText(retryData);
+              }
+            } catch (error) {
+              console.error("OpenAI stream retry after max_output_tokens failed", error);
+            }
+          }
           if (!rawReply.trim()) throw new Error("The assistant returned an empty answer");
           const finalized = finalizeAssistantReply(rawReply, context.bot, context.userMessage || "");
           const reply = finalized.reply;
@@ -1621,22 +1644,22 @@ ${tone}`;
       bot.system_prompt_append || ""
     ].filter(Boolean).join("\n");
     const userContent = attachmentId ? [{ type: "input_text", text: message || "Please review the attached file and help me with it." }, { type: "input_file", file_id: attachmentId }] : message;
+    const basePayload = {
+      model: bot.model || "gpt-5-mini",
+      instructions,
+      input: [...history, { role: "user", content: userContent }],
+      tools: [{ type: "file_search", vector_store_ids: [bot.vector_store_id], max_num_results: FILE_SEARCH_RESULTS }],
+      reasoning: { effort: "low" },
+      max_output_tokens: answerTokenLimit(bot),
+      store: false
+    };
     let openaiResponse;
     let data = {};
     try {
       openaiResponse = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, "content-type": "application/json" },
-        body: JSON.stringify({
-          model: bot.model || "gpt-5-mini",
-          instructions,
-          input: [...history, { role: "user", content: userContent }],
-          tools: [{ type: "file_search", vector_store_ids: [bot.vector_store_id], max_num_results: FILE_SEARCH_RESULTS }],
-          reasoning: { effort: "low" },
-          max_output_tokens: answerTokenLimit(bot),
-          stream: wantsStream,
-          store: false
-        })
+        body: JSON.stringify({ ...basePayload, stream: wantsStream })
       });
     } catch (error) {
       await deleteTemporaryOpenAIFile(env, attachmentId);
@@ -1644,7 +1667,7 @@ ${tone}`;
       return json2({ error: "The assistant could not answer right now. Please try again." }, 502, corsHeaders(auth.origin));
     }
     if (wantsStream && openaiResponse.ok && openaiResponse.body) {
-      return openAIStreamResponse(openaiResponse, env, { bot, conversationId, pageUrl, attachmentId, cacheHash, userMessage: message }, corsHeaders(auth.origin));
+      return openAIStreamResponse(openaiResponse, env, { bot, conversationId, pageUrl, attachmentId, cacheHash, userMessage: message, basePayload }, corsHeaders(auth.origin));
     }
     try {
       data = await openaiResponse.json().catch(() => ({}));
@@ -1655,7 +1678,24 @@ ${tone}`;
       console.error("OpenAI chat error", openaiResponse.status, JSON.stringify(data));
       return json2({ error: "The assistant could not answer right now. Please try again." }, 502, corsHeaders(auth.origin));
     }
-    const rawReply = outputText(data);
+    let rawReply = outputText(data);
+    if (!rawReply && data.status === "incomplete" && data.incomplete_details?.reason === "max_output_tokens") {
+      console.error("OpenAI hit max_output_tokens with no visible text, retrying with a larger budget", data.incomplete_details);
+      try {
+        const retryResponse = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, "content-type": "application/json" },
+          body: JSON.stringify({ ...basePayload, max_output_tokens: Math.min(basePayload.max_output_tokens * 3, 4e3), stream: false })
+        });
+        const retryData = await retryResponse.json().catch(() => ({}));
+        if (retryResponse.ok) {
+          data = retryData;
+          rawReply = outputText(data);
+        }
+      } catch (error) {
+        console.error("OpenAI retry after max_output_tokens failed", error);
+      }
+    }
     if (!rawReply) {
       console.error("OpenAI empty response", data.status, JSON.stringify(data.incomplete_details || {}));
       return json2({ error: "The assistant could not complete that answer. Please try once more." }, 502, corsHeaders(auth.origin));
