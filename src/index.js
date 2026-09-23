@@ -10008,6 +10008,29 @@ async function routeFiseRequest(request, env, url) {
         if (!owned) return response("Chatbot preview not found.", 404);
         return serveWidgetTest(request, owned.id, uiSettings(owned.ui_settings_json).widget_version);
       }
+      if (url.pathname.startsWith("/chat/") && request.method === "GET") {
+        const key = decodeURIComponent(url.pathname.slice("/chat/".length)).slice(0, 180);
+        const bot = await botForKey(env, key);
+        if (!bot || bot.status !== "ready" || !bot.vector_store_id) {
+          return new Response(
+            `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Assistant unavailable</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:#f5f4f1;color:#17181a}</style></head><body><p>This assistant link isn't available right now.</p></body></html>`,
+            { status: 404, headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" } }
+          );
+        }
+        const origin = url.origin;
+        const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${escapeHtml(bot.business_name || bot.name || "Assistant")}</title><meta name="robots" content="noindex"><style>*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:#f5f4f1;font-family:system-ui,-apple-system,sans-serif}.loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#8b8d92;font-size:13px}</style></head><body><div class="loading" id="l">Loading…</div><script src="${escapeHtml(origin)}/widget.js" data-chatbot-key="${escapeHtml(key)}"><\/script><script>(()=>{let n=0;const t=setInterval(()=>{n+=1;const h=document.getElementById('fise-chat-widget'),r=h&&h.shadowRoot,b=r&&r.querySelector('.launcher'),p=r&&r.querySelector('.panel');if(b&&p){b.click();p.classList.remove('standard','large');p.classList.add('fullscreen');document.getElementById('l').remove();clearInterval(t)}else if(n>150){document.getElementById('l').textContent='This assistant could not load. Please refresh.';clearInterval(t)}},100)})();<\/script></body></html>`;
+        return new Response(content, {
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+            "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'",
+            "permissions-policy": "microphone=(self)",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "DENY",
+            "x-robots-tag": "noindex"
+          }
+        });
+      }
       if (url.pathname.startsWith("/api/widget/") && ["GET", "POST", "OPTIONS"].includes(request.method)) {
         return handleWidgetApi(request, env);
       }
