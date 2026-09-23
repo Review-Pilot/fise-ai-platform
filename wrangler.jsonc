@@ -36,6 +36,9 @@
       "bucket_name": "fise-ai-platform-files"
     }
   ],
+  "browser": {
+    "binding": "BROWSER"
+  },
   "services": [
     {
       "binding": "REVIEW_PILOT_SITE",

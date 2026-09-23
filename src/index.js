@@ -1,3 +1,5 @@
+import puppeteer from "@cloudflare/puppeteer";
+
 var __freeze = Object.freeze;
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
@@ -521,7 +523,34 @@ var ScannerModule = /* @__PURE__ */ (() => {
     }
   }
   __name(canonicalUrl, "canonicalUrl");
-  async function fetchPublic(urlValue, expectedOrigin, acceptedTypes, env) {
+  async function renderWithBrowser(env, urlValue) {
+    if (!env?.BROWSER) throw new Error("Browser rendering is not configured");
+    let browser = null;
+    try {
+      browser = await puppeteer.launch(env.BROWSER);
+      const page = await browser.newPage();
+      await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+      await page.goto(urlValue, { waitUntil: "networkidle0", timeout: 2e4 });
+      const html = await page.content();
+      const finalUrl = page.url();
+      return {
+        url: finalUrl,
+        contentType: "text/html; charset=utf-8",
+        bytes: new TextEncoder().encode(html)
+      };
+    } catch (error) {
+      throw new Error(`Browser rendering failed: ${String(error?.message || error).slice(0, 200)}`);
+    } finally {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch {
+        }
+      }
+    }
+  }
+  __name(renderWithBrowser, "renderWithBrowser");
+  async function fetchPublic(urlValue, expectedOrigin, acceptedTypes, env, useBrowserFallback = false) {
     let current = urlValue;
     for (let redirectCount = 0; redirectCount < 4; redirectCount += 1) {
       if (!isSafePublicUrl(current, expectedOrigin)) throw new Error("Unsafe or external URL blocked");
@@ -585,7 +614,15 @@ var ScannerModule = /* @__PURE__ */ (() => {
         } catch {
         }
         const diagText = [diagBits.length ? diagBits.join(", ") : "", bodySnippet ? `body: "${bodySnippet}"` : ""].filter(Boolean).join(" | ");
-        throw new Error(`Website returned HTTP ${response2.status} for ${current}${diagText ? ` (${diagText})` : ""}`);
+        const httpError = `Website returned HTTP ${response2.status} for ${current}${diagText ? ` (${diagText})` : ""}`;
+        if (useBrowserFallback && env?.BROWSER) {
+          try {
+            return await renderWithBrowser(env, current);
+          } catch (browserError) {
+            throw new Error(`${httpError}; ${String(browserError?.message || browserError)}`);
+          }
+        }
+        throw new Error(httpError);
       }
       const declared = Number(response2.headers.get("content-length") || 0);
       if (declared > MAX_DOWNLOAD_BYTES) throw new Error("Page is too large");
@@ -691,7 +728,7 @@ var ScannerModule = /* @__PURE__ */ (() => {
       if (!candidate || crawled.has(candidate)) continue;
       crawled.add(candidate);
       try {
-        const result = await fetchPublic(candidate, origin, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.2", env);
+        const result = await fetchPublic(candidate, origin, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.2", env, true);
         if (!/text\/html|application\/xhtml\+xml/i.test(result.contentType)) {
           lastFailure = `The page did not return HTML: ${candidate}`;
           continue;
@@ -774,8 +811,7 @@ var ScannerModule = /* @__PURE__ */ (() => {
     await env.SCAN_QUEUE.sendBatch(messages);
   }
   __name(processDiscovery, "processDiscovery");
-  async function extractPage(url, origin, env) {
-    const result = await fetchPublic(url, origin, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.2", env);
+  async function extractFromFetchResult(result) {
     if (!/text\/html|application\/xhtml\+xml/i.test(result.contentType)) return { skipped: true, reason: "Not an HTML page" };
     const parts = [];
     let title = "";
@@ -792,6 +828,20 @@ var ScannerModule = /* @__PURE__ */ (() => {
     const clean = parts.join("").replace(/\r/g, "").replace(/[\t ]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_TEXT_CHARS);
     if (clean.length < 80) return { skipped: true, reason: "Not enough useful text" };
     return { title: title.replace(/\s+/g, " ").trim().slice(0, 250) || new URL(result.url).pathname, text: clean, finalUrl: result.url };
+  }
+  __name(extractFromFetchResult, "extractFromFetchResult");
+  async function extractPage(url, origin, env) {
+    const result = await fetchPublic(url, origin, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.2", env, true);
+    const extracted = await extractFromFetchResult(result);
+    if (extracted.skipped && extracted.reason === "Not enough useful text" && env?.BROWSER) {
+      try {
+        const rendered = await renderWithBrowser(env, result.url);
+        const rerendered = await extractFromFetchResult(rendered);
+        if (!rerendered.skipped) return rerendered;
+      } catch {
+      }
+    }
+    return extracted;
   }
   __name(extractPage, "extractPage");
   async function uploadOpenAIFile(env, filename, content) {
