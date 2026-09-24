@@ -18,3 +18,11 @@
 
 /*.svg
   Cache-Control: public, max-age=604800
+
+/dashboard-v2.css
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+/dashboard-v2.js
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff

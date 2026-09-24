@@ -7644,7 +7644,7 @@ function titleCase(value) {
 }
 __name(titleCase, "titleCase");
 function fiseLandingFooter() {
-  return `<footer class="reference-footer" style="background:#000;color:#fff"><div class="video-container"><div class="reference-footer-grid"><div><h3 style="color:#fff">Product</h3><a href="/#features" style="color:#fff">Features</a><a href="/#clients" style="color:#fff">Our Clients</a><a href="/#pricing" style="color:#fff">Pricing</a></div><div><h3 style="color:#fff">Company</h3><a href="/about" style="color:#fff">About</a><a href="/blog" style="color:#fff">Blog</a><a href="/contact" style="color:#fff">Contact</a><a href="/help" style="color:#fff">Help</a></div><div><h3 style="color:#fff">Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener" style="color:#fff">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener" style="color:#fff">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener" style="color:#fff">T&amp;C's</a></div></div><div class="reference-footer-bottom" style="color:#fff"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
+  return `<footer class="reference-footer"><div class="app-footer-row"><nav aria-label="Footer"><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href="/help">Help</a><a href="/contact">Contact</a><a href="/privacy-policy">Privacy Policy</a><a href="/terms-and-conditions">Terms</a><a href="/cookies">Cookies</a></nav><p><span>© ${(/* @__PURE__ */ new Date()).getUTCFullYear()} Fise AI.</span> <span>Built for businesses that care about every conversation.</span></p></div></footer>`;
 }
 __name(fiseLandingFooter, "fiseLandingFooter");
 function fiseEmailFooter(origin) {
@@ -7653,37 +7653,68 @@ function fiseEmailFooter(origin) {
   return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
-var _d;
+var APP_ASSET_VERSION = "20260924-app1";
+function appHead(title) {
+  return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#FAFAFA"><title>${escapeHtml(title)} · Fise AI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site.css?v=${APP_ASSET_VERSION}"><link rel="stylesheet" href="/dashboard-v2.css?v=${APP_ASSET_VERSION}">`;
+}
+__name(appHead, "appHead");
+var APP_ICONS = {
+  overview: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 4v3h6V4z",
+  settings: "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M13 4v4M7 10v4M17 16v4",
+  leads: "M16 8a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0",
+  preview: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z",
+  help: "M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114.3 1.7c-.8.8-1.8 1.3-1.8 2.3M12 17h.01",
+  profile: "M12 12a4 4 0 100-8 4 4 0 000 8zM5 21a7 7 0 0114 0",
+  signout: "M15 17l5-5-5-5M20 12H9M11 4H5v16h6"
+};
+function appIcon(name) {
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${APP_ICONS[name] || ""}"/></svg>`;
+}
+__name(appIcon, "appIcon");
+function dashboardAppShell(title, body, options = {}) {
+  const active = options.active || "overview";
+  const botMatch = String(body).match(/\/dashboard\/chatbots\/([^/"?#\s]+)\/(?:settings|leads)/);
+  const keyMatch = String(body).match(/\/widget\/test\?key=([^"&\s]+)/);
+  const botId = botMatch ? botMatch[1] : "";
+  const link = (key, href, label, extra = "") => `<a class="app-nav-link${active === key ? " is-active" : ""}" href="${href}"${active === key ? ' aria-current="page"' : ""}${extra}>${appIcon(key)}<span>${label}</span></a>`;
+  const nav = [
+    link("overview", "/dashboard", "Overview"),
+    botId ? link("settings", `/dashboard/chatbots/${botId}/settings`, "Customise") : "",
+    botId ? link("leads", `/dashboard/chatbots/${botId}/leads`, "Leads") : "",
+    keyMatch ? link("preview", `/widget/test?key=${keyMatch[1]}`, "Live preview") : "",
+    link("help", "/help", "Help centre")
+  ].join("");
+  const logo = `<a class="app-logo" href="/dashboard" aria-label="Fise dashboard"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a>`;
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app"><a class="app-skip" href="#app-main">Skip to content</a><div class="app-layout"><aside class="app-sidebar" id="app-sidebar" aria-label="Dashboard">${logo}<nav class="app-nav" aria-label="Dashboard sections">${nav}</nav><div class="app-sidebar-foot"><a class="app-nav-link${active === "profile" ? " is-active" : ""}" href="/profile">${appIcon("profile")}<span>Profile &amp; plan</span></a><form method="post" action="/logout"><button class="app-nav-link" type="submit">${appIcon("signout")}<span>Sign out</span></button></form></div></aside><div class="app-scrim" data-app-close hidden></div><div class="app-content"><header class="app-mobilebar">${logo}<button class="app-menu" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button></header><div class="app-main" id="app-main">${body}</div>${fiseLandingFooter()}</div></div><div class="app-toasts" aria-live="polite" aria-atomic="false"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
+}
+__name(dashboardAppShell, "dashboardAppShell");
+function authShellPage(title, body) {
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app app-auth"><header class="auth-top"><a class="app-logo" href="/" aria-label="Fise AI home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a><a class="auth-back" href="/">← Back to site</a></header>${body}<div class="app-toasts" aria-live="polite"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script></body></html>`;
+}
+__name(authShellPage, "authShellPage");
 function documentPage(title, body) {
-  const page = html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), body, (/* @__PURE__ */ new Date()).getFullYear());
-  let rendered = page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/<footer class="public-foot">[\s\S]*?<\/footer>/, "");
-  if (String(title).startsWith("Customize ")) {
-    rendered = rendered.replace('<main class="wrap">', '<main class="wrap chatbot-settings-page">').replace('class="btn"\n          href="/widget/test?', 'class="btn settings-preview-button"\n          href="/widget/test?').replace('/leads"\n          >View leads</a\n        >\n      </div>', '/leads"\n          >View leads</a\n        ><button class="btn settings-save-top" type="submit" form="chatbot-settings-form">Save changes</button>\n      </div>').replace('<form\n        method="post"\n        action="/api/chatbots/', '<form\n        id="chatbot-settings-form"\n        method="post"\n        action="/api/chatbots/').replace(/\s*<section class="setting-section full save-bar">[\s\S]*?<\/section>/, "");
-  } else if (String(title).startsWith("Leads for ")) {
-    rendered = rendered.replace('<main class="wrap">', '<main class="wrap leads-page">').replace('class="btn"\n          href="/api/chatbots/', 'class="btn leads-download"\n          href="/api/chatbots/');
+  const heading = String(title);
+  if (heading.startsWith("Customize ")) {
+    const content = String(body).replace('<main class="wrap">', '<main class="wrap chatbot-settings-page">').replace('class="btn"\n          href="/widget/test?', 'class="btn settings-preview-button"\n          href="/widget/test?').replace('/leads"\n          >View leads</a\n        >\n      </div>', '/leads"\n          >View leads</a\n        ><button class="btn settings-save-top" type="submit" form="chatbot-settings-form">Save changes</button>\n      </div>').replace('<form\n        method="post"\n        action="/api/chatbots/', '<form\n        id="chatbot-settings-form"\n        data-track-changes\n        method="post"\n        action="/api/chatbots/').replace(/\s*<section class="setting-section full save-bar">[\s\S]*?<\/section>/, "");
+    return dashboardAppShell(title, content, { active: "settings" });
   }
-  return rendered;
+  if (heading.startsWith("Leads for ")) {
+    const content = String(body).replace('<main class="wrap">', '<main class="wrap leads-page">').replace('class="btn"\n          href="/api/chatbots/', 'class="btn leads-download"\n          href="/api/chatbots/');
+    return dashboardAppShell(title, content, { active: "leads" });
+  }
+  return authShellPage(title, body);
 }
 __name(documentPage, "documentPage");
 function deletionDocumentPage(title, body) {
-  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>
-    body.deletion-page{min-height:100vh;display:flex;flex-direction:column;background:#f8f8f8}.deletion-page main{flex:1}.deletion-page .shell{background:#fff}
-  </style></head><body class="deletion-page"><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard">Chatbot</a></div></header>${body}</body></html>`;
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return authShellPage(title, body).replace('<body class="app app-auth">', '<body class="app app-auth deletion-page">');
 }
 __name(deletionDocumentPage, "deletionDocumentPage");
-var _e;
 function embeddedDocumentPage(title, body) {
-  const page = html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <link rel=\"stylesheet\" href=\"/site.css\">\n        <style>\n          body { background:#f6f6f6; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), body);
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app app-embedded">${body}<div class="app-toasts" aria-live="polite"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
 }
 __name(embeddedDocumentPage, "embeddedDocumentPage");
 function dashboardStandalonePage(title, body) {
-  const dashboardHeaderCss = `.video-container{width:min(1640px,calc(100% - 96px))}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #ebebeb;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:#0a0a0a;font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 11px 25px rgba(32,32,32,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#0a0a0a;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#202020}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#0a0a0a;font-weight:800!important;box-shadow:0 8px 20px rgba(10,10,10,.1)}.video-demo-pill{display:inline-flex;min-height:54px;padding:0 25px;align-items:center;justify-content:center;border-radius:999px;color:#0a0a0a!important;background:#fff;border:2.5px solid #0a0a0a;font-weight:800!important;text-decoration:none}.video-demo-pill:hover{background:#f2f2f2}.video-menu{display:none;width:44px;height:44px;border:1px solid #e7e7e7;border-radius:10px;background:#fff;color:#0a0a0a;font-size:24px}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}}@media(max-width:720px){.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid #e7e7e7}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.video-container{width:min(100% - 28px,1640px)}}`;
-  const header = `<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/"><span class="video-logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span style="color:#202020">AI</span></span></a><nav class="video-links" id="dashboard-video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a href="/#pricing">Pricing</a><a class="video-demo-pill" href="/dashboard" aria-current="page">Chatbot</a><a class="video-get-started" href="/profile">My profile</a></nav><button class="video-menu" id="dashboard-video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
-  const menuScript = `(()=>{const menu=document.getElementById('dashboard-video-menu');const nav=document.getElementById('dashboard-video-nav');menu?.addEventListener('click',()=>nav?.classList.toggle('open'));})();`;
-  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>body{background:#f6f6f6}main{padding:48px 0 64px}${dashboardHeaderCss}</style></head><body>${header}${body}<script>${menuScript}<\/script><script src="/website-frame.js" defer><\/script></body></html>`;
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return dashboardAppShell(title, body, { active: "overview" });
 }
 __name(dashboardStandalonePage, "dashboardStandalonePage");
 function dashboardAccountSidebar() {
@@ -7708,41 +7739,50 @@ function dashboardDocumentPage(title, body) {
   return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/\s*<div class="dash-topbar-actions">[\s\S]*?<\/div>/, "");
 }
 __name(dashboardDocumentPage, "dashboardDocumentPage");
-function loginPage(message = "", isError = false, embedded = false) {
-  const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}">
-        ${escapeHtml(message)}
-      </div>` : "";
+function loginPage(message = "", isError = false, embedded = false, mode = "") {
+  const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}" role="${isError ? "alert" : "status"}">${escapeHtml(message)}</div>` : "";
   const page = embedded ? embeddedDocumentPage : documentPage;
+  const embedField = embedded ? html`<input type="hidden" name="embed" value="1" />` : "";
+  const initial = mode === "signup" ? "register" : mode === "email" ? "email" : "password";
+  const tab = (key, label) => html`<button type="button" role="tab" id="auth-tab-${key}" aria-controls="auth-panel-${key}" aria-selected="${initial === key}" tabindex="${initial === key ? 0 : -1}">${label}</button>`;
   return page(
     "Sign in",
-    html` <main class="wrap">
+    html`<main class="wrap">
       <section class="shell">
         <div class="eyebrow">Customer platform</div>
-        <h1>Access Fise AI</h1>
-        <p class="lead">Create your account the first time, or sign in using your password or a one-time email link.</p>
+        <h1>${initial === "register" ? "Create your Fise account" : "Welcome back"}</h1>
+        <p class="lead">Sign in with your password or a one-time email link, or create an account in seconds.</p>
         ${notice}
-        <h2>First time here?</h2>
-        <form method="post" action="/api/auth/register">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
-          <button class="btn full" type="submit">Create account</button>
-        </form>
-        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
-        <h2>Sign in with password</h2>
-        <form method="post" action="/api/auth/password">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="identifier-page">Email address</label><input id="identifier-page" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
-          <button class="btn full" type="submit">Sign in with password</button>
-        </form>
-        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
-        <h2>Sign in with email</h2>
-        <form method="post" action="/api/auth/request">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <button class="btn full" type="submit">Sign in with email</button>
-        </form>
+        <div class="auth-tabs" role="tablist" aria-label="Sign-in method" data-initial="${initial}" hidden>${tab("password", "Sign in")}${tab("register", "Create account")}${tab("email", "Email link")}</div>
+        <div class="auth-panel" id="auth-panel-password" role="tabpanel" aria-labelledby="auth-tab-password">
+          <h2 class="sr-only">Sign in with password</h2>
+          <form method="post" action="/api/auth/password">
+            ${embedField}
+            <label for="identifier-page">Email address</label><input id="identifier-page" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
+            <button class="btn full" type="submit">Sign in</button>
+          </form>
+          <p class="auth-alt">Forgot your password? <button type="button" data-auth-go="email">Get a one-time sign-in link</button> — then set a new password from your profile.</p>
+        </div>
+        <div class="auth-panel" id="auth-panel-register" role="tabpanel" aria-labelledby="auth-tab-register">
+          <h2 class="sr-only">Create an account</h2>
+          <form method="post" action="/api/auth/register">
+            ${embedField}
+            <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
+            <button class="btn full" type="submit">Create free account</button>
+          </form>
+          <p class="auth-alt">Free plan · no card required. By continuing you agree to our <a href="/terms-and-conditions">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>
+        </div>
+        <div class="auth-panel" id="auth-panel-email" role="tabpanel" aria-labelledby="auth-tab-email">
+          <h2 class="sr-only">Sign in with an email link</h2>
+          <form method="post" action="/api/auth/request">
+            ${embedField}
+            <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <button class="btn full" type="submit">Email me a sign-in link</button>
+          </form>
+          <p class="auth-alt">The link expires after 15 minutes and can be used once.</p>
+        </div>
         <p class="fine">Passwords are stored as protected one-way hashes and cannot be displayed from storage.</p>
       </section>
     </main>`
@@ -7848,6 +7888,11 @@ function renderSetupWizard(bot, stage, embedded = false) {
   return html`<section class="card onboarding-card setup-wizard"><div class="onboarding-copy"><div class="eyebrow">Quick setup</div><h2>Set up your chatbot</h2><p>Complete all three steps here. Your dashboard will open when the chatbot is ready.</p>${steps}</div>${stageContent}</section>`;
 }
 __name(renderSetupWizard, "renderSetupWizard");
+function dashboardWhatsNew() {
+  const items = FISE_WHATS_NEW.slice(0, 3).map((item) => `<li><time datetime="${item.date}">${escapeHtml(item.label)}</time><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span></li>`).join("");
+  return `<section class="app-card app-whatsnew" aria-labelledby="whats-new-title"><div class="app-card-head"><h2 id="whats-new-title">What’s new</h2><a href="/#insights">All updates</a></div><ul>${items}</ul></section>`;
+}
+__name(dashboardWhatsNew, "dashboardWhatsNew");
 function dashboardPage(user, chatbots, platformOrigin, message = "", isError = false, embedded = false, setupStage = "") {
   const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}">
         ${escapeHtml(message)}
@@ -7884,7 +7929,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
                 <section class="dash-leads-card">
                   <div class="dash-stat-heading"><strong>Captured leads</strong><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6 20v-1.5A5.5 5.5 0 0 1 11.5 13h1A5.5 5.5 0 0 1 18 18.5V20"/></svg></span></div>
                   <h3>${Number(bot.lead_count || 0).toLocaleString()} leads</h3>
-                  <p>Qualified conversations this month</p>
+                  <p>Captured since launch · <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads">View all</a></p>
                 </section>
               </div>
 
@@ -7945,7 +7990,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
               </dialog>
             </div>`;
     }
-  ).join("") : "";
+  ).join("") + dashboardWhatsNew() : "";
   const createPanel = chatbots.length ? setupStage ? renderSetupWizard(chatbots[0], setupStage, embedded) : "" : html`<section class="card onboarding-card">
         <div class="onboarding-copy">
           <div class="eyebrow">Quick setup</div>
@@ -7976,11 +8021,11 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
   const wrapDashboardPage = embedded ? embeddedDocumentPage : dashboardStandalonePage;
   return wrapDashboardPage(
     "Dashboard",
-    html(_g || (_g = __template([' <div class="dash-account-topbar">\n      <div><small>Account centre</small><h1>Chatbot Dashboard</h1><span>Profile</span></div>\n      <div class="dash-topbar-actions">\n        <label class="dash-action-search"><span aria-hidden="true">\u2315</span><input type="search" placeholder="Search actions" aria-label="Search dashboard actions"></label>\n        <button type="button" aria-label="Notifications">\u25CC</button>\n        <span class="dash-user-avatar" aria-label="', '">', '</span>\n      </div>\n    </div>\n    <main class="wrap dashboard-main">\n      ', '\n      <div class="dashboard-shell">', "", '</div>\n      <script src="/dashboard-progress.js" defer><\/script>\n    </main>'])), escapeHtml(user.email), escapeHtml(String(user.email || "F").charAt(0).toUpperCase()), notice, botList, createPanel)
+    html(_g || (_g = __template([' <div class="app-pagehead">\n      <div><small>Account centre</small><h1>Dashboard</h1><p>Signed in as <strong>', '</strong></p></div>\n      <span class="app-avatar" aria-hidden="true">', '</span>\n    </div>\n    <main class="wrap dashboard-main">\n      ', '\n      <div class="dashboard-shell">', "", '</div>\n      <script src="/dashboard-progress.js" defer><\/script>\n    </main>'])), escapeHtml(user.email), escapeHtml(String(user.email || "F").charAt(0).toUpperCase()), notice, botList, createPanel)
   );
 }
 __name(dashboardPage, "dashboardPage");
-var BASE_CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-src 'self' https://fise-ai-platform.seb-slabbert1.workers.dev https://*.seb-slabbert1.workers.dev; base-uri 'none'; form-action 'self'";
+var BASE_CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-src 'self' https://fise-ai-platform.seb-slabbert1.workers.dev https://*.seb-slabbert1.workers.dev; base-uri 'none'; form-action 'self'";
 function htmlResponse(content, status = 200, extraHeaders = {}) {
   return new Response(content, {
     status,
@@ -8011,8 +8056,8 @@ function isEmbeddedRequest(request) {
   return url.searchParams.get("embed") === "1" || String(request.headers.get("sec-fetch-dest") || "").toLowerCase() === "iframe";
 }
 __name(isEmbeddedRequest, "isEmbeddedRequest");
-function loginPageResponse(message = "", isError = false, embedded = false, status = 200) {
-  const content = loginPage(message, isError, embedded);
+function loginPageResponse(message = "", isError = false, embedded = false, status = 200, mode = "") {
+  const content = loginPage(message, isError, embedded, mode);
   return embedded ? embeddedHtmlResponse(content, status) : htmlResponse(content, status);
 }
 __name(loginPageResponse, "loginPageResponse");
@@ -8848,6 +8893,33 @@ async function accountProfile(request, env) {
   });
 }
 __name(accountProfile, "accountProfile");
+var DATABASE_INDEX_STATEMENTS = [
+  "CREATE INDEX IF NOT EXISTS idx_chatbots_user_created ON chatbots(user_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_conversations_chatbot_created ON conversations(chatbot_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_leads_chatbot_created ON leads(chatbot_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_crawl_jobs_chatbot_created ON crawl_jobs(chatbot_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_subscriptions_user_updated ON subscriptions(user_id,updated_at)",
+  "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)",
+  "CREATE INDEX IF NOT EXISTS idx_magic_links_expires ON magic_links(expires_at)"
+];
+var databaseIndexesReady = null;
+function ensureDatabaseIndexes(env) {
+  if (!env?.DB?.prepare) return Promise.resolve();
+  if (!databaseIndexesReady) {
+    databaseIndexesReady = (async () => {
+      for (const sql of DATABASE_INDEX_STATEMENTS) {
+        try {
+          await env.DB.prepare(sql).run();
+        } catch (error) {
+          console.error("Index creation skipped", sql, error?.message || error);
+        }
+      }
+    })();
+  }
+  return databaseIndexesReady;
+}
+__name(ensureDatabaseIndexes, "ensureDatabaseIndexes");
 async function showDashboard(request, env) {
   const user = await currentUser(request, env);
   const requestedUrl = new URL(request.url);
@@ -8861,6 +8933,7 @@ async function showDashboard(request, env) {
   } catch (error) {
     console.error("Testing plan schema check failed; continuing without it", error);
   }
+  await ensureDatabaseIndexes(env);
   let result;
   try {
     result = await env.DB.prepare(
@@ -8874,11 +8947,9 @@ async function showDashboard(request, env) {
          FROM messages m JOIN conversations mc ON mc.id=m.conversation_id
          WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
         (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
-        (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
-        (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
-        (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
-        (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
-      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
+        cj.status AS scan_status,cj.pages_found AS pages_found,cj.pages_processed AS pages_processed,cj.error_message AS scan_error
+      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
+      LEFT JOIN crawl_jobs cj ON cj.id=(SELECT cj2.id FROM crawl_jobs cj2 WHERE cj2.chatbot_id=c.id ORDER BY cj2.created_at DESC LIMIT 1) LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
       LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
       WHERE c.user_id = ? ORDER BY c.created_at DESC`
     ).bind(monthStartIso(), user.id).all();
@@ -8910,25 +8981,13 @@ async function showDashboard(request, env) {
     isError = true;
   }
   const embedded = embeddedRequest;
-  const dashboardBots = await Promise.all((result.results || []).map(async (bot) => {
-    let latestScan = null;
-    if (!bot.scan_status && bot.id) {
-      try {
-        latestScan = await env.DB.prepare(
-          "SELECT status,pages_found,pages_processed FROM crawl_jobs WHERE chatbot_id=? ORDER BY created_at DESC LIMIT 1"
-        ).bind(bot.id).first();
-      } catch (error) {
-        console.error("Could not enrich dashboard scan progress", error);
-      }
-    }
-    return {
-      ...bot,
-      scan_status: bot.scan_status || latestScan?.status || (bot.status === "scanning" ? "running" : null),
-      pages_found: bot.pages_found ?? latestScan?.pages_found ?? 0,
-      pages_processed: bot.pages_processed ?? latestScan?.pages_processed ?? 0,
-      plan_code: normalizedPlanCode(bot.plan_code),
-      conversation_limit: planConversationLimit(bot.plan_code)
-    };
+  const dashboardBots = (result.results || []).map((bot) => ({
+    ...bot,
+    scan_status: bot.scan_status || (bot.status === "scanning" ? "running" : null),
+    pages_found: bot.pages_found ?? 0,
+    pages_processed: bot.pages_processed ?? 0,
+    plan_code: normalizedPlanCode(bot.plan_code),
+    conversation_limit: planConversationLimit(bot.plan_code)
   }));
   let setupStage = "";
   const setupBot = dashboardBots[0];
@@ -9777,7 +9836,7 @@ function leadsPage(bot, leads) {
               <td>${escapeHtml(lead.enquiry || "")}</td>
             </tr>`
   ).join("") : html`<tr>
-        <td colspan="5" class="muted">No leads have been captured yet.</td>
+        <td colspan="5"><div class="app-empty"><span class="app-empty-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0"/></svg></span><h2>No leads yet</h2><p>When a visitor asks to be contacted, their details and question will appear here. Make sure lead capture is switched on and your assistant is installed on your website.</p><a class="btn secondary" href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings">Check lead settings</a></div></td>
       </tr>`;
   return documentPage(
     `Leads for ${bot.name}`,
@@ -10299,7 +10358,7 @@ async function routeFiseRequest(request, env, url) {
         return new Response(sharedStyles, {
           headers: {
             "content-type": "text/css; charset=utf-8",
-            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+            "cache-control": url.searchParams.has("v") ? "public, max-age=31536000, immutable" : "public, max-age=3600, stale-while-revalidate=600",
             "x-content-type-options": "nosniff"
           }
         });
@@ -10395,7 +10454,9 @@ async function routeFiseRequest(request, env, url) {
         return loginPageResponse(
           sent ? "Check your email for the one-time sign-in link." : "",
           false,
-          embedded
+          embedded,
+          200,
+          String(url.searchParams.get("mode") || "")
         );
       }
       if (url.pathname === "/api/contact" && request.method === "POST")
