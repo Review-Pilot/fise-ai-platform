@@ -996,6 +996,12 @@ ${page.text}`;
   __name(queueHandler2, "queueHandler");
   return { queueHandler: queueHandler2, renderScanControls: renderScanControls2, startWebsiteScan: startWebsiteScan2 };
 })();
+var FISE_WHATS_NEW = [
+  { date: "2026-09-23", label: "Sep 2026", title: "Shareable full-screen chat links", text: "Send anyone a login-free link that opens your assistant full-screen \u2014 ideal for WhatsApp, email signatures and QR codes." },
+  { date: "2026-09-23", label: "Sep 2026", title: "Smarter website scanning", text: "When a site blocks or hides content from crawlers, Fise now renders the page in a real browser so nothing important is missed." },
+  { date: "2026-09-23", label: "Sep 2026", title: "More dependable long answers", text: "Detailed questions no longer fail silently \u2014 Fise keeps the useful part of an answer and recovers gracefully." },
+  { date: "2026-09-17", label: "Sep 2026", title: "Guided assistant setup", text: "A step-by-step onboarding flow takes you from website URL to a tested, branded assistant." }
+];
 var PLAN_CONVERSATION_LIMITS = Object.freeze({
   free: 50,
   starter: 50,
@@ -3046,14 +3052,14 @@ var WebsiteModule = (() => {
     nav_blog_enabled: "false",
     nav_signin_enabled: "true",
     hero_eyebrow: "A better first response",
-    hero_title: "Turn website visitors into customers \u2014 automatically.",
-    hero_text: "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.",
+    hero_title: "Every website visitor, answered in seconds.",
+    hero_text: "Fise learns your business from your website and files, then answers questions, guides visitors and captures qualified leads \u2014 around the clock, in your brand.",
     primary_cta: "Try the live demo",
     secondary_cta: "See pricing",
-    benefit_title: "Everything needed to help a visitor take the next step",
-    benefit_intro: "Give people clear answers immediately, then guide them towards a quote, booking or human conversation.",
+    benefit_title: "Everything a great first response needs.",
+    benefit_intro: "One assistant that knows your business, speaks in your voice and hands your team warm, well-described leads.",
     benefit_1_title: "Answers in seconds",
-    benefit_1_text: "Fin uses your approved business information to provide accurate, consistent responses day and night.",
+    benefit_1_text: "Fise uses your approved business information to provide accurate, consistent responses day and night.",
     benefit_2_title: "Made for your brand",
     benefit_2_text: "Choose the name, colours, greeting, tone and popular questions from a simple dashboard.",
     benefit_3_title: "Turns interest into leads",
@@ -3070,21 +3076,21 @@ var WebsiteModule = (() => {
     client_story_3_name: "Customer testimonial",
     client_story_3_quote: "Add the customer\u2019s written testimonial here when their video is ready.",
     client_story_3_video_url: "",
-    steps_title: "From website to working assistant in three clear steps",
+    steps_title: "From question to qualified lead in one conversation.",
     step_1_title: "Add your website",
     step_1_text: "Fise scans your public pages and prepares a private knowledge source for the chatbot.",
     step_2_title: "Make it yours",
     step_2_text: "Set your branding and conversation style using straightforward controls.",
     step_3_title: "Publish and improve",
     step_3_text: "Add one small code snippet, review leads and keep refining from your dashboard.",
-    final_cta_title: "See the customer experience for yourself.",
-    final_cta_text: "Open the live Fise demonstration and ask Fin a question.",
+    final_cta_title: "Give every visitor a great first response.",
+    final_cta_text: "Launch on the free plan today. Upgrade when you\u2019re ready to put Fise on your website.",
     chatbot_title: "AI website chatbots",
     chatbot_eyebrow: "The Fise product",
     chatbot_text: "Fise gives every website a useful first response. The assistant learns from approved business information, answers common questions and guides visitors to the right next step.",
     chatbot_text_2: "Everything is controlled from a simple dashboard: scan your website, choose the design and tone, review leads, and copy the installation code when ready.",
-    pricing_title: "Start with the essentials. Grow when you need to.",
-    pricing_text: "Choose the level that fits your website and customer volume. Contact Fise for a tailored launch quote.",
+    pricing_title: "Start free. Grow when your conversations do.",
+    pricing_text: "Every plan includes the full dashboard. Upgrade to install Fise on your website and unlock lead exports.",
     starter_name: "Starter",
     starter_price: "Simple",
     starter_text: "Website knowledge scan|Custom branding|Popular questions|Lead dashboard",
@@ -3154,14 +3160,21 @@ var WebsiteModule = (() => {
     return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   }
   __name(escapeWebsiteHtml, "escapeWebsiteHtml");
-  function response2(body, status = 200) {
-    return new Response(body, {
+  function fillCanonical(body, url) {
+    if (!url || typeof body !== "string") return body;
+    return body.replaceAll("__FX_CANONICAL__", url.origin + url.pathname).replaceAll("__FX_ORIGIN__", url.origin);
+  }
+  __name(fillCanonical, "fillCanonical");
+  function response2(body, status = 200, url = null) {
+    return new Response(fillCanonical(body, url), {
       status,
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store",
-        "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://reviewpilot.co.za https://www.africanwelcomesafaris.com https://static.wixstatic.com https://mjflooring.co.za https://vineyardcarhire.co.za https://images.unsplash.com; media-src 'self' blob:; connect-src 'self'; frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+        "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://reviewpilot.co.za https://www.africanwelcomesafaris.com https://static.wixstatic.com https://mjflooring.co.za https://vineyardcarhire.co.za https://images.unsplash.com; font-src 'self'; media-src 'self' blob:; connect-src 'self'; frame-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
         "referrer-policy": "strict-origin-when-cross-origin",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       }
@@ -3646,7 +3659,7 @@ var WebsiteModule = (() => {
   }
   __name(handlePublicWebsiteLegacy, "handlePublicWebsiteLegacy");
   const referenceStyles = html2`
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');:root{--ink:#0a0a0a;--muted:#5c5c5c;--cyan:#202020;--cyan-dark:#202020;--soft:#f9f9f9;--line:#e9e9e9;--brand-font:'Plus Jakarta Sans',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--chatbot-font:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light;scroll-behavior:smooth}*{box-sizing:border-box}html{scroll-padding-top:94px}body{margin:0;color:var(--ink);background:#fff;font-family:var(--brand-font);-webkit-font-smoothing:antialiased}.keep-brand-font{font-family:var(--chatbot-font)}button,input{font:inherit}.video-container{width:min(1640px,calc(100% - 96px));margin:auto}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #ebebeb;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:var(--ink);font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 11px 25px rgba(32,32,32,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#0a0a0a;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#202020}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#0a0a0a;font-weight:800!important;box-shadow:0 8px 20px rgba(10,10,10,.1)}.video-demo-pill{display:inline-flex;min-height:54px;padding:0 25px;align-items:center;justify-content:center;border-radius:999px;color:#0a0a0a!important;background:#fff;border:2.5px solid #0a0a0a;font-weight:800!important;text-decoration:none}.video-demo-pill:hover{background:#f2f2f2}.video-menu{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:24px}.reference-hero{padding:74px 0 87px}.reference-hero-grid{display:grid;grid-template-columns:1fr .96fr;align-items:center;gap:76px}.hero-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;padding:9px 17px;border:1px solid #dfdfdf;border-radius:999px;color:#141414;background:#fafafa;font-size:15px;font-weight:750}.hero-pill svg{width:17px;height:17px}.reference-hero h1{max-width:780px;margin:0 0 28px;font-size:clamp(58px,4.7vw,82px);line-height:1.02;letter-spacing:-.052em}.reference-hero h1 span{color:#202020}.reference-hero-copy{max-width:770px;margin:0 0 42px;color:#141414;font-size:21px;line-height:1.55}.reference-actions{display:flex;flex-wrap:wrap;gap:16px}.reference-button{display:inline-flex;min-height:64px;padding:0 28px;align-items:center;justify-content:center;gap:13px;border:1px solid #e5e5e5;border-radius:12px;color:var(--ink);background:#fff;font-size:17px;font-weight:750;text-decoration:none;box-shadow:0 7px 17px rgba(10,10,10,.04)}.reference-button.dark{border-color:#0a0a0a;color:#fff;background:#0a0a0a;box-shadow:0 12px 24px rgba(10,10,10,.14)}.reference-button svg{width:19px;height:19px}.hero-trust{display:flex;gap:30px;margin-top:43px;color:#202020;font-size:16px}.hero-trust span{display:flex;align-items:center;gap:10px}.hero-trust svg{width:21px;height:21px;color:#202020}.hero-media-wrap{position:relative}.hero-media{height:430px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(circle at 76% 28%,#0a0a0a 0,#0a0a0a 68%);box-shadow:0 30px 55px rgba(10,10,10,.13)}.hero-play{width:96px;height:96px;display:grid;place-items:center;border:1px solid #141414;border-radius:50%;color:#e2e2e2;background:#0a0a0a}.hero-play svg{width:42px;height:42px;margin-left:7px}.hero-media-label{position:absolute;left:0;right:0;top:63%;color:#3a3a3a;text-align:center;font-size:16px}.assistant-badge{position:absolute;left:-38px;bottom:-40px;display:flex;align-items:center;gap:15px;padding:18px 26px;border:1px solid #e9e9e9;border-radius:16px;background:#fff;box-shadow:0 19px 35px rgba(10,10,10,.15)}.assistant-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(145deg,#202020,#202020)}.assistant-badge strong{display:block;margin-bottom:3px;font-size:16px}.assistant-badge small{color:#202020;font-size:14px}.customer-stories{padding:105px 0 112px;background:var(--soft)}.center-heading{text-align:center}.reference-eyebrow{margin-bottom:17px;color:#202020;font-size:14px;font-weight:850;letter-spacing:.03em;text-transform:uppercase}.center-heading h2,.left-heading h2{margin:0;color:var(--ink);font-size:clamp(42px,3.2vw,58px);line-height:1.1;letter-spacing:-.04em}.center-heading p,.left-heading p{margin:18px 0 0;color:#202020;font-size:18px;line-height:1.55}.testimonial-shell{max-width:1130px;margin:70px auto 0}.testimonial-card{position:relative;min-height:320px;padding:58px 62px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 7px 22px rgba(10,10,10,.025)}.review-stars{margin-bottom:31px;color:#f7bb18;font-size:27px;letter-spacing:3px}.testimonial-card blockquote{max-width:920px;margin:0;color:#141414;font-size:23px;line-height:1.55}.quote-mark{position:absolute;right:38px;top:24px;color:#f2f2f2;font:900 80px/1 Georgia,serif}.review-person{display:flex;align-items:center;gap:17px;margin-top:34px}.review-avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;color:#fff;background:#25d6a8;font-weight:800}.review-person strong{display:block;font-size:16px}.review-person span{display:block;margin-top:3px;color:#202020;font-size:15px}.carousel-controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px}.carousel-arrow{width:53px;height:53px;border:1px solid var(--line);border-radius:50%;color:#141414;background:#fff;font-size:28px;cursor:pointer}.carousel-dots{display:flex;align-items:center;gap:8px}.carousel-dot{width:10px;height:10px;border:0;border-radius:999px;background:#d9d9d9;padding:0;cursor:pointer}.carousel-dot.active{width:31px;background:#202020}.features-section{padding:118px 0 148px}.left-heading{max-width:890px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:73px}.feature-card{min-height:350px;padding:43px 42px;border:1px solid var(--line);border-radius:21px;background:#fff}.feature-card:first-child{border-color:#d4d4d4;box-shadow:0 10px 25px rgba(32,32,32,.05)}.feature-icon{width:69px;height:69px;display:grid;place-items:center;margin-bottom:34px;border-radius:16px;color:#202020;background:#f6f6f6}.feature-card:nth-child(2) .feature-icon{background:#e8e8e8}.feature-icon svg{width:34px;height:34px}.feature-card h3{margin:0 0 18px;font-size:24px;letter-spacing:-.02em}.feature-card p{margin:0;color:#202020;font-size:19px;line-height:1.6}.steps-section{padding:112px 0 148px;color:#fff;background:radial-gradient(circle at 50% 45%,#0a0a0a 0,#0a0a0a 70%)}.steps-section .center-heading h2{color:#fff}.steps-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:90px;margin-top:78px}.steps-grid:before{content:"";position:absolute;left:9%;right:9%;top:43px;border-top:1px dashed #141414}.step-card{position:relative;z-index:1}.step-icon{width:75px;height:75px;display:grid;place-items:center;margin-bottom:35px;border-radius:18px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 12px 28px rgba(32,32,32,.18)}.step-icon svg{width:34px;height:34px}.step-number{position:absolute;right:0;top:-10px;padding:7px 13px;border:1px solid #141414;border-radius:999px;color:#202020;background:#0a0a0a;font-size:13px}.step-card h3{margin:0 0 16px;font-size:23px}.step-card p{margin:0;color:#3a3a3a;font-size:18px;line-height:1.55}.demo-section{padding:174px 0 122px;background:#fafafa}.demo-toolbar{display:flex;align-items:center;justify-content:space-between;margin:68px 0 30px}.device-switch{display:flex;padding:5px;border:1px solid #e4e4e4;border-radius:12px;background:#fff}.device-button{display:inline-flex;min-height:43px;padding:0 18px;align-items:center;gap:9px;border:0;border-radius:9px;color:#141414;background:transparent;font-weight:650;cursor:pointer}.device-button.active{color:#fff;background:#0a0a0a}.device-button svg{width:17px;height:17px}.open-tab{display:inline-flex;min-height:52px;padding:0 22px;align-items:center;gap:10px;border:1px solid #e4e4e4;border-radius:10px;color:#141414;background:#fff;font-weight:650;text-decoration:none}.demo-browser{position:relative;max-width:100%;margin:auto;overflow:hidden;border:1px solid #e5e5e5;border-radius:21px;background:#fff;box-shadow:0 22px 43px rgba(10,10,10,.11);transition:max-width .25s ease}.demo-browser.tablet{max-width:940px}.demo-browser.mobile{max-width:520px}.demo-browser-top{height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #eaeaea;background:#fcfcfc}.demo-dot{width:17px;height:17px;border-radius:50%}.demo-dot.red{background:#ef568a}.demo-dot.yellow{background:#f6c72d}.demo-dot.green{background:#2ed7a1}.demo-address{margin-left:18px;color:#202020;font-size:14px}.demo-browser iframe{display:block;width:100%;height:650px;border:0;background:#f2f2f2}.pricing-section{padding:127px 0 136px;background:#fafafa}.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:69px}.pricing-card{position:relative;display:flex;min-height:720px;padding:47px 43px 32px;flex-direction:column;border:1px solid #e5e5e5;border-radius:20px;background:#fff;box-shadow:0 12px 25px rgba(10,10,10,.025)}.pricing-card.popular{border:2px solid #202020;box-shadow:0 16px 34px rgba(32,32,32,.08)}.popular-label{position:absolute;left:50%;top:-18px;padding:7px 21px;border-radius:999px;color:#fff;background:#202020;font-size:14px;font-weight:750;transform:translateX(-50%);white-space:nowrap}.pricing-card h3{margin:0 0 20px;font-size:29px}.price-intro{min-height:58px;margin:0 0 48px;color:#202020;font-size:17px;line-height:1.55}.video-price{margin:0 0 33px;font-size:42px;font-weight:850;letter-spacing:-.04em}.video-price small{margin-left:6px;color:#202020;font-size:17px;font-weight:500;letter-spacing:0}.video-feature-list{display:grid;gap:24px;margin:0 0 42px;padding:0;list-style:none;color:#141414;font-size:16px}.video-feature-list li{display:flex;gap:14px}.video-feature-list li:before{content:"✓";color:#202020;font-size:19px;font-weight:900}.video-feature-list li.unavailable{color:#8b4550}.video-feature-list li.unavailable:before{content:"×";color:#d14343}.pricing-card .reference-button{width:100%;margin-top:auto;min-height:59px}.closing-section{padding:115px 0 170px}.closing-card{padding:98px 42px 90px;border-radius:33px;color:#fff;background:linear-gradient(120deg,#202020,#202020);box-shadow:0 28px 55px rgba(32,32,32,.16);text-align:center}.closing-card h2{margin:0 0 25px;color:#fff;font-size:clamp(42px,3.5vw,61px);letter-spacing:-.04em}.closing-card p{max-width:870px;margin:0 auto 43px;color:#f3f3f3;font-size:22px;line-height:1.5}.closing-actions{display:flex;justify-content:center;gap:16px}.closing-actions .reference-button:last-child{border-color:rgba(255,255,255,.25);color:#fff;background:transparent}.reference-footer{padding:92px 0 35px;background:#0a0a0a;color:#fff}.reference-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:60px}.reference-footer .video-logo{font-size:21px;color:#fff}.reference-footer .video-logo-mark{width:51px;height:51px}.reference-footer h3{margin:8px 0 29px;font-size:17px;color:#fff}.reference-footer a{display:block;margin:0 0 23px;color:#c7c7c7;font-size:16px;text-decoration:none}.reference-footer a:hover{color:#fff}.footer-demo-cta{display:flex;justify-content:center;margin:10px 0 52px}.reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:20px;padding-top:33px;border-top:1px solid #2a2a2a;color:#9a9a9a;font-size:14px}.simple-reference{min-height:62vh;padding:110px 0}.simple-reference article{max-width:860px}.simple-reference h1{margin:0 0 26px;font-size:58px;letter-spacing:-.04em}.simple-reference p{color:#202020;font-size:19px;line-height:1.7}.powered-by-bolt,.made-in-bolt,[data-bolt],#bolt-badge{display:none!important}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}.reference-hero-grid{grid-template-columns:1fr}.hero-media-wrap{margin-top:30px}.assistant-badge{left:20px}.feature-grid,.pricing-grid,.steps-grid{grid-template-columns:1fr}.steps-grid:before{display:none}.feature-card{min-height:0}.pricing-card{min-height:0}.reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}.demo-browser iframe{height:560px}}@media(max-width:720px){html{scroll-padding-top:78px}.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid var(--line)}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.reference-hero{padding:48px 0 65px}.reference-hero h1{font-size:49px}.reference-hero-copy{font-size:18px}.hero-pill{margin-bottom:25px}.hero-media{height:310px}.assistant-badge{bottom:-42px;padding:12px 16px}.customer-stories{padding:90px 0}.testimonial-card{padding:36px 27px}.testimonial-card blockquote{font-size:19px}.features-section,.steps-section,.demo-section,.pricing-section,.closing-section{padding:85px 0}.feature-grid{gap:18px}.feature-card{padding:30px}.demo-toolbar{align-items:flex-start;gap:17px;flex-direction:column}.device-switch{width:100%;overflow:auto}.device-button{padding:0 12px}.demo-browser iframe{height:620px}.closing-card{padding:70px 22px}.closing-actions{align-items:stretch;flex-direction:column}.reference-footer-grid{grid-template-columns:1fr;gap:28px}.reference-footer-bottom{flex-direction:column}.hero-trust{align-items:flex-start;flex-direction:column;gap:15px}.video-container{width:min(100% - 28px,1640px)}}
+  :root{--ink:#0a0a0a;--muted:#5c5c5c;--cyan:#202020;--cyan-dark:#202020;--soft:#f9f9f9;--line:#e9e9e9;--brand-font:'Plus Jakarta Sans',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--chatbot-font:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light;scroll-behavior:smooth}*{box-sizing:border-box}html{scroll-padding-top:94px}body{margin:0;color:var(--ink);background:#fff;font-family:var(--brand-font);-webkit-font-smoothing:antialiased}.keep-brand-font{font-family:var(--chatbot-font)}button,input{font:inherit}.video-container{width:min(1640px,calc(100% - 96px));margin:auto}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #ebebeb;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:var(--ink);font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 11px 25px rgba(32,32,32,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#0a0a0a;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#202020}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#0a0a0a;font-weight:800!important;box-shadow:0 8px 20px rgba(10,10,10,.1)}.video-demo-pill{display:inline-flex;min-height:54px;padding:0 25px;align-items:center;justify-content:center;border-radius:999px;color:#0a0a0a!important;background:#fff;border:2.5px solid #0a0a0a;font-weight:800!important;text-decoration:none}.video-demo-pill:hover{background:#f2f2f2}.video-menu{display:none;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:24px}.reference-hero{padding:74px 0 87px}.reference-hero-grid{display:grid;grid-template-columns:1fr .96fr;align-items:center;gap:76px}.hero-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;padding:9px 17px;border:1px solid #dfdfdf;border-radius:999px;color:#141414;background:#fafafa;font-size:15px;font-weight:750}.hero-pill svg{width:17px;height:17px}.reference-hero h1{max-width:780px;margin:0 0 28px;font-size:clamp(58px,4.7vw,82px);line-height:1.02;letter-spacing:-.052em}.reference-hero h1 span{color:#202020}.reference-hero-copy{max-width:770px;margin:0 0 42px;color:#141414;font-size:21px;line-height:1.55}.reference-actions{display:flex;flex-wrap:wrap;gap:16px}.reference-button{display:inline-flex;min-height:64px;padding:0 28px;align-items:center;justify-content:center;gap:13px;border:1px solid #e5e5e5;border-radius:12px;color:var(--ink);background:#fff;font-size:17px;font-weight:750;text-decoration:none;box-shadow:0 7px 17px rgba(10,10,10,.04)}.reference-button.dark{border-color:#0a0a0a;color:#fff;background:#0a0a0a;box-shadow:0 12px 24px rgba(10,10,10,.14)}.reference-button svg{width:19px;height:19px}.hero-trust{display:flex;gap:30px;margin-top:43px;color:#202020;font-size:16px}.hero-trust span{display:flex;align-items:center;gap:10px}.hero-trust svg{width:21px;height:21px;color:#202020}.hero-media-wrap{position:relative}.hero-media{height:430px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(circle at 76% 28%,#0a0a0a 0,#0a0a0a 68%);box-shadow:0 30px 55px rgba(10,10,10,.13)}.hero-play{width:96px;height:96px;display:grid;place-items:center;border:1px solid #141414;border-radius:50%;color:#e2e2e2;background:#0a0a0a}.hero-play svg{width:42px;height:42px;margin-left:7px}.hero-media-label{position:absolute;left:0;right:0;top:63%;color:#3a3a3a;text-align:center;font-size:16px}.assistant-badge{position:absolute;left:-38px;bottom:-40px;display:flex;align-items:center;gap:15px;padding:18px 26px;border:1px solid #e9e9e9;border-radius:16px;background:#fff;box-shadow:0 19px 35px rgba(10,10,10,.15)}.assistant-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(145deg,#202020,#202020)}.assistant-badge strong{display:block;margin-bottom:3px;font-size:16px}.assistant-badge small{color:#202020;font-size:14px}.customer-stories{padding:105px 0 112px;background:var(--soft)}.center-heading{text-align:center}.reference-eyebrow{margin-bottom:17px;color:#202020;font-size:14px;font-weight:850;letter-spacing:.03em;text-transform:uppercase}.center-heading h2,.left-heading h2{margin:0;color:var(--ink);font-size:clamp(42px,3.2vw,58px);line-height:1.1;letter-spacing:-.04em}.center-heading p,.left-heading p{margin:18px 0 0;color:#202020;font-size:18px;line-height:1.55}.testimonial-shell{max-width:1130px;margin:70px auto 0}.testimonial-card{position:relative;min-height:320px;padding:58px 62px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 7px 22px rgba(10,10,10,.025)}.review-stars{margin-bottom:31px;color:#f7bb18;font-size:27px;letter-spacing:3px}.testimonial-card blockquote{max-width:920px;margin:0;color:#141414;font-size:23px;line-height:1.55}.quote-mark{position:absolute;right:38px;top:24px;color:#f2f2f2;font:900 80px/1 Georgia,serif}.review-person{display:flex;align-items:center;gap:17px;margin-top:34px}.review-avatar{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;color:#fff;background:#25d6a8;font-weight:800}.review-person strong{display:block;font-size:16px}.review-person span{display:block;margin-top:3px;color:#202020;font-size:15px}.carousel-controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:34px}.carousel-arrow{width:53px;height:53px;border:1px solid var(--line);border-radius:50%;color:#141414;background:#fff;font-size:28px;cursor:pointer}.carousel-dots{display:flex;align-items:center;gap:8px}.carousel-dot{width:10px;height:10px;border:0;border-radius:999px;background:#d9d9d9;padding:0;cursor:pointer}.carousel-dot.active{width:31px;background:#202020}.features-section{padding:118px 0 148px}.left-heading{max-width:890px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:73px}.feature-card{min-height:350px;padding:43px 42px;border:1px solid var(--line);border-radius:21px;background:#fff}.feature-card:first-child{border-color:#d4d4d4;box-shadow:0 10px 25px rgba(32,32,32,.05)}.feature-icon{width:69px;height:69px;display:grid;place-items:center;margin-bottom:34px;border-radius:16px;color:#202020;background:#f6f6f6}.feature-card:nth-child(2) .feature-icon{background:#e8e8e8}.feature-icon svg{width:34px;height:34px}.feature-card h3{margin:0 0 18px;font-size:24px;letter-spacing:-.02em}.feature-card p{margin:0;color:#202020;font-size:19px;line-height:1.6}.steps-section{padding:112px 0 148px;color:#fff;background:radial-gradient(circle at 50% 45%,#0a0a0a 0,#0a0a0a 70%)}.steps-section .center-heading h2{color:#fff}.steps-grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:90px;margin-top:78px}.steps-grid:before{content:"";position:absolute;left:9%;right:9%;top:43px;border-top:1px dashed #141414}.step-card{position:relative;z-index:1}.step-icon{width:75px;height:75px;display:grid;place-items:center;margin-bottom:35px;border-radius:18px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 12px 28px rgba(32,32,32,.18)}.step-icon svg{width:34px;height:34px}.step-number{position:absolute;right:0;top:-10px;padding:7px 13px;border:1px solid #141414;border-radius:999px;color:#202020;background:#0a0a0a;font-size:13px}.step-card h3{margin:0 0 16px;font-size:23px}.step-card p{margin:0;color:#3a3a3a;font-size:18px;line-height:1.55}.demo-section{padding:174px 0 122px;background:#fafafa}.demo-toolbar{display:flex;align-items:center;justify-content:space-between;margin:68px 0 30px}.device-switch{display:flex;padding:5px;border:1px solid #e4e4e4;border-radius:12px;background:#fff}.device-button{display:inline-flex;min-height:43px;padding:0 18px;align-items:center;gap:9px;border:0;border-radius:9px;color:#141414;background:transparent;font-weight:650;cursor:pointer}.device-button.active{color:#fff;background:#0a0a0a}.device-button svg{width:17px;height:17px}.open-tab{display:inline-flex;min-height:52px;padding:0 22px;align-items:center;gap:10px;border:1px solid #e4e4e4;border-radius:10px;color:#141414;background:#fff;font-weight:650;text-decoration:none}.demo-browser{position:relative;max-width:100%;margin:auto;overflow:hidden;border:1px solid #e5e5e5;border-radius:21px;background:#fff;box-shadow:0 22px 43px rgba(10,10,10,.11);transition:max-width .25s ease}.demo-browser.tablet{max-width:940px}.demo-browser.mobile{max-width:520px}.demo-browser-top{height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #eaeaea;background:#fcfcfc}.demo-dot{width:17px;height:17px;border-radius:50%}.demo-dot.red{background:#ef568a}.demo-dot.yellow{background:#f6c72d}.demo-dot.green{background:#2ed7a1}.demo-address{margin-left:18px;color:#202020;font-size:14px}.demo-browser iframe{display:block;width:100%;height:650px;border:0;background:#f2f2f2}.pricing-section{padding:127px 0 136px;background:#fafafa}.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:69px}.pricing-card{position:relative;display:flex;min-height:720px;padding:47px 43px 32px;flex-direction:column;border:1px solid #e5e5e5;border-radius:20px;background:#fff;box-shadow:0 12px 25px rgba(10,10,10,.025)}.pricing-card.popular{border:2px solid #202020;box-shadow:0 16px 34px rgba(32,32,32,.08)}.popular-label{position:absolute;left:50%;top:-18px;padding:7px 21px;border-radius:999px;color:#fff;background:#202020;font-size:14px;font-weight:750;transform:translateX(-50%);white-space:nowrap}.pricing-card h3{margin:0 0 20px;font-size:29px}.price-intro{min-height:58px;margin:0 0 48px;color:#202020;font-size:17px;line-height:1.55}.video-price{margin:0 0 33px;font-size:42px;font-weight:850;letter-spacing:-.04em}.video-price small{margin-left:6px;color:#202020;font-size:17px;font-weight:500;letter-spacing:0}.video-feature-list{display:grid;gap:24px;margin:0 0 42px;padding:0;list-style:none;color:#141414;font-size:16px}.video-feature-list li{display:flex;gap:14px}.video-feature-list li:before{content:"✓";color:#202020;font-size:19px;font-weight:900}.video-feature-list li.unavailable{color:#8b4550}.video-feature-list li.unavailable:before{content:"×";color:#d14343}.pricing-card .reference-button{width:100%;margin-top:auto;min-height:59px}.closing-section{padding:115px 0 170px}.closing-card{padding:98px 42px 90px;border-radius:33px;color:#fff;background:linear-gradient(120deg,#202020,#202020);box-shadow:0 28px 55px rgba(32,32,32,.16);text-align:center}.closing-card h2{margin:0 0 25px;color:#fff;font-size:clamp(42px,3.5vw,61px);letter-spacing:-.04em}.closing-card p{max-width:870px;margin:0 auto 43px;color:#f3f3f3;font-size:22px;line-height:1.5}.closing-actions{display:flex;justify-content:center;gap:16px}.closing-actions .reference-button:last-child{border-color:rgba(255,255,255,.25);color:#fff;background:transparent}.reference-footer{padding:92px 0 35px;background:#0a0a0a;color:#fff}.reference-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:60px}.reference-footer .video-logo{font-size:21px;color:#fff}.reference-footer .video-logo-mark{width:51px;height:51px}.reference-footer h3{margin:8px 0 29px;font-size:17px;color:#fff}.reference-footer a{display:block;margin:0 0 23px;color:#c7c7c7;font-size:16px;text-decoration:none}.reference-footer a:hover{color:#fff}.footer-demo-cta{display:flex;justify-content:center;margin:10px 0 52px}.reference-footer-bottom{display:flex;justify-content:space-between;gap:30px;margin-top:20px;padding-top:33px;border-top:1px solid #2a2a2a;color:#9a9a9a;font-size:14px}.simple-reference{min-height:62vh;padding:110px 0}.simple-reference article{max-width:860px}.simple-reference h1{margin:0 0 26px;font-size:58px;letter-spacing:-.04em}.simple-reference p{color:#202020;font-size:19px;line-height:1.7}.powered-by-bolt,.made-in-bolt,[data-bolt],#bolt-badge{display:none!important}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}.reference-hero-grid{grid-template-columns:1fr}.hero-media-wrap{margin-top:30px}.assistant-badge{left:20px}.feature-grid,.pricing-grid,.steps-grid{grid-template-columns:1fr}.steps-grid:before{display:none}.feature-card{min-height:0}.pricing-card{min-height:0}.reference-footer-grid{grid-template-columns:1fr 1fr;gap:55px}.demo-browser iframe{height:560px}}@media(max-width:720px){html{scroll-padding-top:78px}.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid var(--line)}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.reference-hero{padding:48px 0 65px}.reference-hero h1{font-size:49px}.reference-hero-copy{font-size:18px}.hero-pill{margin-bottom:25px}.hero-media{height:310px}.assistant-badge{bottom:-42px;padding:12px 16px}.customer-stories{padding:90px 0}.testimonial-card{padding:36px 27px}.testimonial-card blockquote{font-size:19px}.features-section,.steps-section,.demo-section,.pricing-section,.closing-section{padding:85px 0}.feature-grid{gap:18px}.feature-card{padding:30px}.demo-toolbar{align-items:flex-start;gap:17px;flex-direction:column}.device-switch{width:100%;overflow:auto}.device-button{padding:0 12px}.demo-browser iframe{height:620px}.closing-card{padding:70px 22px}.closing-actions{align-items:stretch;flex-direction:column}.reference-footer-grid{grid-template-columns:1fr;gap:28px}.reference-footer-bottom{flex-direction:column}.hero-trust{align-items:flex-start;flex-direction:column;gap:15px}.video-container{width:min(100% - 28px,1640px)}}
 /* ===== Fise redesign overrides (2026) — monochrome palette + sparing accents ===== */
 :root{--ink:#0d0d0e;--muted:#68686e;--cyan:#111113;--cyan-dark:#000000;--soft:#f7f7f7;--line:#e7e7e8;--pink:#3a3a3a;--violet:#0a0a0a;--accent-blue:#3a3a3a;--border-strong:#d9d9da}
 .hero-media{background:radial-gradient(circle at 76% 28%,#1a1a1d 0,#000 68%)!important;box-shadow:0 30px 55px rgba(0,0,0,.18)!important}
@@ -4749,14 +4762,6 @@ var WebsiteModule = (() => {
     return html2`<section class="customer-stories" id="clients"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Customer stories</div><h2>See and read what customers have to say</h2><p>Each story keeps the customer’s video and written testimonial together in one clear frame.</p></div><div class="video-review-grid">${customerVideoCard(c, 1)}${customerVideoCard(c, 2)}${customerVideoCard(c, 3)}</div></div></section>`;
   }
   __name(videoCustomerStories, "videoCustomerStories");
-  function referenceHeader() {
-    return html2`<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/">${referenceLogo()}</a><nav class="video-links" id="video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a href="/#pricing">Pricing</a><a class="video-demo-pill" id="demo-link" href="/dashboard">Chatbot</a><a class="video-get-started" id="account-button" href="/login">Sign in</a></nav><button class="video-menu" id="video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
-  }
-  __name(referenceHeader, "referenceHeader");
-  function referenceFooter() {
-    return html2`<footer class="reference-footer"><div class="video-container"><div class="reference-footer-grid"><div><h3>Product</h3><a href="/#features">Features</a><a href="/#clients">Our Clients</a><a href="/#pricing">Pricing</a></div><div><h3>Company</h3><a href="/about">About</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/help">Help</a></div><div><h3>Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener">T&amp;C's</a></div></div><div class="reference-footer-bottom"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
-  }
-  __name(referenceFooter, "referenceFooter");
   function accountModal() {
     return html2`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="reference-eyebrow">Customer platform</div><div class="account-standard" id="account-standard"><h2 id="account-title">Access Fise AI</h2><p>Create an account the first time, or choose how you would like to sign in.</p><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-tabs" role="tablist" aria-label="Account access options"><button class="account-access-tab active" type="button" data-account-view="register">First time</button><button class="account-access-tab" type="button" data-account-view="password">Password</button><button class="account-access-tab" type="button" data-account-view="email">Email link</button></div><div class="account-access-panel active" data-account-panel="register"><form method="post" action="/api/auth/register"><label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field password-field"><label for="register-password">Password</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="register-password">Show</button></div><button class="reference-button dark" type="submit">Create my account</button></form><div class="account-note">Your password is protected with one-way encryption and is never displayed from storage.</div></div><div class="account-access-panel" data-account-panel="password"><form method="post" action="/api/auth/password"><label for="signin-identifier">Email address</label><input id="signin-identifier" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><div class="account-field password-field"><label for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Your password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="reference-button dark" type="submit">Sign in with password</button></form></div><div class="account-access-panel" data-account-panel="email"><form method="post" action="/api/auth/request"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"><button class="reference-button dark" type="submit">Sign in with email</button></form><small>The verification link works once and expires after 15 minutes.</small></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a password before continuing.</p><form method="post" action="/api/account/credentials"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div><button class="account-setup-skip" type="button" id="account-setup-skip">Remind me later</button></div></section></div>`;
   }
@@ -4865,14 +4870,9 @@ var WebsiteModule = (() => {
     return value;
   }
   __name(prepareReferenceBody, "prepareReferenceBody");
-  function referenceShell(title, description, body, c, bodyClass = "") {
-    const page = html2(_b || (_b = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="', '"><title>', '</title><link rel="stylesheet" href="/reference-styles.css"></head><body class="', '">', "", "", "", "", "<script>", "", "<\/script></body></html>"])), escapeWebsiteHtml(description), escapeWebsiteHtml(title), escapeWebsiteHtml(bodyClass), referenceHeader(), body, referenceFooter(), accountModal(), profileDrawer(), referenceJavascript(), requestedJavascript());
-    return page.replace('<link rel="stylesheet" href="/reference-styles.css">', `<style>${referenceStyles + requestedStyles}</style>`);
-  }
-  __name(referenceShell, "referenceShell");
   function referenceProfilePage() {
-    const page = html2(_c || (_c = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><link rel="stylesheet" href="/reference-styles.css"><style>body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">', "<script>", "<\/script></body></html>"])), profileDrawer(), referenceJavascript());
-    return page.replace('<link rel="stylesheet" href="/reference-styles.css">', `<style>${referenceStyles + requestedStyles}</style>`);
+    const page = html2(_c || (_c = __template(['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>My profile | Fise AI</title><link rel="stylesheet" href="/reference-styles.css?v=20260924-fx3"><link rel="stylesheet" href="/site-v2.css?v=20260924-fx3"><style>body.profile-route .profile-layer{display:block}</style></head><body class="profile-route">', "<script>", "<\/script></body></html>"])), profileDrawer(), referenceJavascript());
+    return page.replace(/\?v=20260924-fx3/g, `?v=${FX_ASSET_VERSION}`);
   }
   __name(referenceProfilePage, "referenceProfilePage");
   function visualOverridesJavascript(c) {
@@ -5303,24 +5303,199 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
+  const FX_ASSET_VERSION = "20260924-fx5";
+  const FX_SITE_NAME = "Fise AI";
+  function fxText(c, key) {
+    const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
+    return value.replace(/\bFin\b/g, "Fise");
+  }
+  __name(fxText, "fxText");
+  function fxOn(c, key) {
+    return String(c && c[key] != null ? c[key] : "true") !== "false";
+  }
+  __name(fxOn, "fxOn");
+  function fxLogoMark(size = 26) {
+    return html2`<svg width="${size}" height="${size}" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
+  }
+  __name(fxLogoMark, "fxLogoMark");
+  function fxIcon(path, size = 20) {
+    return html2`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+  }
+  __name(fxIcon, "fxIcon");
+  const FX_CHECK = html2`<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const FX_CROSS = html2`<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`;
+  const FX_ARROW = html2`<span class="fx-arrow" aria-hidden="true">→</span>`;
+  function fxSeoHead({ title, description, noindex = false, jsonLd = "" }) {
+    const canonical = "__FX_CANONICAL__";
+    const image = "__FX_ORIGIN__/og-image.png";
+    return html2`<meta name="description" content="${escapeWebsiteHtml(description)}"><link rel="canonical" href="${escapeWebsiteHtml(canonical)}"><meta name="theme-color" content="#FAFAFA"><meta name="color-scheme" content="light">${noindex ? '<meta name="robots" content="noindex,nofollow">' : ""}<meta property="og:type" content="website"><meta property="og:site_name" content="${FX_SITE_NAME}"><meta property="og:title" content="${escapeWebsiteHtml(title)}"><meta property="og:description" content="${escapeWebsiteHtml(description)}"><meta property="og:url" content="${escapeWebsiteHtml(canonical)}"><meta property="og:image" content="${escapeWebsiteHtml(image)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeWebsiteHtml(title)}"><meta name="twitter:description" content="${escapeWebsiteHtml(description)}"><link rel="icon" href="/favicon.svg" type="image/svg+xml">${jsonLd}`;
+  }
+  __name(fxSeoHead, "fxSeoHead");
+  function referenceHeader(c = {}) {
+    const links = [["/#features", "Product"], ["/#how", "How it works"]];
+    if (fxOn(c, "nav_pricing_enabled")) links.push(["/#pricing", "Pricing"]);
+    links.push(["/#faq", "FAQ"]);
+    if (fxOn(c, "nav_blog_enabled") || fxOn(c, "nav_resources_enabled")) links.push(["/blog", "Blog"]);
+    const desktop = links.map(([href, label]) => html2`<a href="${href}">${label}</a>`).join("");
+    const mobile = links.map(([href, label]) => html2`<a class="fx-m-link" href="${href}">${label}</a>`).join("");
+    const signin = fxOn(c, "nav_signin_enabled") ? html2`<a class="fx-nav-signin" id="account-button" href="/login">Sign in</a>` : "";
+    return html2`<header class="fx-nav"><div class="fx-container fx-nav-row"><a class="fx-logo" href="/" aria-label="Fise AI home">${fxLogoMark()}<span>Fise</span></a><nav class="fx-nav-links" aria-label="Primary">${desktop}</nav><div class="fx-nav-actions"><a class="fx-nav-signin" id="demo-link" href="/demo">Live demo</a>${signin}<a class="fx-btn fx-btn-primary fx-btn-sm" href="/login?mode=signup">Start free</a><button class="fx-menu-btn" type="button" aria-expanded="false" aria-controls="fx-mobile-menu" aria-label="Open menu"><span></span><span></span></button></div></div><nav class="fx-mobile-menu" id="fx-mobile-menu" aria-label="Mobile">${mobile}<a class="fx-m-link" href="/demo">Live demo</a><div class="fx-mobile-cta"><a class="fx-btn fx-btn-secondary" href="/login">Sign in</a><a class="fx-btn fx-btn-primary" href="/login?mode=signup">Start free</a></div></nav></header>`;
+  }
+  __name(referenceHeader, "referenceHeader");
+  function referenceFooter(c = {}) {
+    const col = (title, items) => html2`<nav aria-label="${title}"><h2 class="fx-footer-h">${title}</h2>${items.map(([href, label]) => html2`<a href="${href}">${label}</a>`).join("")}</nav>`;
+    const email = fxText(c, "contact_email");
+    return html2`<footer class="fx-footer site-footer"><div class="fx-container"><div class="fx-footer-grid"><div class="fx-footer-brand"><a class="fx-logo" href="/">${fxLogoMark()}<span>Fise</span></a><p>${escapeWebsiteHtml(fxText(c, "footer_text"))}</p><form class="fx-news-form" id="fx-newsletter" novalidate><label for="fx-news-email">Product updates, once a month</label><div class="fx-news-row"><input class="fx-input" id="fx-news-email" name="email" type="email" autocomplete="email" placeholder="you@company.co.za" required><button class="fx-btn fx-btn-primary fx-btn-sm" type="submit">Subscribe</button></div><p class="fx-form-msg" role="status" aria-live="polite"></p></form></div>${col("Product", [["/#features", "Features"], ["/#how", "How it works"], ["/#pricing", "Pricing"], ["/demo", "Live demo"], ["/#insights", "What’s new"]])}${col("Company", [["/about", "About"], ["/blog", "Blog"], ["/contact", "Contact"]])}${col("Resources", [["/help", "Help centre"], ["/help#install", "Install guide"], ["/#faq", "FAQ"]])}${col("Legal", [["/privacy-policy", "Privacy Policy"], ["/terms-and-conditions", "Terms &amp; Conditions"], ["/cookies", "Cookies"]])}</div><div class="fx-footer-bottom"><span>© ${(/* @__PURE__ */ new Date()).getUTCFullYear()} Fise AI. All rights reserved.</span><div class="fx-social"><a href="mailto:${escapeWebsiteHtml(email)}" aria-label="Email Fise AI">${fxIcon("M4 6h16v12H4zM4 7l8 6 8-6", 16)}</a><a href="https://www.linkedin.com/" rel="noopener" aria-label="Fise AI on LinkedIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5zM3 9h4v12H3zM9 9h3.8v1.7h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V21H9z"/></svg></a><a href="https://x.com/" rel="noopener" aria-label="Fise AI on X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.2 2H21l-6.5 7.4L22 22h-6l-4.7-6.1L5.9 22H3l7-8L2 2h6.1l4.2 5.6zm-1 18h1.6L7 3.7H5.3z"/></svg></a></div></div></div></footer>`;
+  }
+  __name(referenceFooter, "referenceFooter");
+  function referenceShell(title, description, body, c, bodyClass = "", options = {}) {
+    const page = html2`<!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${escapeWebsiteHtml(title)}</title>${fxSeoHead({ title, description, noindex: options.noindex, jsonLd: options.jsonLd || "" })}<link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/reference-styles.css?v=${FX_ASSET_VERSION}"><link rel="stylesheet" href="/site-v2.css?v=${FX_ASSET_VERSION}"></head><body class="fx ${escapeWebsiteHtml(bodyClass)}"><a class="fx-skip" href="#main">Skip to content</a>${referenceHeader(c)}${body.replace(/<main(\s|>)/, '<main id="main"$1')}${referenceFooter(c)}${accountModal()}${profileDrawer()}<script>${referenceJavascript()}</script><script src="/site-v2.js?v=${FX_ASSET_VERSION}" defer></script></body></html>`;
+    return page;
+  }
+  __name(referenceShell, "referenceShell");
+  const FX_FEATURES = [
+    { icon: "M12 7v5l3 2M12 3a9 9 0 110 18 9 9 0 010-18z", title: "Answers in seconds, 24/7", text: "Immediate, accurate replies grounded in your approved business information — even after hours or while your team is busy." },
+    { icon: "M7 3h7l4 4v14H7zM14 3v4h4M9.5 12h5M9.5 16h5", title: "Trained on your knowledge", text: "Scan up to 100 website pages and add files and FAQs, so answers stay specific to your business." },
+    { icon: "M12 3a9 9 0 100 18c1.1 0 1.5-.8 1.5-1.6 0-1-.9-1.4-.9-2.4 0-.8.7-1.5 1.6-1.5H16a5 5 0 005-5C21 6.4 17 3 12 3zM7.5 11.5h.01M10 7.5h.01M15 7.5h.01", title: "Made for your brand", text: "Choose the name, colour, greeting, tone and suggested questions from a simple dashboard — no code or designer needed." },
+    { icon: "M16 8a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0", title: "Qualified lead capture", text: "Collect contact details with the visitor’s question attached, then export to Excel or Google Sheets." },
+    { icon: "M4 12h4l2-6 4 12 2-6h4", title: "Guided next steps", text: "Suggested questions, helpful links and clear actions move visitors towards a quote, booking or conversation." },
+    { icon: "M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16", title: "One-line install", text: "Paste one script tag on WordPress, Wix, Shopify, Squarespace or a custom site and you’re live." }
+  ];
+  const FX_FAQ = [
+    ["What does Fise learn from?", "Your website (up to 100 pages per assistant) plus any files and FAQs you add. You stay in control of what it knows and can re-scan whenever your site changes."],
+    ["How do I put it on my website?", "Copy one script tag from your dashboard and paste it before the closing body tag. It works on WordPress, Wix, Shopify, Squarespace and custom-built sites."],
+    ["Can I try it before paying?", "Yes. The Free plan includes 50 conversations a month and the full dashboard, so you can build and test your assistant. Website installation starts on Essential."],
+    ["Where do captured leads go?", "Leads appear in your dashboard with the visitor’s question attached. On Grow and Enterprise you can also export them to Excel or Google Sheets and receive them by email."],
+    ["Can it match my brand?", "Choose the assistant’s name, colours, greeting, tone and suggested questions. You can preview every change live before it reaches your website."],
+    ["How is my data handled?", "Your content is stored privately for your assistant only. Our Privacy Policy explains exactly how information is processed and retained."]
+  ];
+  const FX_PLANS = [
+    { key: "free", name: "Free", blurb: "Try Fise and tune your assistant.", monthly: 0, items: [["50 AI conversations / month", true], ["Customisable dashboard", true], ["Website installation", false]] },
+    { key: "essential", name: "Essential", blurb: "For small sites getting started.", monthly: 500, items: [["250 AI conversations / month", true], ["Customisable dashboard", true], ["Website installation", true]] },
+    { key: "grow", name: "Grow", blurb: "For businesses that run on leads.", monthly: 2e3, featured: true, items: [["1,000 AI conversations / month", true], ["Website installation", true], ["Export leads to Excel / Sheets", true], ["Email lead collection", true]] },
+    { key: "enterprise", name: "Enterprise", blurb: "High-volume and multi-site teams.", monthly: 5e3, items: [["5,000 AI conversations / month", true], ["Website installation", true], ["Export leads to Excel / Sheets", true], ["Email lead collection", true]] }
+  ];
+  function fxRand(value) {
+    return "R" + Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  __name(fxRand, "fxRand");
+  function fxHero(c) {
+    const news = FISE_WHATS_NEW[0];
+    return html2`<section class="fx-hero" aria-labelledby="fx-hero-title"><div class="fx-hero-grid" aria-hidden="true"></div><div class="fx-hero-glow" aria-hidden="true"></div><div class="fx-grain" aria-hidden="true"></div><div class="fx-container"><a class="fx-pill" href="/#insights"><b>New</b><span>${escapeWebsiteHtml(news.title)}</span><span aria-hidden="true">→</span></a><h1 id="fx-hero-title">${escapeWebsiteHtml(fxText(c, "hero_title"))}</h1><p class="fx-hero-sub">${escapeWebsiteHtml(fxText(c, "hero_text"))}</p><div class="fx-hero-ctas"><a class="fx-btn fx-btn-primary" href="/login?mode=signup">Start free ${FX_ARROW}</a><a class="fx-btn fx-btn-secondary" href="/#demo"><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 2l9 5-9 5z" fill="currentColor"/></svg>Watch the demo</a></div><p class="fx-hero-note">Free plan · no card required</p><div class="fx-stage"><div class="fx-browser" role="img" aria-label="A business website with the Fise assistant open, answering a visitor's question about weekend installations and offering to arrange a quote."><div class="fx-browser-bar" aria-hidden="true"><i></i><i></i><i></i><span class="fx-url">yourbusiness.co.za</span></div><div class="fx-browser-body" aria-hidden="true"><div class="fx-page-sk"><span style="width:180px;height:12px"></span><span style="width:min(420px,90%);height:34px"></span><span style="width:min(360px,80%);height:34px"></span><span style="width:min(460px,95%);height:10px;margin-top:12px"></span><span style="width:min(400px,85%);height:10px"></span><div class="fx-page-row"><span></span><span></span><span></span></div></div><div class="fx-widget"><div class="fx-widget-head"><span class="fx-avatar fx-pulse"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 4h10v6H7l-3 3v-3H3z" fill="none" stroke="#FAFAFA" stroke-width="1.5" stroke-linejoin="round"/></svg></span><div><strong>Assistant</strong><small>Typically replies instantly</small></div></div><div class="fx-thread"><div class="fx-msg">Hi! Ask me anything about our services, pricing or bookings.</div><div class="fx-msg me">Do you install on weekends? I need a quote.</div><div class="fx-msg">Yes — Saturdays from 8:00 to 13:00. I can pass your details to the team for a quote. What’s the best email?</div><div class="fx-msg fx-typing"><i></i><i></i><i></i></div></div></div></div></div></div></div></section>`;
+  }
+  __name(fxHero, "fxHero");
+  function fxLogoBar() {
+    const shapes = ["50%", "6px", "2px 12px", "50% 0", "4px", "50%"];
+    const group = shapes.map((radius, i) => html2`<span class="fx-logo-mark"><i style="border-radius:${radius}"></i>Client ${String(i + 1).padStart(2, "0")}</span>`).join("");
+    return html2`<section class="fx-logos" aria-label="Businesses using Fise"><p>Helping businesses answer every visitor</p><div class="fx-marquee"><div class="fx-marquee-track"><div class="fx-marquee-group">${group}</div><div class="fx-marquee-group" aria-hidden="true">${group}</div></div></div></section>`;
+  }
+  __name(fxLogoBar, "fxLogoBar");
+  function fxFeatures(c) {
+    const features = FX_FEATURES.map((f, i) => {
+      const n = i + 1;
+      const title = i < 3 && c[`benefit_${n}_title`] ? c[`benefit_${n}_title`] : f.title;
+      const text = i < 3 && c[`benefit_${n}_text`] ? String(c[`benefit_${n}_text`]).replace(/\bFin\b/g, "Fise") : f.text;
+      return html2`<article class="fx-card fx-reveal" style="--i:${i % 3}"><span class="fx-icon">${fxIcon(f.icon)}</span><h3>${escapeWebsiteHtml(title)}</h3><p>${escapeWebsiteHtml(text)}</p></article>`;
+    }).join("");
+    return html2`<section class="fx-section" id="features" aria-labelledby="fx-features-title"><div class="fx-container"><div class="fx-head-split fx-reveal"><div><p class="fx-eyebrow">Product</p><h2 class="fx-h2" id="fx-features-title">${escapeWebsiteHtml(fxText(c, "benefit_title"))}</h2></div><p class="fx-lead">${escapeWebsiteHtml(fxText(c, "benefit_intro"))}</p></div><div class="fx-grid-3">${features}</div></div></section>`;
+  }
+  __name(fxFeatures, "fxFeatures");
+  function fxHowItWorks(c) {
+    const steps = [
+      ["01", fxText(c, "step_1_title"), fxText(c, "step_1_text")],
+      ["02", fxText(c, "step_2_title"), fxText(c, "step_2_text")],
+      ["03", fxText(c, "step_3_title"), fxText(c, "step_3_text")],
+      ["04", "Capture and follow up", "Leads arrive in your dashboard with the full question, ready for your team."]
+    ].map(([n, t, x], i) => html2`<div class="fx-reveal" style="--i:${i}"><small>${n}</small><h3>${escapeWebsiteHtml(t)}</h3><p>${escapeWebsiteHtml(x)}</p></div>`).join("");
+    const node = (x, y, w, h, k, label, light = false) => html2`<g class="fx-node"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="18" fill="${light ? "#FAFAFA" : "url(#fx-node)"}" stroke="${light ? "none" : "#404040"}"/><text x="${x + w / 2}" y="${y + h / 2 - 8}" text-anchor="middle" fill="${light ? "#525252" : "#A3A3A3"}" font-size="12" font-family="Geist Mono, monospace" letter-spacing="1">${k}</text><text x="${x + w / 2}" y="${y + h / 2 + 18}" text-anchor="middle" fill="${light ? "#0A0A0A" : "#FAFAFA"}" font-size="17" font-family="Geist, sans-serif" font-weight="600">${label}</text></g>`;
+    return html2`<section class="fx-section fx-band fx-dark" id="how" aria-labelledby="fx-how-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">How it works</p><h2 class="fx-h2" id="fx-how-title">${escapeWebsiteHtml(fxText(c, "steps_title"))}</h2></div><svg class="fx-flow" viewBox="0 0 1200 300" role="img" aria-labelledby="fx-flow-t fx-flow-d"><title id="fx-flow-t">How Fise answers a visitor</title><desc id="fx-flow-d">A visitor's question goes to Fise, which retrieves facts from your indexed pages and files, composes a reply in your tone, and returns an answer while capturing the lead.</desc><defs><linearGradient id="fx-node" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262626"/><stop offset="1" stop-color="#171717"/></linearGradient></defs><g fill="none" stroke="#737373" stroke-width="1.5"><path class="fx-dash" d="M220 150H420"/><path class="fx-dash" d="M620 150C700 150 700 70 780 70"/><path class="fx-dash" d="M620 150C700 150 700 230 780 230"/><path class="fx-dash" d="M980 70C1030 70 1030 150 1060 150"/><path class="fx-dash" d="M980 230C1030 230 1030 150 1060 150"/></g>${node(20, 100, 200, 100, "01 · INPUT", "Visitor asks")}${node(420, 90, 200, 120, "02 · FISE", "Understands intent", true)}${node(780, 20, 200, 100, "03 · RETRIEVE", "Your pages &amp; files")}${node(780, 180, 200, 100, "03 · COMPOSE", "Your tone &amp; rules")}<g class="fx-node"><circle cx="1110" cy="150" r="50" fill="#FAFAFA"/><text x="1110" y="146" text-anchor="middle" fill="#0A0A0A" font-size="14" font-family="Geist, sans-serif" font-weight="600">Answer</text><text x="1110" y="165" text-anchor="middle" fill="#525252" font-size="12" font-family="Geist, sans-serif">+ lead</text></g></svg><ol class="fx-flow-mobile" aria-hidden="true"><li><small>01</small>Visitor asks a question</li><li><small>02</small>Fise understands the intent</li><li><small>03</small>Retrieves your pages &amp; files</li><li><small>04</small>Answers and captures the lead</li></ol><div class="fx-steps">${steps}</div></div></section>`;
+  }
+  __name(fxHowItWorks, "fxHowItWorks");
+  function fxVideo() {
+    return html2`<section class="fx-section" id="demo" aria-labelledby="fx-demo-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">See it in action</p><h2 class="fx-h2" id="fx-demo-title">From sign-up to a live assistant, in one short walkthrough.</h2></div><div class="fx-video fx-reveal" data-video="/fise-product-walkthrough.mp4"><div class="fx-poster" aria-hidden="true"><aside><span style="width:60%"></span><span></span><span style="width:80%"></span><span style="width:70%"></span></aside><div><span></span><span></span><span></span><span></span></div></div><div class="fx-video-scrim" aria-hidden="true"></div><button class="fx-play" type="button" aria-label="Play the Fise product walkthrough, 33 seconds"><span class="fx-play-dot fx-pulse"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3l10 6-10 6z" fill="#FAFAFA"/></svg></span><span class="fx-play-label">Watch the walkthrough · 0:33</span></button></div></div></section>`;
+  }
+  __name(fxVideo, "fxVideo");
+  function fxCapabilities() {
+    const tabs = [
+      ["answers", "Grounded answers", "Replies draw on the pages and files you approved — no guesswork."],
+      ["leads", "Lead inbox", "Every enquiry arrives with the visitor’s question and contact details."],
+      ["brand", "Brand &amp; tone controls", "Name, colours, greeting and suggested questions in one place."],
+      ["new", "What’s new", "Recent improvements, shipped to every assistant."]
+    ];
+    const tabButtons = tabs.map(([id, title, text], i) => html2`<button class="fx-tab" type="button" role="tab" id="fx-tab-${id}" aria-controls="fx-panel-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"><strong>${title}</strong><span>${text}</span><span class="fx-tab-progress" aria-hidden="true"><i></i></span></button>`).join("");
+    const leads = [["Quote for a weekend installation", "2 min ago"], ["Do you service the Northern Suburbs?", "1 h ago"], ["Group booking for 12 people in March", "Yesterday"], ["Pricing for the annual maintenance plan", "Mon"]].map(([q, t]) => html2`<div class="fx-row"><b>[Visitor name]</b><span>${q}</span><small>${t}</small></div>`).join("");
+    const news = FISE_WHATS_NEW.map((n) => html2`<article><time datetime="${n.date}">${n.label}</time><div><h3>${escapeWebsiteHtml(n.title)}</h3><p>${escapeWebsiteHtml(n.text)}</p></div></article>`).join("");
+    const panel = (id, inner, first = false) => html2`<div class="fx-panel" role="tabpanel" id="fx-panel-${id}" aria-labelledby="fx-tab-${id}" tabindex="0"${first ? "" : " hidden"}>${inner}</div>`;
+    return html2`<section class="fx-section" id="insights" aria-labelledby="fx-insights-title"><div class="fx-container"><div class="fx-head-split fx-reveal"><div><p class="fx-eyebrow">Capabilities &amp; AI insights</p><h2 class="fx-h2" id="fx-insights-title">An assistant that gets sharper every week.</h2></div><p class="fx-lead">See exactly what your visitors ask, what Fise answered, and which conversations became leads.</p></div><div class="fx-tabs fx-reveal" data-tabs><div class="fx-tablist" role="tablist" aria-label="Fise capabilities" aria-orientation="vertical">${tabButtons}</div><div class="fx-panels">${panel("answers", html2`<div class="fx-chat"><div class="fx-q">What’s your call-out fee in Stellenbosch?</div><div class="fx-a">Our call-out fee for the Stellenbosch area is [your fee], and it’s credited against the job if you go ahead. Would you like me to arrange a quote?<div class="fx-chips"><span class="fx-chip">Source · /pricing</span><span class="fx-chip">Source · rates.pdf</span></div></div><div class="fx-q">Yes please — Thursday morning works.</div></div>`, true)}${panel("leads", html2`<div class="fx-table"><div class="fx-table-head"><strong>Leads</strong><span>Export CSV · Google Sheets</span></div>${leads}</div>`)}${panel("brand", html2`<div class="fx-brand-demo"><div class="fx-mini"><strong>Appearance</strong><div>Assistant name<span class="fx-field">Ava</span></div><div>Tone<span class="fx-field">Friendly &amp; concise</span></div><div class="fx-swatches"><i style="background:#0A0A0A;box-shadow:0 0 0 2px #fff,0 0 0 4px #0A0A0A"></i><i style="background:#525252"></i><i style="background:#A3A3A3"></i></div></div><div class="fx-preview"><div class="fx-preview-head">Ava · Your business</div><div class="fx-preview-body"><span>Book a consultation</span><span>Plans and pricing</span><span>Service areas</span></div></div></div>`)}${panel("new", html2`<div class="fx-news">${news}</div>`)}</div></div></div></section>`;
+  }
+  __name(fxCapabilities, "fxCapabilities");
+  function fxTestimonials() {
+    const quotes = [
+      ["A", "Placeholder testimonial — replace with a real customer quote about how Fise changed their enquiries."],
+      ["B", "Placeholder testimonial — a second customer describing the leads Fise captured after hours."],
+      ["C", "Placeholder testimonial — a third customer on how quickly they set up and launched."]
+    ];
+    const slides = quotes.map(([initial, quote], i) => html2`<figure class="fx-slide${i === 0 ? " is-active" : ""}" aria-roledescription="slide" aria-label="${i + 1} of ${quotes.length}" aria-hidden="${i !== 0}"><blockquote>“${quote}”</blockquote><figcaption><span class="fx-initials" aria-hidden="true">${initial}</span><span class="fx-who"><strong>[Customer name]</strong><span>[Role], [Company]</span></span></figcaption></figure>`).join("");
+    const dots = quotes.map((_, i) => html2`<button class="fx-dot" type="button" aria-label="Show testimonial ${i + 1}" aria-current="${i === 0}"></button>`).join("");
+    return html2`<section class="fx-section fx-quotes" aria-labelledby="fx-quotes-title"><div class="fx-container"><p class="fx-eyebrow" id="fx-quotes-title">Customer stories</p><div class="fx-carousel fx-reveal" data-carousel aria-roledescription="carousel" aria-label="Customer testimonials" tabindex="0"><div class="fx-slides" aria-live="polite">${slides}</div><div class="fx-carousel-ctrl"><button class="fx-round" type="button" data-prev aria-label="Previous testimonial">${fxIcon("M15 6l-6 6 6 6", 18)}</button><div class="fx-dots">${dots}</div><button class="fx-round" type="button" data-next aria-label="Next testimonial">${fxIcon("M9 6l6 6-6 6", 18)}</button></div></div></div></section>`;
+  }
+  __name(fxTestimonials, "fxTestimonials");
+  function fxStats() {
+    const stats = [
+      { value: 24, suffix: "/7", label: "Always-on answers, weekends included" },
+      { value: 100, suffix: "", label: "Website pages indexed per assistant" },
+      { value: 1, suffix: "", label: "Script tag to install on any site" },
+      { value: 5e3, suffix: "", label: "Monthly conversations on Enterprise" }
+    ].map((s) => html2`<div class="fx-stat"><strong data-count="${s.value}" data-suffix="${s.suffix}">${s.value.toLocaleString("en-US")}${s.suffix}</strong><span>${s.label}</span></div>`).join("");
+    return html2`<section class="fx-stats" aria-label="Fise in numbers"><div class="fx-container"><div class="fx-stats-grid fx-reveal">${stats}</div></div></section>`;
+  }
+  __name(fxStats, "fxStats");
+  function fxPricing(c) {
+    const plans = FX_PLANS.map((p) => {
+      const monthly = p.monthly === 0 ? "R0" : fxRand(p.monthly);
+      const annual = p.monthly === 0 ? "R0" : fxRand(p.monthly * 10 / 12);
+      const noteMonthly = p.monthly === 0 ? "Free forever" : "Billed monthly";
+      const noteAnnual = p.monthly === 0 ? "Free forever" : `${fxRand(p.monthly * 10)} billed yearly`;
+      const href = p.key === "free" ? "/login?mode=signup" : `/checkout?plan=${p.key}`;
+      const items = p.items.map(([label, ok]) => html2`<li class="${ok ? "" : "is-off"}">${ok ? FX_CHECK : FX_CROSS}<span>${label}${ok ? "" : '<span class="sr-only"> (not included)</span>'}</span></li>`).join("");
+      return html2`<article class="fx-plan fx-reveal${p.featured ? " is-featured" : ""}" aria-label="${p.name} plan"><div class="fx-plan-top"><h3>${p.name}</h3>${p.featured ? '<span class="fx-badge">Recommended</span>' : ""}</div><p class="fx-plan-blurb">${p.blurb}</p><p class="fx-price"><strong data-monthly="${monthly}" data-annual="${annual}">${monthly}</strong><span>/month</span></p><p class="fx-price-note" data-note-monthly="${noteMonthly}" data-note-annual="${noteAnnual}">${noteMonthly}</p><a class="fx-btn fx-btn-primary" href="${href}" data-plan-link>${p.monthly === 0 ? "Start free" : "Get started"} ${FX_ARROW}</a><ul>${items}</ul></article>`;
+    }).join("");
+    return html2`<section class="fx-section fx-pricing" id="pricing" aria-labelledby="fx-pricing-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">Pricing</p><h2 class="fx-h2" id="fx-pricing-title">${escapeWebsiteHtml(fxText(c, "pricing_title"))}</h2><p class="fx-lead" style="margin-top:16px">${escapeWebsiteHtml(fxText(c, "pricing_text"))}</p></div><div class="fx-toggle" role="radiogroup" aria-label="Billing period" data-billing><button type="button" role="radio" aria-checked="true" data-mode="monthly">Monthly</button><button type="button" role="radio" aria-checked="false" data-mode="annual">Annual <em>2 months free</em></button></div><div class="fx-plans">${plans}</div><p class="fx-fine">Prices in South African rand. Conversation allowances reset on the 1st of each month.</p></div></section>`;
+  }
+  __name(fxPricing, "fxPricing");
+  function fxFaq(c) {
+    const items = FX_FAQ.map(([q, a], i) => html2`<details${i === 0 ? " open" : ""}><summary>${q}<i aria-hidden="true"></i></summary><div class="fx-faq-body"><p>${a}</p></div></details>`).join("");
+    return html2`<section class="fx-section" id="faq" aria-labelledby="fx-faq-title"><div class="fx-container fx-faq"><div class="fx-reveal"><p class="fx-eyebrow">FAQ</p><h2 class="fx-h2" id="fx-faq-title">Questions, answered.</h2><p class="fx-lead" style="margin-top:20px">Can’t find what you need? <a class="fx-link" href="/contact" style="color:var(--fx-ink);font-weight:500">Talk to us</a> or browse the <a class="fx-link" href="/help" style="color:var(--fx-ink);font-weight:500">help centre</a>.</p></div><div class="fx-faq-list fx-reveal">${items}</div></div></section>`;
+  }
+  __name(fxFaq, "fxFaq");
+  function fxCta(c) {
+    return html2`<section class="fx-cta fx-reveal" aria-labelledby="fx-cta-title"><h2 id="fx-cta-title">${escapeWebsiteHtml(fxText(c, "final_cta_title"))}</h2><p>${escapeWebsiteHtml(fxText(c, "final_cta_text"))}</p><div class="fx-hero-ctas"><a class="fx-btn fx-btn-light" href="/login?mode=signup">Start free ${FX_ARROW}</a><a class="fx-btn fx-btn-ghost-light" href="/contact">Talk to us</a></div></section>`;
+  }
+  __name(fxCta, "fxCta");
+  function fxJsonLd(c) {
+    const data = {
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "Organization", name: FX_SITE_NAME, url: "__FX_ORIGIN__/", email: fxText(c, "contact_email") },
+        { "@type": "SoftwareApplication", name: FX_SITE_NAME, applicationCategory: "BusinessApplication", operatingSystem: "Web", description: fxText(c, "seo_home_description"), offers: FX_PLANS.map((p) => ({ "@type": "Offer", name: p.name, price: String(p.monthly), priceCurrency: "ZAR" })) },
+        { "@type": "FAQPage", mainEntity: FX_FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) }
+      ]
+    };
+    return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\<")}<\/script>`;
+  }
+  __name(fxJsonLd, "fxJsonLd");
   function referenceHome(c) {
-    return referenceShell("Fise AI | Helpful AI Website Chatbots", "Fise AI answers questions, guides visitors and captures qualified leads around the clock, using your own business information and branding.", html2`<main><section class="reference-hero"><div class="video-container reference-hero-grid"><div><h1><span class="hero-stat">82% of visitors</span> leave your website right before purchase due to unanswered questions</h1><p class="reference-hero-copy">Your support team can’t be available every second, but Fise is. It can answer any question, guide visitors and capture leads.</p><div class="reference-actions"><a class="reference-button dark hero-demo-button" href="/demo">Demo <span class="demo-arrow" aria-hidden="true">→</span></a></div><div class="hero-trust"><span class="hero-rating"><span class="hero-stars" aria-hidden="true">★★★★★</span>Trusted by growing businesses</span><span>${referenceIcon("chat")}No code required</span></div></div><div class="hero-media-wrap"><div class="hero-depth-shapes" aria-hidden="true"><span class="depth-circle depth-one"></span><span class="depth-circle depth-two"></span><span class="depth-circle depth-three"></span><span class="depth-circle depth-four"></span></div><div class="hero-media"><iframe class="hero-product-video" src="https://streamable.com/e/imldid?autoplay=1&muted=1&nocontrols=0" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen aria-label="Fise AI signup walkthrough" style="display:block;width:100%;height:100%;border:0"></iframe></div><div class="assistant-badge"><span class="assistant-icon">${referenceIcon("chat")}</span><div><strong>AI Assistant<span class="live-dot" aria-hidden="true"></span></strong><small>Online and answering now</small></div></div></div></div></section>${trustedBusinessStrip()}${storyCarousel()}<section class="features-section reveal" id="features"><div class="video-container"><div class="left-heading"><div class="reference-eyebrow">Why choose Fise AI</div><h2>Everything your website assistant needs</h2><p>Real tools that help visitors get answers, take action and become qualified leads.</p></div><div class="feature-grid">
-    <article class="feature-card"><div class="feature-media"><img src="https://images.unsplash.com/photo-1626863905121-3b0c0ed7b94c?auto=format&amp;fit=crop&amp;w=900&amp;q=82" alt="Customer support team helping clients" loading="lazy"></div><div class="feature-copy"><span class="feature-kicker">Always available</span><h3>Helpful answers, 24/7</h3><p>Give every visitor an immediate, useful response—even after hours or while your team is busy.</p></div></article>
-    <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="knowledge-window"><div class="mini-window-top"><i></i><i></i><i></i></div><div class="knowledge-row"><b>1</b>Website pages scanned</div><div class="knowledge-row"><b>2</b>Files and FAQs added</div><div class="knowledge-row"><b>3</b>Private knowledge ready</div><span class="knowledge-ready">Ready</span></div></div></div><div class="feature-copy"><span class="feature-kicker">Business knowledge</span><h3>Trained on your information</h3><p>Scan up to 100 website pages and add approved files so answers stay relevant to your business.</p></div></article>
-    <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="brand-window"><div class="brand-controls"><span class="brand-swatch"></span><span class="brand-swatch"></span><span class="brand-swatch"></span></div><div class="brand-chat"><span></span><span></span><span></span></div></div></div></div><div class="feature-copy"><span class="feature-kicker">Your look and voice</span><h3>Made for your brand</h3><p>Choose the colours, chatbot name, greeting, tone and popular questions from your dashboard.</p></div></article>
-    <article class="feature-card"><div class="feature-media"><img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&amp;fit=crop&amp;w=900&amp;q=82" alt="Business analytics and lead dashboard" loading="lazy"><div class="lead-overlay"><span><strong>24 new leads</strong><small>Captured with context</small></span><span class="lead-pill">CSV ready</span></div></div><div class="feature-copy"><span class="feature-kicker">Better follow-up</span><h3>Capture qualified leads</h3><p>Collect contact details and the visitor’s question, then review or export leads for your team.</p></div></article>
-    <article class="feature-card"><div class="feature-media"><div class="chat-scene"><div class="chat-window"><div class="chat-window-title">Chat with your assistant</div><div class="chat-bubble">Can you help me choose the right option?</div><div class="chat-bubble answer">Of course—tell me what you need and I’ll guide you.</div><div class="chat-bubble">I’d also like a quote.</div></div></div></div><div class="feature-copy"><span class="feature-kicker">Clear next steps</span><h3>Guide every conversation</h3><p>Use popular questions, helpful links and clear actions to move visitors towards a quote or booking.</p></div></article>
-    <article class="feature-card"><div class="feature-media"><div class="feature-scene"><div class="install-window"><div class="mini-window-top"><i></i><i></i><i></i></div>&lt;script src="fise.ai/widget.js"&gt;<span class="install-line">data-chatbot="your-assistant"</span>&lt;/script&gt;<div class="install-success">✓ Assistant ready on your website</div></div></div></div><div class="feature-copy"><span class="feature-kicker">Simple control</span><h3>Dashboard and no-code setup</h3><p>Test, customise and manage your assistant in one place, then install it with one small snippet.</p></div></article>
-  </div></div></section><section class="pricing-section reveal" id="pricing"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Pricing</div><h2>Choose the right fit for your business</h2><p>Start simply, then grow as your customer conversations grow.</p></div><div class="pricing-grid"><article class="pricing-card free-plan-card"><h3>Free</h3><p class="price-intro">50 AI conversations per month.</p><p class="video-price">R0<small>/month</small></p><ul class="video-feature-list"><li>50 AI conversations per month</li><li>Customisable dashboard</li><li class="unavailable">Website installation</li></ul><a class="reference-button" href="/login">Start for free <span>→</span></a></article><article class="pricing-card"><h3>Essential</h3><p class="price-intro">250 AI conversations per month.</p><p class="video-price">R500<small>/month</small></p><ul class="video-feature-list"><li>250 AI conversations per month</li><li>Customisable dashboard</li><li>Website installation</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article><article class="pricing-card popular"><span class="popular-label">Most popular</span><h3>Grow</h3><p class="price-intro">1,000 AI conversations per month.</p><p class="video-price">R2,000<small>/month</small></p><ul class="video-feature-list"><li>1,000 AI conversations per month</li><li>Customisable dashboard</li><li>Export leads to Excel/Sheets</li><li>Email lead collection</li><li>Website installation</li></ul><a class="reference-button dark" href="/login">Get started <span>→</span></a></article><article class="pricing-card"><h3>Enterprise</h3><p class="price-intro">5,000 AI conversations per month.</p><p class="video-price">R5,000<small>/month</small></p><ul class="video-feature-list"><li>5,000 AI conversations per month</li><li>Customisable dashboard</li><li>Export leads to Excel/Sheets</li><li>Email lead collection</li><li>Website installation</li></ul><a class="reference-button" href="/login">Get started <span>→</span></a></article></div></div></section><section class="closing-section reveal"><div class="video-container"><div class="closing-card"><h2>Give every visitor a helpful first response</h2><p>See how Fise AI can help your website answer questions, guide customers, and capture better enquiries.</p><div class="closing-actions"><a class="reference-button" href="/login">Get started free <span>→</span></a><a class="reference-button" href="/#features">Explore features</a></div></div></div></section></main>`, c);
+    const body = html2`<main>${fxHero(c)}${fxLogoBar()}${fxFeatures(c)}${fxHowItWorks(c)}${fxVideo()}${fxCapabilities()}${fxTestimonials()}${fxStats()}${fxPricing(c)}${fxFaq(c)}${fxCta(c)}</main>`;
+    return referenceShell(fxText(c, "seo_home_title"), fxText(c, "seo_home_description"), body, c, "fx-home", { jsonLd: fxJsonLd(c) });
   }
   __name(referenceHome, "referenceHome");
   function referenceDemo(c) {
     return referenceShell(
       "Live demo | Fise AI",
       "Try the Fise AI platform yourself. Sign in to open the live assistant dashboard and see how a Fise AI chatbot works.",
-      html2`<main class="demo-page"><section class="demo-section" id="demo"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Live demo</div><h2>Try the Fise AI platform</h2><p>Sign in to open the assistant dashboard right here, without leaving the page.</p></div></div><div class="demo-inline-access" id="demo-lock"><h3>Sign in to access the demo</h3><p>Use your Fise AI account to try the working chatbot dashboard.</p><button class="reference-button dark" id="demo-signin" type="button">Sign in</button></div><iframe class="demo-dashboard-frame" src="about:blank" data-dashboard-frame="demo" title="Fise AI platform demo" loading="eager" scrolling="no" hidden></iframe></section></main>`,
+      html2`<main class="demo-page"><section class="demo-section" id="demo"><div class="video-container"><div class="center-heading"><div class="reference-eyebrow">Live demo</div><h1 class="fx-h2">Try the Fise AI platform</h1><p>Sign in to open the assistant dashboard right here, without leaving the page.</p></div></div><div class="demo-inline-access" id="demo-lock"><h3>Sign in to access the demo</h3><p>Use your Fise AI account to try the working chatbot dashboard.</p><button class="reference-button dark" id="demo-signin" type="button">Sign in</button></div><iframe class="demo-dashboard-frame" src="about:blank" data-dashboard-frame="demo" title="Fise AI platform demo" loading="eager" scrolling="no" hidden></iframe></section></main>`,
       c
-    ).replace(/<footer class="reference-footer">[\s\S]*?<\/footer>/, "");
+    );
   }
   __name(referenceDemo, "referenceDemo");
   function referenceAbout(c) {
@@ -5501,13 +5676,19 @@ var WebsiteModule = (() => {
     }
   }
   __name(validCheckoutUrl, "validCheckoutUrl");
-  function referenceCheckout(plan, c) {
+  function referenceCheckout(plan, c, billing = "monthly") {
+    const monthly = Number(String(plan.price).replace(/[^0-9]/g, "")) || 0;
+    const annual = billing === "annual" && monthly > 0;
+    const priceLabel = annual ? `${fxRand(monthly * 10)}/year (2 months free)` : plan.price;
+    const subject = encodeURIComponent(`Fise AI ${plan.name} checkout (${annual ? "annual" : "monthly"})`);
     return referenceShell(
       `${plan.name} checkout | Fise AI`,
       `Continue with the Fise AI ${plan.name} plan.`,
-      html2`<main class="simple-reference"><div class="video-container"><article class="checkout-card"><div class="reference-eyebrow">Fise AI checkout</div><h1>Continue with ${escapeWebsiteHtml(plan.name)}</h1><p>Your selected Fise AI plan is ready.</p><div class="checkout-summary"><strong>${escapeWebsiteHtml(plan.name)}</strong><span>${escapeWebsiteHtml(plan.price)}</span></div><p>The secure payment link for this plan is being connected. Contact Fise AI and we will complete your setup without changing your selected plan.</p><a class="reference-button dark" href="mailto:${escapeWebsiteHtml(c.contact_email)}?subject=${encodeURIComponent(`Fise AI ${plan.name} checkout`)}">Contact Fise AI</a></article></div></main>`,
-      c
-    ).replace(/<footer class="reference-footer">[\s\S]*?<\/footer>/, "");
+      html2`<main class="simple-reference"><div class="video-container"><article class="checkout-card"><div class="reference-eyebrow">Fise AI checkout</div><h1>Continue with ${escapeWebsiteHtml(plan.name)}</h1><p>Your selected Fise AI plan is ready.</p><div class="checkout-summary"><strong>${escapeWebsiteHtml(plan.name)}</strong><span>${escapeWebsiteHtml(priceLabel)}</span></div><p>The secure payment link for this plan is being connected. Contact Fise AI and we will complete your setup without changing your selected plan.</p><a class="reference-button dark" href="mailto:${escapeWebsiteHtml(fxText(c, "contact_email"))}?subject=${subject}">Contact Fise AI</a> <a class="reference-button" href="/#pricing">Compare plans</a></article></div></main>`,
+      c,
+      "",
+      { noindex: true }
+    );
   }
   __name(referenceCheckout, "referenceCheckout");
   function referenceContact(c, status = "") {
@@ -5516,7 +5697,7 @@ var WebsiteModule = (() => {
     return referenceShell(
       "Contact Fise AI",
       "Contact Fise AI for help with an AI website chatbot, setup or a plan.",
-      html2`<main class="contact-reference"><div class="video-container contact-layout"><section class="contact-intro"><div class="reference-eyebrow">Contact Fise AI</div><h1>Let’s make your website more helpful.</h1><p>Tell us what you need. Whether you are exploring Fise AI, setting up a chatbot or need support, we will point you in the right direction.</p><ul class="contact-points"><li>Ask about the right plan for your business.</li><li>Get help with chatbot setup or website scanning.</li><li>Share a question and our team will follow up.</li></ul></section><section class="contact-card">${message}<form method="post" action="/api/contact"><label for="contact-name">Your name<input id="contact-name" name="name" autocomplete="name" maxlength="120" required placeholder="Your name"></label><label for="contact-email">Email address<input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"></label><label for="contact-business">Business name <span>(optional)</span><input id="contact-business" name="business" autocomplete="organization" maxlength="160" placeholder="Your business"></label><label for="contact-message">How can we help?<textarea id="contact-message" name="message" maxlength="4000" required placeholder="Tell us a little about what you need."></textarea></label><button class="reference-button dark" type="submit">Send message <span>→</span></button><p class="contact-note">We only use these details to respond to your query.</p></form></section></div></main>`,
+      html2`<main class="contact-reference"><div class="video-container contact-layout"><section class="contact-intro"><div class="reference-eyebrow">Contact Fise AI</div><h1>Let’s make your website more helpful.</h1><p>Tell us what you need. Whether you are exploring Fise AI, setting up a chatbot or need support, we will point you in the right direction.</p><ul class="contact-points"><li>Ask about the right plan for your business.</li><li>Get help with chatbot setup or website scanning.</li><li>Share a question and our team will follow up.</li></ul></section><section class="contact-card">${message}<form method="post" action="/api/contact"><label for="contact-name">Your name<input id="contact-name" name="name" autocomplete="name" maxlength="120" required placeholder="Your name"></label><label for="contact-email">Email address<input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"></label><label for="contact-business"><span class="fx-label">Business name <span>(optional)</span></span><input id="contact-business" name="business" autocomplete="organization" maxlength="160" placeholder="Your business"></label><label for="contact-message">How can we help?<textarea id="contact-message" name="message" maxlength="4000" required placeholder="Tell us a little about what you need."></textarea></label><div class="sr-only" aria-hidden="true"><label for="contact-website">Leave this field empty<input id="contact-website" name="website" tabindex="-1" autocomplete="off"></label></div><button class="reference-button dark" type="submit">Send message <span>→</span></button><p class="contact-note">We only use these details to respond to your query.</p></form></section></div></main>`,
       c
     );
   }
@@ -5528,7 +5709,11 @@ var WebsiteModule = (() => {
     const email = normalizeEmail(form.get("email"));
     const business = String(form.get("business") || "").trim().replace(/[\r\n]+/g, " ").slice(0, 160);
     const message = String(form.get("message") || "").trim().slice(0, 4e3);
+    if (String(form.get("website") || "").trim()) return redirect("/contact?status=sent");
     if (!name || !email || !message) return redirect("/contact?status=error");
+    const contactKeys = ["ip:" + clientAddress(request)];
+    if (await rateLimitExceeded(env, "contact", contactKeys, 5, 60 * 60)) return redirect("/contact?status=error");
+    await recordRateLimitEvent(env, "contact", contactKeys);
     if (!env.RESEND_API_KEY) return redirect("/contact?status=error");
     const safeName = escapeHtml(name);
     const safeEmail = escapeHtml(email);
@@ -5575,26 +5760,26 @@ ${message}`,
     if (url.pathname === "/profile") {
       const user = await currentUser(request, env);
       if (!user) return go("/login");
-      return response2(referenceProfilePage());
+      return response2(referenceProfilePage(), 200, url);
     }
     const { content: c } = await readWebsiteContent2(env);
-    if (url.pathname === "/") return response2(referenceHome(c));
-    if (url.pathname === "/privacy-policy") return response2(referenceLegal("privacy", c, url.origin));
-    if (url.pathname === "/terms-and-conditions") return response2(referenceLegal("terms", c, url.origin));
-    if (url.pathname === "/cookies") return response2(referenceLegal("cookies", c, url.origin));
-    if (url.pathname === "/about") return response2(referenceAbout(c));
-    if (url.pathname === "/blog") return response2(referenceBlog(c));
-    if (url.pathname === "/help") return response2(referenceHelp(c));
-    if (url.pathname === "/demo") return response2(referenceDemo(c));
+    if (url.pathname === "/") return response2(referenceHome(c), 200, url);
+    if (url.pathname === "/privacy-policy") return response2(referenceLegal("privacy", c, url.origin), 200, url);
+    if (url.pathname === "/terms-and-conditions") return response2(referenceLegal("terms", c, url.origin), 200, url);
+    if (url.pathname === "/cookies") return response2(referenceLegal("cookies", c, url.origin), 200, url);
+    if (url.pathname === "/about") return response2(referenceAbout(c), 200, url);
+    if (url.pathname === "/blog") return response2(referenceBlog(c), 200, url);
+    if (url.pathname === "/help") return response2(referenceHelp(c), 200, url);
+    if (url.pathname === "/demo") return response2(referenceDemo(c), 200, url);
     if (url.pathname === "/checkout") {
       const key = String(url.searchParams.get("plan") || "").toLowerCase();
       const plan = checkoutPlans[key];
       if (!plan) return go("/#pricing");
       const configured = validCheckoutUrl(c[plan.field]);
       if (configured) return go(configured);
-      return response2(referenceCheckout(plan, c));
+      return response2(referenceCheckout(plan, c, url.searchParams.get("billing") === "annual" ? "annual" : "monthly"), 200, url);
     }
-    return response2(referenceContact(c, String(url.searchParams.get("status") || "")));
+    return response2(referenceContact(c, String(url.searchParams.get("status") || "")), 200, url);
   }
   __name(handlePublicWebsite2, "handlePublicWebsite");
   async function updateWebsiteContent2(request, env, user) {
@@ -6820,7 +7005,7 @@ var CHATBOT_DELETE_REQUEST_LIMIT = 3;
 var DIRECT_EMAIL_LOGIN = false;
 var PASSWORD_ITERATIONS = 5e4;
 var sharedStyles = html`
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  
   :root { color-scheme:light; --blue:#0a0a0a; --blue2:#1a1a1a; --dark:#0a0a0a;
   --muted:#5c5c5c; --line:#e7e7e7; --soft:#f8f8f8; --ok:#167044;
   --danger:#a52b2b; } * { box-sizing:border-box; } body { margin:0;
@@ -7463,7 +7648,7 @@ function titleCase(value) {
 }
 __name(titleCase, "titleCase");
 function fiseLandingFooter() {
-  return `<footer class="reference-footer" style="background:#000;color:#fff"><div class="video-container"><div class="reference-footer-grid"><div><h3 style="color:#fff">Product</h3><a href="/#features" style="color:#fff">Features</a><a href="/#clients" style="color:#fff">Our Clients</a><a href="/#pricing" style="color:#fff">Pricing</a></div><div><h3 style="color:#fff">Company</h3><a href="/about" style="color:#fff">About</a><a href="/blog" style="color:#fff">Blog</a><a href="/contact" style="color:#fff">Contact</a><a href="/help" style="color:#fff">Help</a></div><div><h3 style="color:#fff">Legal</h3><a href="/privacy-policy" target="_blank" rel="noopener" style="color:#fff">Privacy Policy</a><a href="/cookies" target="_blank" rel="noopener" style="color:#fff">Cookies</a><a href="/terms-and-conditions" target="_blank" rel="noopener" style="color:#fff">T&amp;C's</a></div></div><div class="reference-footer-bottom" style="color:#fff"><span>© 2026 Fise AI. All rights reserved.</span><span>Built for businesses that care about every conversation.</span></div></div></footer>`;
+  return `<footer class="reference-footer"><div class="app-footer-row"><nav aria-label="Footer"><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href="/help">Help</a><a href="/contact">Contact</a><a href="/privacy-policy">Privacy Policy</a><a href="/terms-and-conditions">Terms</a><a href="/cookies">Cookies</a></nav><p><span>© ${(/* @__PURE__ */ new Date()).getUTCFullYear()} Fise AI.</span> <span>Built for businesses that care about every conversation.</span></p></div></footer>`;
 }
 __name(fiseLandingFooter, "fiseLandingFooter");
 function fiseEmailFooter(origin) {
@@ -7472,37 +7657,68 @@ function fiseEmailFooter(origin) {
   return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
-var _d;
+var APP_ASSET_VERSION = "20260924-app2";
+function appHead(title) {
+  return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#FAFAFA"><title>${escapeHtml(title)} · Fise AI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site.css?v=${APP_ASSET_VERSION}"><link rel="stylesheet" href="/dashboard-v2.css?v=${APP_ASSET_VERSION}">`;
+}
+__name(appHead, "appHead");
+var APP_ICONS = {
+  overview: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 4v3h6V4z",
+  settings: "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M13 4v4M7 10v4M17 16v4",
+  leads: "M16 8a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0",
+  preview: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z",
+  help: "M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114.3 1.7c-.8.8-1.8 1.3-1.8 2.3M12 17h.01",
+  profile: "M12 12a4 4 0 100-8 4 4 0 000 8zM5 21a7 7 0 0114 0",
+  signout: "M15 17l5-5-5-5M20 12H9M11 4H5v16h6"
+};
+function appIcon(name) {
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${APP_ICONS[name] || ""}"/></svg>`;
+}
+__name(appIcon, "appIcon");
+function dashboardAppShell(title, body, options = {}) {
+  const active = options.active || "overview";
+  const botMatch = String(body).match(/\/dashboard\/chatbots\/([^/"?#\s]+)\/(?:settings|leads)/);
+  const keyMatch = String(body).match(/\/widget\/test\?key=([^"&\s]+)/);
+  const botId = botMatch ? botMatch[1] : "";
+  const link = (key, href, label, extra = "") => `<a class="app-nav-link${active === key ? " is-active" : ""}" href="${href}"${active === key ? ' aria-current="page"' : ""}${extra}>${appIcon(key)}<span>${label}</span></a>`;
+  const nav = [
+    link("overview", "/dashboard", "Overview"),
+    botId ? link("settings", `/dashboard/chatbots/${botId}/settings`, "Customise") : "",
+    botId ? link("leads", `/dashboard/chatbots/${botId}/leads`, "Leads") : "",
+    keyMatch ? link("preview", `/widget/test?key=${keyMatch[1]}`, "Live preview") : "",
+    link("help", "/help", "Help centre")
+  ].join("");
+  const logo = `<a class="app-logo" href="/dashboard" aria-label="Fise dashboard"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a>`;
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app"><a class="app-skip" href="#app-main">Skip to content</a><div class="app-layout"><aside class="app-sidebar" id="app-sidebar" aria-label="Dashboard">${logo}<nav class="app-nav" aria-label="Dashboard sections">${nav}</nav><div class="app-sidebar-foot"><a class="app-nav-link${active === "profile" ? " is-active" : ""}" href="/profile">${appIcon("profile")}<span>Profile &amp; plan</span></a><form method="post" action="/logout"><button class="app-nav-link" type="submit">${appIcon("signout")}<span>Sign out</span></button></form></div></aside><div class="app-scrim" data-app-close hidden></div><div class="app-content"><header class="app-mobilebar">${logo}<button class="app-menu" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button></header><div class="app-main" id="app-main">${body}</div>${fiseLandingFooter()}</div></div><div class="app-toasts" aria-live="polite" aria-atomic="false"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
+}
+__name(dashboardAppShell, "dashboardAppShell");
+function authShellPage(title, body) {
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app app-auth"><header class="auth-top"><a class="app-logo" href="/" aria-label="Fise AI home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a><a class="auth-back" href="/">← Back to site</a></header>${body}<div class="app-toasts" aria-live="polite"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script></body></html>`;
+}
+__name(authShellPage, "authShellPage");
 function documentPage(title, body) {
-  const page = html(_d || (_d = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', ' \xB7 Fise AI</title>\n        <link rel="stylesheet" href="/site.css">\n      </head>\n      <body>\n        <header class="public-head">\n          <div class="wrap public-nav">\n            <a class="public-logo" href="/"\n              ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n            >\n            <a class="public-cta" href="/dashboard">Dashboard</a>\n          </div>\n        </header>\n        ', '\n        <footer class="public-foot">\n          <div class="wrap">\n            <div class="public-foot-grid">\n              <div>\n                <a class="public-logo" href="/" style="color:white"\n                  ><span class="public-main-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span class="public-logo-accent">AI</span></span></a\n                >\n                <p\n                  data-global-footer-text\n                  style="max-width:310px;line-height:1.6"\n                >\n                  Helpful AI website assistants built around your business, your\n                  customers and your brand.\n                </p>\n              </div>\n              <div id="fise-global-product-links">\n                <h3>Product</h3>\n                <a href="/demo">Live demo</a><a href="/pricing">Pricing</a\n                ><a href="/login">Customer sign in</a>\n              </div>\n              <div id="fise-global-company-links">\n                <h3>Company</h3>\n                <a href="/about">About</a><a href="/resources">Resources</a\n                ><a href="/blog">Blog</a><a href="/contact">Contact</a>\n              </div>\n              <div>\n                <h3>Legal</h3>\n                <a href="/privacy">Privacy</a><a href="/terms">Terms</a\n                ><a data-global-email href="mailto:hello@fise.ai"\n                  >hello@fise.ai</a\n                >\n              </div>\n            </div>\n            <div class="public-foot-bottom">\n              <span\n                >\xA9 ', ' Fise AI. All rights\n                reserved.</span\n              ><span>Fast answers. Better conversations.</span>\n            </div>\n          </div>\n        </footer>\n        <script src="/website-frame.js" defer><\/script>\n      </body>\n    </html>'])), escapeHtml(title), body, (/* @__PURE__ */ new Date()).getFullYear());
-  let rendered = page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/<footer class="public-foot">[\s\S]*?<\/footer>/, "");
-  if (String(title).startsWith("Customize ")) {
-    rendered = rendered.replace('<main class="wrap">', '<main class="wrap chatbot-settings-page">').replace('class="btn"\n          href="/widget/test?', 'class="btn settings-preview-button"\n          href="/widget/test?').replace('/leads"\n          >View leads</a\n        >\n      </div>', '/leads"\n          >View leads</a\n        ><button class="btn settings-save-top" type="submit" form="chatbot-settings-form">Save changes</button>\n      </div>').replace('<form\n        method="post"\n        action="/api/chatbots/', '<form\n        id="chatbot-settings-form"\n        method="post"\n        action="/api/chatbots/').replace(/\s*<section class="setting-section full save-bar">[\s\S]*?<\/section>/, "");
-  } else if (String(title).startsWith("Leads for ")) {
-    rendered = rendered.replace('<main class="wrap">', '<main class="wrap leads-page">').replace('class="btn"\n          href="/api/chatbots/', 'class="btn leads-download"\n          href="/api/chatbots/');
+  const heading = String(title);
+  if (heading.startsWith("Customize ")) {
+    const content = String(body).replace('<main class="wrap">', '<main class="wrap chatbot-settings-page">').replace('class="btn"\n          href="/widget/test?', 'class="btn settings-preview-button"\n          href="/widget/test?').replace('/leads"\n          >View leads</a\n        >\n      </div>', '/leads"\n          >View leads</a\n        ><button class="btn settings-save-top" type="submit" form="chatbot-settings-form">Save changes</button>\n      </div>').replace('<form\n        method="post"\n        action="/api/chatbots/', '<form\n        id="chatbot-settings-form"\n        data-track-changes\n        method="post"\n        action="/api/chatbots/').replace(/\s*<section class="setting-section full save-bar">[\s\S]*?<\/section>/, "");
+    return dashboardAppShell(title, content, { active: "settings" });
   }
-  return rendered;
+  if (heading.startsWith("Leads for ")) {
+    const content = String(body).replace('<main class="wrap">', '<main class="wrap leads-page">').replace('class="btn"\n          href="/api/chatbots/', 'class="btn leads-download"\n          href="/api/chatbots/');
+    return dashboardAppShell(title, content, { active: "leads" });
+  }
+  return authShellPage(title, body);
 }
 __name(documentPage, "documentPage");
 function deletionDocumentPage(title, body) {
-  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>
-    body.deletion-page{min-height:100vh;display:flex;flex-direction:column;background:#f8f8f8}.deletion-page main{flex:1}.deletion-page .shell{background:#fff}
-  </style></head><body class="deletion-page"><header class="public-head"><div class="wrap public-nav"><a class="public-logo" href="/"><span class="public-main-mark" aria-hidden="true">✣</span><span>Fise <span class="public-logo-accent">AI</span></span></a><a class="public-cta" href="/dashboard">Chatbot</a></div></header>${body}</body></html>`;
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return authShellPage(title, body).replace('<body class="app app-auth">', '<body class="app app-auth deletion-page">');
 }
 __name(deletionDocumentPage, "deletionDocumentPage");
-var _e;
 function embeddedDocumentPage(title, body) {
-  const page = html(_e || (_e = __template(['<!doctype html>\n    <html lang="en">\n      <head>\n        <meta charset="utf-8" />\n        <meta name="viewport" content="width=device-width,initial-scale=1" />\n        <meta name="robots" content="noindex,nofollow" />\n        <title>', " \xB7 Fise AI</title>\n        <link rel=\"stylesheet\" href=\"/site.css\">\n        <style>\n          body { background:#f6f6f6; }\n          main { padding:48px 0 64px; }\n        </style>\n      </head>\n      <body>", '<script src="/website-frame.js" defer><\/script></body>\n    </html>'])), escapeHtml(title), body);
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app app-embedded">${body}<div class="app-toasts" aria-live="polite"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
 }
 __name(embeddedDocumentPage, "embeddedDocumentPage");
 function dashboardStandalonePage(title, body) {
-  const dashboardHeaderCss = `.video-container{width:min(1640px,calc(100% - 96px))}.video-header{position:sticky;top:0;z-index:100;border-bottom:1px solid #ebebeb;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}.video-nav{height:94px;display:flex;align-items:center;justify-content:space-between;gap:32px}.video-logo{display:flex;align-items:center;gap:13px;color:#0a0a0a;font-size:22px;font-weight:850;text-decoration:none}.video-logo-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;color:#fff;background:linear-gradient(145deg,#202020,#202020);box-shadow:0 11px 25px rgba(32,32,32,.22)}.video-logo-mark svg{width:28px;height:28px}.video-links{display:flex;align-items:center;gap:47px}.video-links a{color:#0a0a0a;font-size:17px;font-weight:600;text-decoration:none}.video-links a:hover{color:#202020}.video-get-started{display:inline-flex;min-height:54px;padding:0 27px;align-items:center;justify-content:center;border-radius:10px;color:#fff!important;background:#0a0a0a;font-weight:800!important;box-shadow:0 8px 20px rgba(10,10,10,.1)}.video-demo-pill{display:inline-flex;min-height:54px;padding:0 25px;align-items:center;justify-content:center;border-radius:999px;color:#0a0a0a!important;background:#fff;border:2.5px solid #0a0a0a;font-weight:800!important;text-decoration:none}.video-demo-pill:hover{background:#f2f2f2}.video-menu{display:none;width:44px;height:44px;border:1px solid #e7e7e7;border-radius:10px;background:#fff;color:#0a0a0a;font-size:24px}@media(max-width:1000px){.video-container{width:min(100% - 42px,1640px)}.video-links{gap:24px}}@media(max-width:720px){.video-nav{height:78px}.video-menu{display:block}.video-links{position:absolute;left:0;right:0;top:78px;display:none;padding:23px;background:#fff;border-bottom:1px solid #e7e7e7}.video-links.open{display:grid}.video-links a{font-size:16px}.video-get-started{min-height:48px}.video-container{width:min(100% - 28px,1640px)}}`;
-  const header = `<header class="video-header"><div class="video-container video-nav"><a class="video-logo" href="/"><span class="video-logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="10" rx="2.5"/><path d="M9 11h.01M15 11h.01M9 14h6M12 7V4M10.5 4h3M3 11v3M21 11v3"/></svg></span><span>Fise <span style="color:#202020">AI</span></span></a><nav class="video-links" id="dashboard-video-nav"><a href="/#features">Features</a><a href="/#clients">Our clients</a><a href="/#pricing">Pricing</a><a class="video-demo-pill" href="/dashboard" aria-current="page">Chatbot</a><a class="video-get-started" href="/profile">My profile</a></nav><button class="video-menu" id="dashboard-video-menu" type="button" aria-label="Open navigation">☰</button></div></header>`;
-  const menuScript = `(()=>{const menu=document.getElementById('dashboard-video-menu');const nav=document.getElementById('dashboard-video-nav');menu?.addEventListener('click',()=>nav?.classList.toggle('open'));})();`;
-  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escapeHtml(title)} · Fise AI</title><link rel="stylesheet" href="/site.css"><style>body{background:#f6f6f6}main{padding:48px 0 64px}${dashboardHeaderCss}</style></head><body>${header}${body}<script>${menuScript}<\/script><script src="/website-frame.js" defer><\/script></body></html>`;
-  return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`);
+  return dashboardAppShell(title, body, { active: "overview" });
 }
 __name(dashboardStandalonePage, "dashboardStandalonePage");
 function dashboardAccountSidebar() {
@@ -7527,41 +7743,50 @@ function dashboardDocumentPage(title, body) {
   return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/\s*<div class="dash-topbar-actions">[\s\S]*?<\/div>/, "");
 }
 __name(dashboardDocumentPage, "dashboardDocumentPage");
-function loginPage(message = "", isError = false, embedded = false) {
-  const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}">
-        ${escapeHtml(message)}
-      </div>` : "";
+function loginPage(message = "", isError = false, embedded = false, mode = "") {
+  const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}" role="${isError ? "alert" : "status"}">${escapeHtml(message)}</div>` : "";
   const page = embedded ? embeddedDocumentPage : documentPage;
+  const embedField = embedded ? html`<input type="hidden" name="embed" value="1" />` : "";
+  const initial = mode === "signup" ? "register" : mode === "email" ? "email" : "password";
+  const tab = (key, label) => html`<button type="button" role="tab" id="auth-tab-${key}" aria-controls="auth-panel-${key}" aria-selected="${initial === key}" tabindex="${initial === key ? 0 : -1}">${label}</button>`;
   return page(
     "Sign in",
-    html` <main class="wrap">
+    html`<main class="wrap">
       <section class="shell">
         <div class="eyebrow">Customer platform</div>
-        <h1>Access Fise AI</h1>
-        <p class="lead">Create your account the first time, or sign in using your password or a one-time email link.</p>
+        <h1>${initial === "register" ? "Create your Fise account" : "Welcome back"}</h1>
+        <p class="lead">Sign in with your password or a one-time email link, or create an account in seconds.</p>
         ${notice}
-        <h2>First time here?</h2>
-        <form method="post" action="/api/auth/register">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
-          <button class="btn full" type="submit">Create account</button>
-        </form>
-        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
-        <h2>Sign in with password</h2>
-        <form method="post" action="/api/auth/password">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="identifier-page">Email address</label><input id="identifier-page" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
-          <button class="btn full" type="submit">Sign in with password</button>
-        </form>
-        <hr style="margin:30px 0;border:0;border-top:1px solid var(--line)" />
-        <h2>Sign in with email</h2>
-        <form method="post" action="/api/auth/request">
-          ${embedded ? html`<input type="hidden" name="embed" value="1" />` : ""}
-          <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-          <button class="btn full" type="submit">Sign in with email</button>
-        </form>
+        <div class="auth-tabs" role="tablist" aria-label="Sign-in method" data-initial="${initial}" hidden>${tab("password", "Sign in")}${tab("register", "Create account")}${tab("email", "Email link")}</div>
+        <div class="auth-panel" id="auth-panel-password" role="tabpanel" aria-labelledby="auth-tab-password">
+          <h2 class="sr-only">Sign in with password</h2>
+          <form method="post" action="/api/auth/password">
+            ${embedField}
+            <label for="identifier-page">Email address</label><input id="identifier-page" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
+            <button class="btn full" type="submit">Sign in</button>
+          </form>
+          <p class="auth-alt">Forgot your password? <button type="button" data-auth-go="email">Get a one-time sign-in link</button> — then set a new password from your profile.</p>
+        </div>
+        <div class="auth-panel" id="auth-panel-register" role="tabpanel" aria-labelledby="auth-tab-register">
+          <h2 class="sr-only">Create an account</h2>
+          <form method="post" action="/api/auth/register">
+            ${embedField}
+            <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
+            <button class="btn full" type="submit">Create free account</button>
+          </form>
+          <p class="auth-alt">Free plan · no card required. By continuing you agree to our <a href="/terms-and-conditions">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>
+        </div>
+        <div class="auth-panel" id="auth-panel-email" role="tabpanel" aria-labelledby="auth-tab-email">
+          <h2 class="sr-only">Sign in with an email link</h2>
+          <form method="post" action="/api/auth/request">
+            ${embedField}
+            <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <button class="btn full" type="submit">Email me a sign-in link</button>
+          </form>
+          <p class="auth-alt">The link expires after 15 minutes and can be used once.</p>
+        </div>
         <p class="fine">Passwords are stored as protected one-way hashes and cannot be displayed from storage.</p>
       </section>
     </main>`
@@ -7667,6 +7892,11 @@ function renderSetupWizard(bot, stage, embedded = false) {
   return html`<section class="card onboarding-card setup-wizard"><div class="onboarding-copy"><div class="eyebrow">Quick setup</div><h2>Set up your chatbot</h2><p>Complete all three steps here. Your dashboard will open when the chatbot is ready.</p>${steps}</div>${stageContent}</section>`;
 }
 __name(renderSetupWizard, "renderSetupWizard");
+function dashboardWhatsNew() {
+  const items = FISE_WHATS_NEW.slice(0, 3).map((item) => `<li><time datetime="${item.date}">${escapeHtml(item.label)}</time><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span></li>`).join("");
+  return `<section class="app-card app-whatsnew" aria-labelledby="whats-new-title"><div class="app-card-head"><h2 id="whats-new-title">What’s new</h2><a href="/#insights">All updates</a></div><ul>${items}</ul></section>`;
+}
+__name(dashboardWhatsNew, "dashboardWhatsNew");
 function dashboardPage(user, chatbots, platformOrigin, message = "", isError = false, embedded = false, setupStage = "") {
   const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}">
         ${escapeHtml(message)}
@@ -7703,7 +7933,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
                 <section class="dash-leads-card">
                   <div class="dash-stat-heading"><strong>Captured leads</strong><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M6 20v-1.5A5.5 5.5 0 0 1 11.5 13h1A5.5 5.5 0 0 1 18 18.5V20"/></svg></span></div>
                   <h3>${Number(bot.lead_count || 0).toLocaleString()} leads</h3>
-                  <p>Qualified conversations this month</p>
+                  <p>Captured since launch · <a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/leads">View all</a></p>
                 </section>
               </div>
 
@@ -7764,7 +7994,7 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
               </dialog>
             </div>`;
     }
-  ).join("") : "";
+  ).join("") + dashboardWhatsNew() : "";
   const createPanel = chatbots.length ? setupStage ? renderSetupWizard(chatbots[0], setupStage, embedded) : "" : html`<section class="card onboarding-card">
         <div class="onboarding-copy">
           <div class="eyebrow">Quick setup</div>
@@ -7795,11 +8025,11 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
   const wrapDashboardPage = embedded ? embeddedDocumentPage : dashboardStandalonePage;
   return wrapDashboardPage(
     "Dashboard",
-    html(_g || (_g = __template([' <div class="dash-account-topbar">\n      <div><small>Account centre</small><h1>Chatbot Dashboard</h1><span>Profile</span></div>\n      <div class="dash-topbar-actions">\n        <label class="dash-action-search"><span aria-hidden="true">\u2315</span><input type="search" placeholder="Search actions" aria-label="Search dashboard actions"></label>\n        <button type="button" aria-label="Notifications">\u25CC</button>\n        <span class="dash-user-avatar" aria-label="', '">', '</span>\n      </div>\n    </div>\n    <main class="wrap dashboard-main">\n      ', '\n      <div class="dashboard-shell">', "", '</div>\n      <script src="/dashboard-progress.js" defer><\/script>\n    </main>'])), escapeHtml(user.email), escapeHtml(String(user.email || "F").charAt(0).toUpperCase()), notice, botList, createPanel)
+    html(_g || (_g = __template([' <div class="app-pagehead">\n      <div><small>Account centre</small><h1>Dashboard</h1><p>Signed in as <strong>', '</strong></p></div>\n      <span class="app-avatar" aria-hidden="true">', '</span>\n    </div>\n    <main class="wrap dashboard-main">\n      ', '\n      <div class="dashboard-shell">', "", '</div>\n      <script src="/dashboard-progress.js" defer><\/script>\n    </main>'])), escapeHtml(user.email), escapeHtml(String(user.email || "F").charAt(0).toUpperCase()), notice, botList, createPanel)
   );
 }
 __name(dashboardPage, "dashboardPage");
-var BASE_CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-src 'self' https://fise-ai-platform.seb-slabbert1.workers.dev https://*.seb-slabbert1.workers.dev; base-uri 'none'; form-action 'self'";
+var BASE_CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-src 'self' https://fise-ai-platform.seb-slabbert1.workers.dev https://*.seb-slabbert1.workers.dev; base-uri 'none'; form-action 'self'";
 function htmlResponse(content, status = 200, extraHeaders = {}) {
   return new Response(content, {
     status,
@@ -7830,8 +8060,8 @@ function isEmbeddedRequest(request) {
   return url.searchParams.get("embed") === "1" || String(request.headers.get("sec-fetch-dest") || "").toLowerCase() === "iframe";
 }
 __name(isEmbeddedRequest, "isEmbeddedRequest");
-function loginPageResponse(message = "", isError = false, embedded = false, status = 200) {
-  const content = loginPage(message, isError, embedded);
+function loginPageResponse(message = "", isError = false, embedded = false, status = 200, mode = "") {
+  const content = loginPage(message, isError, embedded, mode);
   return embedded ? embeddedHtmlResponse(content, status) : htmlResponse(content, status);
 }
 __name(loginPageResponse, "loginPageResponse");
@@ -8117,6 +8347,10 @@ async function registerAccount(request, env) {
   const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
   if (!email || !password)
     return loginPageResponse("Enter a valid email address and a password of at least 8 characters.", true, embedded, 400);
+  const registerKeys = ["ip:" + clientAddress(request)];
+  if (await rateLimitExceeded(env, "register", registerKeys, 5, 60 * 60))
+    return loginPageResponse("Too many new accounts from this network. Please try again later.", true, embedded, 429);
+  await recordRateLimitEvent(env, "register", registerKeys);
   const existing = await env.DB.prepare(
     "SELECT id,email,password_hash FROM users WHERE email=? LIMIT 1"
   ).bind(email).first();
@@ -8137,6 +8371,39 @@ async function registerAccount(request, env) {
   return createUserSession(userId, env, embedded ? "/dashboard?embed=1" : returnTo);
 }
 __name(registerAccount, "registerAccount");
+function clientAddress(request) {
+  return String(request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim().slice(0, 64);
+}
+__name(clientAddress, "clientAddress");
+async function rateLimitExceeded(env, bucket, keys, limit, windowSeconds) {
+  if (!env?.DB?.prepare) return false;
+  const now = Math.floor(Date.now() / 1e3);
+  try {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS rate_limit_events (bucket TEXT NOT NULL, key TEXT NOT NULL, created_at INTEGER NOT NULL)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_rate_limit_lookup ON rate_limit_events(bucket,key,created_at)").run();
+    for (const key of keys.filter(Boolean)) {
+      const row = await env.DB.prepare("SELECT COUNT(*) AS total FROM rate_limit_events WHERE bucket=? AND key=? AND created_at>?").bind(bucket, key, now - windowSeconds).first();
+      if (Number(row?.total || 0) >= limit) return true;
+    }
+  } catch (error) {
+    console.error("Rate limit check failed; allowing request", error?.message || error);
+  }
+  return false;
+}
+__name(rateLimitExceeded, "rateLimitExceeded");
+async function recordRateLimitEvent(env, bucket, keys) {
+  if (!env?.DB?.prepare) return;
+  const now = Math.floor(Date.now() / 1e3);
+  try {
+    for (const key of keys.filter(Boolean))
+      await env.DB.prepare("INSERT INTO rate_limit_events (bucket,key,created_at) VALUES (?,?,?)").bind(bucket, key, now).run();
+    if (Math.random() < 0.02) await env.DB.prepare("DELETE FROM rate_limit_events WHERE created_at<?").bind(now - 86400).run();
+  } catch (error) {
+    console.error("Rate limit record failed", error?.message || error);
+  }
+}
+__name(recordRateLimitEvent, "recordRateLimitEvent");
+var DUMMY_PASSWORD_USER = { password_hash: "x", password_salt: "AAAAAAAAAAAAAAAAAAAAAA", password_iterations: null };
 async function passwordLogin(request, env) {
   if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
   await ensureAccountAuthSchema(env);
@@ -8145,10 +8412,15 @@ async function passwordLogin(request, env) {
   const password = String(form.get("password") || "");
   const embedded = String(form.get("embed") || "") === "1";
   const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
+  const limitKeys = ["ip:" + clientAddress(request), "id:" + identifier.toLowerCase().slice(0, 254)];
+  if (await rateLimitExceeded(env, "password-login", limitKeys, 10, 15 * 60))
+    return loginPageResponse("Too many sign-in attempts. Please wait 15 minutes, or use a one-time email link.", true, embedded, 429);
   const user = await env.DB.prepare(
     "SELECT id,email,username,password_hash,password_salt,password_iterations,status FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1"
   ).bind(normalizeEmail(identifier), identifier).first();
-  if (!user || user.status !== "active" || !await passwordMatches(password, user)) {
+  const matches = await passwordMatches(password, user?.password_hash ? user : DUMMY_PASSWORD_USER) && Boolean(user?.password_hash);
+  if (!user || user.status !== "active" || !matches) {
+    await recordRateLimitEvent(env, "password-login", limitKeys);
     const legacy = user && !user.password_hash;
     return loginPageResponse(
       legacy ? "Use the one-time email link once, then Fise will ask you to set a password." : "The email and password do not match.",
@@ -8667,6 +8939,33 @@ async function accountProfile(request, env) {
   });
 }
 __name(accountProfile, "accountProfile");
+var DATABASE_INDEX_STATEMENTS = [
+  "CREATE INDEX IF NOT EXISTS idx_chatbots_user_created ON chatbots(user_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_conversations_chatbot_created ON conversations(chatbot_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_leads_chatbot_created ON leads(chatbot_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_crawl_jobs_chatbot_created ON crawl_jobs(chatbot_id,created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_subscriptions_user_updated ON subscriptions(user_id,updated_at)",
+  "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)",
+  "CREATE INDEX IF NOT EXISTS idx_magic_links_expires ON magic_links(expires_at)"
+];
+var databaseIndexesReady = null;
+function ensureDatabaseIndexes(env) {
+  if (!env?.DB?.prepare) return Promise.resolve();
+  if (!databaseIndexesReady) {
+    databaseIndexesReady = (async () => {
+      for (const sql of DATABASE_INDEX_STATEMENTS) {
+        try {
+          await env.DB.prepare(sql).run();
+        } catch (error) {
+          console.error("Index creation skipped", sql, error?.message || error);
+        }
+      }
+    })();
+  }
+  return databaseIndexesReady;
+}
+__name(ensureDatabaseIndexes, "ensureDatabaseIndexes");
 async function showDashboard(request, env) {
   const user = await currentUser(request, env);
   const requestedUrl = new URL(request.url);
@@ -8680,6 +8979,7 @@ async function showDashboard(request, env) {
   } catch (error) {
     console.error("Testing plan schema check failed; continuing without it", error);
   }
+  await ensureDatabaseIndexes(env);
   let result;
   try {
     result = await env.DB.prepare(
@@ -8693,11 +8993,9 @@ async function showDashboard(request, env) {
          FROM messages m JOIN conversations mc ON mc.id=m.conversation_id
          WHERE mc.chatbot_id=c.id AND m.created_at>=?) AS conversations_used,
         (SELECT COUNT(*) FROM leads l WHERE l.chatbot_id=c.id) AS lead_count,
-        (SELECT status FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_status,
-        (SELECT pages_found FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_found,
-        (SELECT pages_processed FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS pages_processed,
-        (SELECT error_message FROM crawl_jobs WHERE chatbot_id=c.id ORDER BY created_at DESC LIMIT 1) AS scan_error
-      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
+        cj.status AS scan_status,cj.pages_found AS pages_found,cj.pages_processed AS pages_processed,cj.error_message AS scan_error
+      FROM chatbots c LEFT JOIN chatbot_settings cs ON cs.chatbot_id=c.id
+      LEFT JOIN crawl_jobs cj ON cj.id=(SELECT cj2.id FROM crawl_jobs cj2 WHERE cj2.chatbot_id=c.id ORDER BY cj2.created_at DESC LIMIT 1) LEFT JOIN subscriptions s ON s.id=(SELECT s2.id FROM subscriptions s2 WHERE s2.user_id=c.user_id ORDER BY s2.updated_at DESC,s2.id DESC LIMIT 1)
       LEFT JOIN testing_plan_overrides tpo ON tpo.user_id=c.user_id
       WHERE c.user_id = ? ORDER BY c.created_at DESC`
     ).bind(monthStartIso(), user.id).all();
@@ -8729,25 +9027,13 @@ async function showDashboard(request, env) {
     isError = true;
   }
   const embedded = embeddedRequest;
-  const dashboardBots = await Promise.all((result.results || []).map(async (bot) => {
-    let latestScan = null;
-    if (!bot.scan_status && bot.id) {
-      try {
-        latestScan = await env.DB.prepare(
-          "SELECT status,pages_found,pages_processed FROM crawl_jobs WHERE chatbot_id=? ORDER BY created_at DESC LIMIT 1"
-        ).bind(bot.id).first();
-      } catch (error) {
-        console.error("Could not enrich dashboard scan progress", error);
-      }
-    }
-    return {
-      ...bot,
-      scan_status: bot.scan_status || latestScan?.status || (bot.status === "scanning" ? "running" : null),
-      pages_found: bot.pages_found ?? latestScan?.pages_found ?? 0,
-      pages_processed: bot.pages_processed ?? latestScan?.pages_processed ?? 0,
-      plan_code: normalizedPlanCode(bot.plan_code),
-      conversation_limit: planConversationLimit(bot.plan_code)
-    };
+  const dashboardBots = (result.results || []).map((bot) => ({
+    ...bot,
+    scan_status: bot.scan_status || (bot.status === "scanning" ? "running" : null),
+    pages_found: bot.pages_found ?? 0,
+    pages_processed: bot.pages_processed ?? 0,
+    plan_code: normalizedPlanCode(bot.plan_code),
+    conversation_limit: planConversationLimit(bot.plan_code)
   }));
   let setupStage = "";
   const setupBot = dashboardBots[0];
@@ -9503,7 +9789,7 @@ async function updateChatbotSettings(request, env, chatbotId) {
     ) ? String(form.get("header_pattern")) : "circles",
     pattern_intensity: Math.max(
       0,
-      Math.min(100, Number(form.get("pattern_intensity") || 55))
+      Math.min(100, Number.isFinite(Number(form.get("pattern_intensity"))) ? Number(form.get("pattern_intensity") || 55) : 55)
     ),
     header_gradient: form.get("header_gradient") === "1",
     allow_emoji: form.get("allow_emoji") === "1"
@@ -9596,7 +9882,7 @@ function leadsPage(bot, leads) {
               <td>${escapeHtml(lead.enquiry || "")}</td>
             </tr>`
   ).join("") : html`<tr>
-        <td colspan="5" class="muted">No leads have been captured yet.</td>
+        <td colspan="5"><div class="app-empty"><span class="app-empty-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0"/></svg></span><h2>No leads yet</h2><p>When a visitor asks to be contacted, their details and question will appear here. Make sure lead capture is switched on and your assistant is installed on your website.</p><a class="btn secondary" href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings">Check lead settings</a></div></td>
       </tr>`;
   return documentPage(
     `Leads for ${bot.name}`,
@@ -10002,6 +10288,45 @@ async function personalisePublicWebsiteForChatbotOwner(request, env, response) {
   return new Response(markup, { status: response.status, statusText: response.statusText, headers });
 }
 __name(personalisePublicWebsiteForChatbotOwner, "personalisePublicWebsiteForChatbotOwner");
+var PUBLIC_SITEMAP_PATHS = ["/", "/about", "/blog", "/help", "/contact", "/demo", "/privacy-policy", "/terms-and-conditions", "/cookies"];
+function robotsTxt(url) {
+  const body = `User-agent: *\nAllow: /\nDisallow: /dashboard\nDisallow: /api/\nDisallow: /profile\nDisallow: /chat/\nDisallow: /checkout\nDisallow: /login\nDisallow: /widget/\n\nSitemap: ${url.origin}/sitemap.xml\n`;
+  return new Response(body, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" } });
+}
+__name(robotsTxt, "robotsTxt");
+function sitemapXml(url) {
+  const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const entries = PUBLIC_SITEMAP_PATHS.map((path) => `<url><loc>${escapeHtml(url.origin + path)}</loc><lastmod>${today}</lastmod><changefreq>${path === "/" || path === "/blog" ? "weekly" : "monthly"}</changefreq><priority>${path === "/" ? "1.0" : "0.6"}</priority></url>`).join("");
+  return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}</urlset>`, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=86400" } });
+}
+__name(sitemapXml, "sitemapXml");
+async function subscribeNewsletter(request, env) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  const length = Number(request.headers.get("content-length") || 0);
+  if (length > 2048) return json({ error: "Request too large" }, 413);
+  let email = "";
+  try {
+    const type = String(request.headers.get("content-type") || "");
+    if (type.includes("application/json")) email = normalizeEmail((await request.json()).email);
+    else email = normalizeEmail((await request.formData()).get("email"));
+  } catch {
+    return json({ error: "Enter a valid email address." }, 400);
+  }
+  if (!email) return json({ error: "Enter a valid email address." }, 400);
+  if (!env.DB) return json({ error: "Subscriptions are temporarily unavailable." }, 503);
+  const keys = ["ip:" + clientAddress(request)];
+  if (await rateLimitExceeded(env, "newsletter", keys, 10, 60 * 60)) return json({ error: "Too many requests. Please try again later." }, 429);
+  await recordRateLimitEvent(env, "newsletter", keys);
+  try {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS newsletter_subscribers (email TEXT PRIMARY KEY, created_at TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'website')").run();
+    await env.DB.prepare("INSERT OR IGNORE INTO newsletter_subscribers (email, created_at, source) VALUES (?, ?, 'website')").bind(email, (/* @__PURE__ */ new Date()).toISOString()).run();
+  } catch (error) {
+    console.error("Newsletter subscribe failed", error);
+    return json({ error: "Something went wrong. Please try again." }, 500);
+  }
+  return json({ ok: true });
+}
+__name(subscribeNewsletter, "subscribeNewsletter");
 async function routeFiseRequest(request, env, url) {
       if (url.pathname === "/api/health" && request.method === "GET") {
         try {
@@ -10023,8 +10348,14 @@ async function routeFiseRequest(request, env, url) {
       }
       if (url.pathname === "/fise-product-walkthrough.mp4" && request.method === "GET" && env.ASSETS)
         return env.ASSETS.fetch(request);
-      if (url.pathname === "/fise-signup-demo.mp4" && request.method === "GET" && env.ASSETS)
-        return env.ASSETS.fetch(request);
+      if (url.pathname === "/fise-signup-demo.mp4" && request.method === "GET")
+        return redirect("/fise-product-walkthrough.mp4");
+      if (url.pathname === "/robots.txt" && request.method === "GET")
+        return robotsTxt(url);
+      if (url.pathname === "/sitemap.xml" && request.method === "GET")
+        return sitemapXml(url);
+      if (url.pathname === "/api/newsletter" && request.method === "POST")
+        return await subscribeNewsletter(request, env);
       if (url.pathname === "/widget.js" && request.method === "GET")
         return serveWidgetScript();
       if (url.pathname === "/dashboard-settings.js" && request.method === "GET") {
@@ -10076,7 +10407,7 @@ async function routeFiseRequest(request, env, url) {
         return new Response(sharedStyles, {
           headers: {
             "content-type": "text/css; charset=utf-8",
-            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+            "cache-control": url.searchParams.has("v") ? "public, max-age=31536000, immutable" : "public, max-age=3600, stale-while-revalidate=600",
             "x-content-type-options": "nosniff"
           }
         });
@@ -10085,7 +10416,7 @@ async function routeFiseRequest(request, env, url) {
         return new Response(referenceStyles + requestedStyles, {
           headers: {
             "content-type": "text/css; charset=utf-8",
-            "cache-control": "public, max-age=3600, stale-while-revalidate=600",
+            "cache-control": url.searchParams.has("v") ? "public, max-age=31536000, immutable" : "public, max-age=3600, stale-while-revalidate=600",
             "x-content-type-options": "nosniff"
           }
         });
@@ -10172,7 +10503,9 @@ async function routeFiseRequest(request, env, url) {
         return loginPageResponse(
           sent ? "Check your email for the one-time sign-in link." : "",
           false,
-          embedded
+          embedded,
+          200,
+          String(url.searchParams.get("mode") || "")
         );
       }
       if (url.pathname === "/api/contact" && request.method === "POST")
