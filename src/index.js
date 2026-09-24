@@ -1991,7 +1991,7 @@ Date: ${lead.created_at}`
         <div class="questions"><div class="questions-label">Popular questions</div><div class="question-grid"></div></div>
         <div class="messages" aria-live="polite"></div>
         <div class="history-view"><div class="history-title">All your conversations</div><div class="history-list"></div><button class="history-new" type="button">＋ Start new conversation</button></div>
-        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}…" aria-label="Your message"></textarea><div class="emoji-picker">${emojiButtons}</div><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button><button class="tool emoji-toggle" type="button" title="Add an emoji" aria-label="Add an emoji"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.76 2.24a1 1 0 0 0-1.08-.22L2.62 9.22a1 1 0 0 0 .06 1.88l7.17 2.39 2.39 7.17a1 1 0 0 0 .91.68h.04a1 1 0 0 0 .92-.61l7.86-17.4a1 1 0 0 0-.21-1.09ZM11.4 12.6l-5.32-1.77 10.64-4.24-5.32 6.01Z"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
+        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Ask ${safe(config.name)}…" aria-label="Your message"></textarea><div class="emoji-picker">${emojiButtons}</div><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button><button class="tool emoji-toggle" type="button" title="Add an emoji" aria-label="Add an emoji"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.76 2.24a1 1 0 0 0-1.08-.22L2.62 9.22a1 1 0 0 0 .06 1.88l7.17 2.39 2.39 7.17a1 1 0 0 0 .91.68h.04a1 1 0 0 0 .92-.61l7.86-17.4a1 1 0 0 0-.21-1.09ZM11.4 12.6l-5.32-1.77 10.64-4.24-5.32 6.01Z"/></svg></button></div></form></div>
       </section>`;
 
     const panel = root.querySelector(".panel");
@@ -2354,7 +2354,7 @@ Date: ${lead.created_at}`
         </header>
         <div class="messages" aria-live="polite"></div>
         <div class="history-view"><div class="history-title">Your conversations</div><div class="history-list"></div><button class="history-new" type="button">Start a new chat</button></div>
-        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Message ${name}\u2026" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M21.76 2.24a1 1 0 0 0-1.08-.22L2.62 9.22a1 1 0 0 0 .06 1.88l7.17 2.39 2.39 7.17a1 1 0 0 0 .91.68h.04a1 1 0 0 0 .92-.61l7.86-17.4a1 1 0 0 0-.21-1.09ZM11.4 12.6l-5.32-1.77 10.64-4.24-5.32 6.01Z"/></svg></button></div></form><div class="powered"><a href="${safe(config.powered_by_url)}" target="_blank" rel="noopener">Powered by Fise AI</a></div></div>
+        <div class="composer-wrap"><form class="composer"><input class="file-input hidden" type="file" accept=".pdf,.txt,.md,.doc,.docx,.rtf,.csv,.tsv,.xls,.xlsx,.ppt,.pptx"><div class="attachment-bar"><span class="attachment-name"></span><button class="remove-file" type="button">Remove</button></div><textarea class="input" maxlength="2000" rows="2" placeholder="Message ${name}\u2026" aria-label="Your message"></textarea><div class="composer-actions"><div class="tool-group"><button class="tool attach" type="button" title="Attach a file" aria-label="Attach a file"><svg viewBox="0 0 24 24"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.1-9.1a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button><button class="tool mic" type="button" title="Record a voice message" aria-label="Record a voice message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button></div><button class="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M21.76 2.24a1 1 0 0 0-1.08-.22L2.62 9.22a1 1 0 0 0 .06 1.88l7.17 2.39 2.39 7.17a1 1 0 0 0 .91.68h.04a1 1 0 0 0 .92-.61l7.86-17.4a1 1 0 0 0-.21-1.09ZM11.4 12.6l-5.32-1.77 10.64-4.24-5.32 6.01Z"/></svg></button></div></form></div>
       </section>`;
       const panel = root.querySelector(".panel"), launcher = root.querySelector(".launcher"), callout = root.querySelector(".callout");
       const close = root.querySelector(".close"), historyTrigger = root.querySelector(".history-trigger"), historyList = root.querySelector(".history-list"), historyNew = root.querySelector(".history-new");
@@ -2488,7 +2488,7 @@ Date: ${lead.created_at}`
         }
         introSequenceStarted = true;
         let finished = false, started = false;
-        const finishVideo = /* @__PURE__ */ __name(() => {
+        function finishVideo() {
           if (finished) return;
           finished = true;
           if (introVideoFallbackTimer) clearTimeout(introVideoFallbackTimer);
@@ -2499,15 +2499,15 @@ Date: ${lead.created_at}`
             shell.classList.add("hidden");
             startDailyIntro();
           }, 210);
-        }, "finishVideo");
-        const beginPlayback = /* @__PURE__ */ __name(() => {
+        }
+        function beginPlayback() {
           if (started || finished) return;
           started = true;
           video.classList.add("playing");
           video.currentTime = 0;
           const playing = video.play();
           if (playing && typeof playing.catch === "function") playing.catch(finishVideo);
-        }, "beginPlayback");
+        }
         video.addEventListener("ended", finishVideo, { once: true });
         video.addEventListener("error", finishVideo, { once: true });
         if (video.readyState >= 2) beginPlayback();
@@ -2959,7 +2959,12 @@ Date: ${lead.created_at}`
   }
   __name(widgetBootstrapV2Clean, "widgetBootstrapV2Clean");
   function widgetJavascript() {
-    return `(()=>{const __name=(target)=>target;const legacy=${widgetBootstrap.toString()};const modern=${widgetBootstrapV2Clean.toString()};const script=document.currentScript;if(!script||script.dataset.fiseLoaded==="1")return;script.dataset.fiseLoaded="1";const key=script.dataset.chatbotKey||"";if(!key)return;const api=new URL(script.src).origin;fetch(api+"/api/widget/config?key="+encodeURIComponent(key),{mode:"cors"}).then((response)=>response.ok?response.json():Promise.reject(new Error("Unavailable"))).then((config)=>(config.widget_version==="2"?modern:legacy)(config,script)).catch((error)=>console.warn("Fise widget:",error.message));})();`;
+    const legacySrc = widgetBootstrap.toString();
+    const modernSrc = widgetBootstrapV2Clean.toString();
+    const nameHelpers = /* @__PURE__ */ new Set(["__name"]);
+    for (const match of (legacySrc + modernSrc).matchAll(/__name\d*(?=\()/g)) nameHelpers.add(match[0]);
+    const nameShims = Array.from(nameHelpers).map((id) => `const ${id}=(target)=>target;`).join("");
+    return `(()=>{${nameShims}const legacy=${legacySrc};const modern=${modernSrc};const script=document.currentScript;if(!script||script.dataset.fiseLoaded==="1")return;script.dataset.fiseLoaded="1";const key=script.dataset.chatbotKey||"";if(!key)return;const api=new URL(script.src).origin;script.__fiseMount={legacy,modern};fetch(api+"/api/widget/config?key="+encodeURIComponent(key),{mode:"cors"}).then((response)=>response.ok?response.json():Promise.reject(new Error("Unavailable"))).then((config)=>{if(script.dataset.forceVersion==="1"||script.dataset.forceVersion==="2")config.widget_version=script.dataset.forceVersion;script.__fiseConfig=config;(config.widget_version==="2"?modern:legacy)(config,script)}).catch((error)=>console.warn("Fise widget:",error.message));})();`;
   }
   __name(widgetJavascript, "widgetJavascript");
   function serveWidgetScript2() {
@@ -3011,7 +3016,7 @@ Date: ${lead.created_at}`
     return json2({ error: "Not found" }, 404);
   }
   __name(handleWidgetApi2, "handleWidgetApi");
-  return { handleWidgetApi: handleWidgetApi2, serveWidgetScript: serveWidgetScript2, serveWidgetTest: serveWidgetTest2, tailoredPopularQuestions: tailoredPopularQuestions2, widgetTestJavascript: widgetTestJavascript2 };
+  return { handleWidgetApi: handleWidgetApi2, serveWidgetScript: serveWidgetScript2, serveWidgetTest: serveWidgetTest2, tailoredPopularQuestions: tailoredPopularQuestions2, widgetTestJavascript: widgetTestJavascript2, botForKey };
 })();
 var _a, _b, _c;
 var WebsiteModule = (() => {
@@ -6775,7 +6780,7 @@ ${JSON.stringify(finalState)}`,
   return { handleWebsiteStudioApi: handleWebsiteStudioApi2, serveWebsiteMedia: serveWebsiteMedia2, showWebsiteEditor: showWebsiteEditor2, showStudioWebsitePreview: showStudioWebsitePreview2, websiteQueueHandler: websiteQueueHandler2, websiteStudioJavascript: websiteStudioJavascript2 };
 })();
 var { queueHandler, renderScanControls, startWebsiteScan } = ScannerModule;
-var { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript } = ChatModule;
+var { handleWidgetApi, serveWidgetScript, serveWidgetTest, tailoredPopularQuestions, widgetTestJavascript, botForKey } = ChatModule;
 var { handlePublicWebsite, readWebsiteContent, updateWebsiteContent, websiteFrameJavascript, submitContactRequest, referenceStyles, requestedStyles } = WebsiteModule;
 var { handleWebsiteStudioApi, serveWebsiteMedia, showWebsiteEditor, showStudioWebsitePreview, websiteQueueHandler, websiteStudioJavascript } = StudioModule;
 var html = String.raw;
@@ -9840,6 +9845,129 @@ async function createChatbot(request, env) {
   return redirect(dashboardReturnUrl(request, { created: "1", setup: "scan" }));
 }
 __name(createChatbot, "createChatbot");
+const QUICKSTART_PHANTOM_EMAIL = "quickstart-phantom@fise.internal";
+function quickstartAuthorized(request, env) {
+  return Boolean(env.QUICKSTART_ADMIN_TOKEN) && request.headers.get("authorization") === `Bearer ${env.QUICKSTART_ADMIN_TOKEN}`;
+}
+__name(quickstartAuthorized, "quickstartAuthorized");
+async function beginScan(env, chatbotId, websiteUrl, vectorStoreId) {
+  if (!env.SCAN_QUEUE) return { ok: false, error: "The scan queue is not configured." };
+  const jobId = crypto.randomUUID();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.DB.prepare(`
+    INSERT INTO crawl_jobs (id,chatbot_id,root_url,status,pages_found,pages_processed,created_at,updated_at)
+    VALUES (?,?,?,'queued',0,0,?,?)
+  `).bind(jobId, chatbotId, websiteUrl, now, now).run();
+  await env.DB.prepare("UPDATE chatbots SET status = 'scanning', updated_at = ? WHERE id = ?").bind(now, chatbotId).run();
+  try {
+    await env.SCAN_QUEUE.send({ type: "discover", jobId, chatbotId, rootUrl: websiteUrl, vectorStoreId });
+  } catch (error) {
+    await env.DB.prepare("UPDATE crawl_jobs SET status='failed',error_message=?,updated_at=? WHERE id=?").bind(String(error?.message || error).slice(0, 500), now, jobId).run();
+    await env.DB.prepare("UPDATE chatbots SET status='setup',updated_at=? WHERE id=?").bind(now, chatbotId).run();
+    return { ok: false, error: "The website scan could not be queued." };
+  }
+  return { ok: true, jobId };
+}
+__name(beginScan, "beginScan");
+async function quickstartCreate(request, env) {
+  if (!quickstartAuthorized(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (!env.OPENAI_API_KEY) return json({ error: "OpenAI is not configured." }, 503);
+  const phantomUser = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(QUICKSTART_PHANTOM_EMAIL).first();
+  if (!phantomUser) return json({ error: "Quickstart system account not found." }, 500);
+  const body = await request.json().catch(() => ({}));
+  const websiteInput = String(body.website_url || "").trim().slice(0, 500);
+  let website;
+  try {
+    website = new URL(websiteInput);
+  } catch {
+    website = null;
+  }
+  if (!website || !["http:", "https:"].includes(website.protocol) || website.username || website.password)
+    return json({ error: "Enter a valid, public website URL." }, 400);
+  const quickstartHost = website.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!quickstartHost || quickstartHost === "localhost" || quickstartHost.endsWith(".local") || quickstartHost.endsWith(".internal") || quickstartHost.includes(":"))
+    return json({ error: "Enter a valid, public website URL." }, 400);
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(quickstartHost)) {
+    const parts = quickstartHost.split(".").map(Number);
+    const isPrivate = parts.some((part) => part < 0 || part > 255) || parts[0] === 10 || parts[0] === 127 || parts[0] === 0 || parts[0] === 169 && parts[1] === 254 || parts[0] === 192 && parts[1] === 168 || parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31 || parts[0] >= 224;
+    if (isPrivate) return json({ error: "Enter a valid, public website URL." }, 400);
+  }
+  website.hash = "";
+  const businessName = String(body.business_name || website.hostname.replace(/^www\./, "")).trim().slice(0, 100);
+  const name = String(body.name || businessName.split(" ")[0] || "Assistant").trim().slice(0, 80);
+  const greeting = String(body.greeting || "Hi! How can I help you today?").trim().slice(0, 240);
+  const colour = /^#[0-9a-fA-F]{6}$/.test(String(body.primary_colour || "")) ? body.primary_colour : "#1769e0";
+  const chatbotId = crypto.randomUUID();
+  const publicKey = `fise_${randomToken(24)}`;
+  let vectorStoreId = "";
+  try {
+    vectorStoreId = await createVectorStore(env, chatbotId, businessName, name);
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    await env.DB.prepare(`
+      INSERT INTO chatbots
+      (id,user_id,name,business_name,website_url,status,public_key,vector_store_id,model,primary_colour,greeting,instructions,allowed_domains_json,monthly_message_limit,created_at,updated_at)
+      VALUES (?,?,?,?,?,'setup',?,?,'gpt-5-mini',?,?,?,?,500,?,?)
+    `).bind(
+      chatbotId,
+      phantomUser.id,
+      name,
+      businessName,
+      website.toString(),
+      publicKey,
+      vectorStoreId,
+      colour.toLowerCase(),
+      greeting,
+      "",
+      JSON.stringify([website.origin]),
+      nowIso,
+      nowIso
+    ).run();
+    await env.DB.prepare(`
+      INSERT INTO chatbot_settings
+        (chatbot_id,answer_length,formality,popular_questions_json,default_size,allow_files,allow_voice,lead_capture_enabled,lead_cta_label,lead_destination_email,google_sheets_webhook,ui_settings_json,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(
+      chatbotId,
+      "short",
+      "friendly",
+      "[]",
+      "large",
+      1,
+      1,
+      0,
+      "Talk to us",
+      "",
+      "",
+      JSON.stringify({ allow_emoji: false, onboarding_complete: true, widget_version: "2" }),
+      nowIso,
+      nowIso
+    ).run();
+  } catch (error) {
+    if (vectorStoreId) await deleteVectorStore(env, vectorStoreId);
+    console.error("Quickstart create chatbot error", error);
+    return json({ error: error.message || "The chatbot could not be created." }, 500);
+  }
+  const started = await beginScan(env, chatbotId, website.toString(), vectorStoreId);
+  if (!started.ok) return json({ error: started.error || "The website scan could not be started." }, 502);
+  return json({ chatbotId, publicKey, chatLink: `${new URL(request.url).origin}/chat/${publicKey}` });
+}
+__name(quickstartCreate, "quickstartCreate");
+async function quickstartStatus(request, env) {
+  if (!quickstartAuthorized(request, env)) return json({ error: "Unauthorized" }, 401);
+  const url = new URL(request.url);
+  const chatbotId = url.searchParams.get("id") || "";
+  const bot = await env.DB.prepare("SELECT id,status,public_key,name,business_name,website_url FROM chatbots WHERE id = ?").bind(chatbotId).first();
+  if (!bot) return json({ error: "Not found." }, 404);
+  const job = await env.DB.prepare("SELECT status,pages_found,pages_processed,error_message FROM crawl_jobs WHERE chatbot_id = ? ORDER BY created_at DESC LIMIT 1").bind(bot.id).first();
+  return json({
+    status: bot.status,
+    publicKey: bot.public_key,
+    businessName: bot.business_name,
+    chatLink: `${url.origin}/chat/${bot.public_key}`,
+    scan: job ? { status: job.status, pagesFound: job.pages_found, pagesProcessed: job.pages_processed, error: job.error_message } : null
+  });
+}
+__name(quickstartStatus, "quickstartStatus");
 async function logout(request, env) {
   if (!sameOrigin(request))
     return json({ error: "Invalid request origin" }, 403);
@@ -10018,7 +10146,8 @@ async function routeFiseRequest(request, env, url) {
           );
         }
         const origin = url.origin;
-        const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${escapeHtml(bot.business_name || bot.name || "Assistant")}</title><meta name="robots" content="noindex"><style>*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:#f5f4f1;font-family:system-ui,-apple-system,sans-serif}.loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#8b8d92;font-size:13px}</style></head><body><div class="loading" id="l">Loading…</div><script src="${escapeHtml(origin)}/widget.js" data-chatbot-key="${escapeHtml(key)}"><\/script><script>(()=>{let n=0;const t=setInterval(()=>{n+=1;const h=document.getElementById('fise-chat-widget'),r=h&&h.shadowRoot,b=r&&r.querySelector('.launcher'),p=r&&r.querySelector('.panel');if(b&&p){b.click();p.classList.remove('standard','large');p.classList.add('fullscreen');document.getElementById('l').remove();clearInterval(t)}else if(n>150){document.getElementById('l').textContent='This assistant could not load. Please refresh.';clearInterval(t)}},100)})();<\/script></body></html>`;
+        const versionControl = `<div class="version-control"><details class="version-picker" id="fise-version-picker"><summary aria-label="Choose chatbot version"><span class="version-picker-title" id="fise-version-title">Version 2.1</span><span class="version-picker-chevron" aria-hidden="true"></span></summary><div class="version-picker-menu" role="menu"><button type="button" data-version="1" class="version-picker-option" role="menuitem"><span><strong>Version 1.1</strong><small>Older, but your brand colours</small></span><span class="version-picker-check" aria-hidden="true">✓</span></button><button type="button" data-version="2" class="version-picker-option active" role="menuitem"><span><strong>Version 2.1</strong><small>Modern and professional <em>(Recommended)</em></small></span><span class="version-picker-check" aria-hidden="true">✓</span></button></div></details></div>`;
+        const content = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${escapeHtml(bot.business_name || bot.name || "Assistant")}</title><meta name="robots" content="noindex"><style>*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:#f5f4f1;font-family:system-ui,-apple-system,sans-serif}.version-control{position:fixed;top:24px;right:24px;z-index:2147483003}.version-picker{position:relative}.version-picker summary{min-width:158px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 16px;border:1px solid #d7d9dd;border-radius:13px;list-style:none;color:#202124;background:#fff;box-shadow:0 8px 24px rgba(10,10,10,.09);font-size:14px;font-weight:750;cursor:pointer;user-select:none}.version-picker summary::-webkit-details-marker{display:none}.version-picker summary:focus-visible{outline:3px solid rgba(32,32,32,.2);outline-offset:2px}.version-picker-chevron{width:8px;height:8px;border-right:2px solid #868b93;border-bottom:2px solid #868b93;transform:translateY(-2px) rotate(45deg);transition:transform .16s ease}.version-picker[open] .version-picker-chevron{transform:translateY(2px) rotate(225deg)}.version-picker-menu{position:absolute;top:calc(100% + 10px);right:0;width:340px;max-width:calc(100vw - 24px);padding:10px;border:1px solid #d4d6da;border-radius:18px;background:#fff;box-shadow:0 18px 48px rgba(10,10,10,.18);animation:versionMenuIn .16s ease-out}.version-picker-option{width:100%;min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 13px;border:0;border-radius:12px;color:#202124;background:transparent;text-align:left;cursor:pointer}.version-picker-option:hover,.version-picker-option:focus-visible{background:#f6f6f6;outline:none}.version-picker-option strong,.version-picker-option small{display:block}.version-picker-option strong{font-size:16px;line-height:1.3;font-weight:500}.version-picker-option small{margin-top:3px;color:#8b8d91;font-size:14px;line-height:1.35}.version-picker-check{display:none;color:#202020;font-size:24px;font-weight:700}.version-picker-option.active .version-picker-check{display:block}@keyframes versionMenuIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(max-width:650px){.version-control{top:12px;right:12px}.version-picker summary{min-width:145px;height:43px}}</style></head><body>${versionControl}<script src="${escapeHtml(origin)}/widget.js?v=20260923-chat-link-5" data-chatbot-key="${escapeHtml(key)}" data-preview="1" data-force-version="2"><\/script><script>(()=>{const script=document.querySelector('script[data-chatbot-key]'),details=document.getElementById('fise-version-picker'),title=document.getElementById('fise-version-title'),options=Array.prototype.slice.call(details.querySelectorAll('.version-picker-option'));function setActive(version){title.textContent=version==='2'?'Version 2.1':'Version 1.1';options.forEach((opt)=>opt.classList.toggle('active',opt.getAttribute('data-version')===version))}function wireLauncher(){const host=document.getElementById('fise-chat-widget'),root=host&&host.shadowRoot,launcher=root&&root.querySelector('.launcher'),panel=root&&root.querySelector('.panel');if(!launcher||!panel)return false;const versionControlEl=details.parentElement,syncVisibility=()=>{versionControlEl.style.display=panel.classList.contains('open')?'none':''};syncVisibility();new MutationObserver(syncVisibility).observe(panel,{attributes:true,attributeFilter:['class']});launcher.addEventListener('click',()=>{panel.classList.remove('standard','large');panel.classList.add('fullscreen')});return true}function waitForMount(cb){let tries=0;const iv=setInterval(()=>{tries+=1;if(wireLauncher()){clearInterval(iv);if(cb)cb()}else if(tries>100)clearInterval(iv)},100)}waitForMount(()=>{if(script.__fiseConfig)setActive(script.__fiseConfig.widget_version==='2'?'2':'1')});options.forEach((opt)=>{opt.addEventListener('click',()=>{const version=opt.getAttribute('data-version');details.removeAttribute('open');if(!script.__fiseConfig||!script.__fiseMount||script.__fiseConfig.widget_version===version)return;const nextConfig=Object.assign({},script.__fiseConfig,{widget_version:version});script.__fiseConfig=nextConfig;const oldHost=document.getElementById('fise-chat-widget');if(oldHost)oldHost.remove();(version==='2'?script.__fiseMount.modern:script.__fiseMount.legacy)(nextConfig,script);setActive(version);waitForMount()})})})();<\/script></body></html>`;
         return new Response(content, {
           headers: {
             "content-type": "text/html; charset=utf-8",
@@ -10184,6 +10313,10 @@ async function routeFiseRequest(request, env, url) {
         );
       if (url.pathname === "/api/chatbots" && request.method === "POST")
         return createChatbot(request, env);
+      if (url.pathname === "/api/admin/quickstart" && request.method === "POST")
+        return quickstartCreate(request, env);
+      if (url.pathname === "/api/admin/quickstart/status" && request.method === "GET")
+        return quickstartStatus(request, env);
       if (url.pathname === "/api/scans/start" && request.method === "POST") {
         if (!sameOrigin(request))
           return json({ error: "Invalid request origin" }, 403);
