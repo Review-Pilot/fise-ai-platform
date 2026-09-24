@@ -115,6 +115,7 @@ $$('[data-video]').forEach((box)=>{
     v.setAttribute('aria-label',btn.getAttribute('aria-label')||'Product walkthrough');
     box.appendChild(v);
     box.querySelector('.fx-video-scrim')?.remove();btn.remove();
+    v.addEventListener('error',()=>{const note=doc.createElement('p');note.className='fx-video-fallback';note.innerHTML='This browser can\u2019t play the video inline. <a href="'+box.dataset.video+'">Download the walkthrough</a>.';box.appendChild(note)},{once:true});
     const p=v.play();if(p&&p.catch)p.catch(()=>{});v.focus();
   });
 });

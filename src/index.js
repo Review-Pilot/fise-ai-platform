@@ -5303,7 +5303,7 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
-  const FX_ASSET_VERSION = "20260924-fx3";
+  const FX_ASSET_VERSION = "20260924-fx5";
   const FX_SITE_NAME = "Fise AI";
   function fxText(c, key) {
     const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
@@ -5343,7 +5343,7 @@ var WebsiteModule = (() => {
   }
   __name(referenceHeader, "referenceHeader");
   function referenceFooter(c = {}) {
-    const col = (title, items) => html2`<nav aria-label="${title}"><h3>${title}</h3>${items.map(([href, label]) => html2`<a href="${href}">${label}</a>`).join("")}</nav>`;
+    const col = (title, items) => html2`<nav aria-label="${title}"><h2 class="fx-footer-h">${title}</h2>${items.map(([href, label]) => html2`<a href="${href}">${label}</a>`).join("")}</nav>`;
     const email = fxText(c, "contact_email");
     return html2`<footer class="fx-footer site-footer"><div class="fx-container"><div class="fx-footer-grid"><div class="fx-footer-brand"><a class="fx-logo" href="/">${fxLogoMark()}<span>Fise</span></a><p>${escapeWebsiteHtml(fxText(c, "footer_text"))}</p><form class="fx-news-form" id="fx-newsletter" novalidate><label for="fx-news-email">Product updates, once a month</label><div class="fx-news-row"><input class="fx-input" id="fx-news-email" name="email" type="email" autocomplete="email" placeholder="you@company.co.za" required><button class="fx-btn fx-btn-primary fx-btn-sm" type="submit">Subscribe</button></div><p class="fx-form-msg" role="status" aria-live="polite"></p></form></div>${col("Product", [["/#features", "Features"], ["/#how", "How it works"], ["/#pricing", "Pricing"], ["/demo", "Live demo"], ["/#insights", "What’s new"]])}${col("Company", [["/about", "About"], ["/blog", "Blog"], ["/contact", "Contact"]])}${col("Resources", [["/help", "Help centre"], ["/help#install", "Install guide"], ["/#faq", "FAQ"]])}${col("Legal", [["/privacy-policy", "Privacy Policy"], ["/terms-and-conditions", "Terms &amp; Conditions"], ["/cookies", "Cookies"]])}</div><div class="fx-footer-bottom"><span>© ${(/* @__PURE__ */ new Date()).getUTCFullYear()} Fise AI. All rights reserved.</span><div class="fx-social"><a href="mailto:${escapeWebsiteHtml(email)}" aria-label="Email Fise AI">${fxIcon("M4 6h16v12H4zM4 7l8 6 8-6", 16)}</a><a href="https://www.linkedin.com/" rel="noopener" aria-label="Fise AI on LinkedIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5zM3 9h4v12H3zM9 9h3.8v1.7h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V21H9z"/></svg></a><a href="https://x.com/" rel="noopener" aria-label="Fise AI on X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.2 2H21l-6.5 7.4L22 22h-6l-4.7-6.1L5.9 22H3l7-8L2 2h6.1l4.2 5.6zm-1 18h1.6L7 3.7H5.3z"/></svg></a></div></div></div></footer>`;
   }
@@ -5697,7 +5697,7 @@ var WebsiteModule = (() => {
     return referenceShell(
       "Contact Fise AI",
       "Contact Fise AI for help with an AI website chatbot, setup or a plan.",
-      html2`<main class="contact-reference"><div class="video-container contact-layout"><section class="contact-intro"><div class="reference-eyebrow">Contact Fise AI</div><h1>Let’s make your website more helpful.</h1><p>Tell us what you need. Whether you are exploring Fise AI, setting up a chatbot or need support, we will point you in the right direction.</p><ul class="contact-points"><li>Ask about the right plan for your business.</li><li>Get help with chatbot setup or website scanning.</li><li>Share a question and our team will follow up.</li></ul></section><section class="contact-card">${message}<form method="post" action="/api/contact"><label for="contact-name">Your name<input id="contact-name" name="name" autocomplete="name" maxlength="120" required placeholder="Your name"></label><label for="contact-email">Email address<input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"></label><label for="contact-business"><span class="fx-label">Business name <span>(optional)</span></span><input id="contact-business" name="business" autocomplete="organization" maxlength="160" placeholder="Your business"></label><label for="contact-message">How can we help?<textarea id="contact-message" name="message" maxlength="4000" required placeholder="Tell us a little about what you need."></textarea></label><button class="reference-button dark" type="submit">Send message <span>→</span></button><p class="contact-note">We only use these details to respond to your query.</p></form></section></div></main>`,
+      html2`<main class="contact-reference"><div class="video-container contact-layout"><section class="contact-intro"><div class="reference-eyebrow">Contact Fise AI</div><h1>Let’s make your website more helpful.</h1><p>Tell us what you need. Whether you are exploring Fise AI, setting up a chatbot or need support, we will point you in the right direction.</p><ul class="contact-points"><li>Ask about the right plan for your business.</li><li>Get help with chatbot setup or website scanning.</li><li>Share a question and our team will follow up.</li></ul></section><section class="contact-card">${message}<form method="post" action="/api/contact"><label for="contact-name">Your name<input id="contact-name" name="name" autocomplete="name" maxlength="120" required placeholder="Your name"></label><label for="contact-email">Email address<input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com"></label><label for="contact-business"><span class="fx-label">Business name <span>(optional)</span></span><input id="contact-business" name="business" autocomplete="organization" maxlength="160" placeholder="Your business"></label><label for="contact-message">How can we help?<textarea id="contact-message" name="message" maxlength="4000" required placeholder="Tell us a little about what you need."></textarea></label><div class="sr-only" aria-hidden="true"><label for="contact-website">Leave this field empty<input id="contact-website" name="website" tabindex="-1" autocomplete="off"></label></div><button class="reference-button dark" type="submit">Send message <span>→</span></button><p class="contact-note">We only use these details to respond to your query.</p></form></section></div></main>`,
       c
     );
   }
@@ -5709,7 +5709,11 @@ var WebsiteModule = (() => {
     const email = normalizeEmail(form.get("email"));
     const business = String(form.get("business") || "").trim().replace(/[\r\n]+/g, " ").slice(0, 160);
     const message = String(form.get("message") || "").trim().slice(0, 4e3);
+    if (String(form.get("website") || "").trim()) return redirect("/contact?status=sent");
     if (!name || !email || !message) return redirect("/contact?status=error");
+    const contactKeys = ["ip:" + clientAddress(request)];
+    if (await rateLimitExceeded(env, "contact", contactKeys, 5, 60 * 60)) return redirect("/contact?status=error");
+    await recordRateLimitEvent(env, "contact", contactKeys);
     if (!env.RESEND_API_KEY) return redirect("/contact?status=error");
     const safeName = escapeHtml(name);
     const safeEmail = escapeHtml(email);
@@ -7653,7 +7657,7 @@ function fiseEmailFooter(origin) {
   return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
-var APP_ASSET_VERSION = "20260924-app1";
+var APP_ASSET_VERSION = "20260924-app2";
 function appHead(title) {
   return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#FAFAFA"><title>${escapeHtml(title)} · Fise AI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site.css?v=${APP_ASSET_VERSION}"><link rel="stylesheet" href="/dashboard-v2.css?v=${APP_ASSET_VERSION}">`;
 }
@@ -8343,6 +8347,10 @@ async function registerAccount(request, env) {
   const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
   if (!email || !password)
     return loginPageResponse("Enter a valid email address and a password of at least 8 characters.", true, embedded, 400);
+  const registerKeys = ["ip:" + clientAddress(request)];
+  if (await rateLimitExceeded(env, "register", registerKeys, 5, 60 * 60))
+    return loginPageResponse("Too many new accounts from this network. Please try again later.", true, embedded, 429);
+  await recordRateLimitEvent(env, "register", registerKeys);
   const existing = await env.DB.prepare(
     "SELECT id,email,password_hash FROM users WHERE email=? LIMIT 1"
   ).bind(email).first();
@@ -8363,6 +8371,39 @@ async function registerAccount(request, env) {
   return createUserSession(userId, env, embedded ? "/dashboard?embed=1" : returnTo);
 }
 __name(registerAccount, "registerAccount");
+function clientAddress(request) {
+  return String(request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim().slice(0, 64);
+}
+__name(clientAddress, "clientAddress");
+async function rateLimitExceeded(env, bucket, keys, limit, windowSeconds) {
+  if (!env?.DB?.prepare) return false;
+  const now = Math.floor(Date.now() / 1e3);
+  try {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS rate_limit_events (bucket TEXT NOT NULL, key TEXT NOT NULL, created_at INTEGER NOT NULL)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_rate_limit_lookup ON rate_limit_events(bucket,key,created_at)").run();
+    for (const key of keys.filter(Boolean)) {
+      const row = await env.DB.prepare("SELECT COUNT(*) AS total FROM rate_limit_events WHERE bucket=? AND key=? AND created_at>?").bind(bucket, key, now - windowSeconds).first();
+      if (Number(row?.total || 0) >= limit) return true;
+    }
+  } catch (error) {
+    console.error("Rate limit check failed; allowing request", error?.message || error);
+  }
+  return false;
+}
+__name(rateLimitExceeded, "rateLimitExceeded");
+async function recordRateLimitEvent(env, bucket, keys) {
+  if (!env?.DB?.prepare) return;
+  const now = Math.floor(Date.now() / 1e3);
+  try {
+    for (const key of keys.filter(Boolean))
+      await env.DB.prepare("INSERT INTO rate_limit_events (bucket,key,created_at) VALUES (?,?,?)").bind(bucket, key, now).run();
+    if (Math.random() < 0.02) await env.DB.prepare("DELETE FROM rate_limit_events WHERE created_at<?").bind(now - 86400).run();
+  } catch (error) {
+    console.error("Rate limit record failed", error?.message || error);
+  }
+}
+__name(recordRateLimitEvent, "recordRateLimitEvent");
+var DUMMY_PASSWORD_USER = { password_hash: "x", password_salt: "AAAAAAAAAAAAAAAAAAAAAA", password_iterations: null };
 async function passwordLogin(request, env) {
   if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
   await ensureAccountAuthSchema(env);
@@ -8371,10 +8412,15 @@ async function passwordLogin(request, env) {
   const password = String(form.get("password") || "");
   const embedded = String(form.get("embed") || "") === "1";
   const returnTo = safeReturnPath(form.get("return_to"), "/dashboard");
+  const limitKeys = ["ip:" + clientAddress(request), "id:" + identifier.toLowerCase().slice(0, 254)];
+  if (await rateLimitExceeded(env, "password-login", limitKeys, 10, 15 * 60))
+    return loginPageResponse("Too many sign-in attempts. Please wait 15 minutes, or use a one-time email link.", true, embedded, 429);
   const user = await env.DB.prepare(
     "SELECT id,email,username,password_hash,password_salt,password_iterations,status FROM users WHERE email=? OR username=? COLLATE NOCASE LIMIT 1"
   ).bind(normalizeEmail(identifier), identifier).first();
-  if (!user || user.status !== "active" || !await passwordMatches(password, user)) {
+  const matches = await passwordMatches(password, user?.password_hash ? user : DUMMY_PASSWORD_USER) && Boolean(user?.password_hash);
+  if (!user || user.status !== "active" || !matches) {
+    await recordRateLimitEvent(env, "password-login", limitKeys);
     const legacy = user && !user.password_hash;
     return loginPageResponse(
       legacy ? "Use the one-time email link once, then Fise will ask you to set a password." : "The email and password do not match.",
@@ -9743,7 +9789,7 @@ async function updateChatbotSettings(request, env, chatbotId) {
     ) ? String(form.get("header_pattern")) : "circles",
     pattern_intensity: Math.max(
       0,
-      Math.min(100, Number(form.get("pattern_intensity") || 55))
+      Math.min(100, Number.isFinite(Number(form.get("pattern_intensity"))) ? Number(form.get("pattern_intensity") || 55) : 55)
     ),
     header_gradient: form.get("header_gradient") === "1",
     allow_emoji: form.get("allow_emoji") === "1"
@@ -10268,6 +10314,9 @@ async function subscribeNewsletter(request, env) {
   }
   if (!email) return json({ error: "Enter a valid email address." }, 400);
   if (!env.DB) return json({ error: "Subscriptions are temporarily unavailable." }, 503);
+  const keys = ["ip:" + clientAddress(request)];
+  if (await rateLimitExceeded(env, "newsletter", keys, 10, 60 * 60)) return json({ error: "Too many requests. Please try again later." }, 429);
+  await recordRateLimitEvent(env, "newsletter", keys);
   try {
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS newsletter_subscribers (email TEXT PRIMARY KEY, created_at TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'website')").run();
     await env.DB.prepare("INSERT OR IGNORE INTO newsletter_subscribers (email, created_at, source) VALUES (?, ?, 'website')").bind(email, (/* @__PURE__ */ new Date()).toISOString()).run();
