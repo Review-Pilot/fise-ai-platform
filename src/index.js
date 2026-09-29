@@ -370,10 +370,6 @@ var HELP_MODULES = [
 ];
 
 
-function helpVideoPlaceholder() {
-  return '<div class="help-video-placeholder"><span class="help-video-play" aria-hidden="true">\u25B6</span><div><strong>Video walkthrough</strong><small>~15s clip placeholder \u2014 add your video here</small></div></div>';
-}
-__name(helpVideoPlaceholder, "helpVideoPlaceholder");
 function escapeHelpHtml(value) {
   return String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
@@ -398,7 +394,7 @@ function renderHelpModules() {
   return HELP_MODULES.map((mod, mi) => {
     const topics = mod.topics.map((topic) => {
       const steps = topic.steps.map((s) => `<li>${escapeHelpHtml(s)}</li>`).join("");
-      return `<details class="help-topic"><summary><span>${escapeHelpHtml(topic.title)}</span><span class="help-topic-chevron">${helpChevron(false)}</span></summary><div class="help-topic-body">${helpVideoPlaceholder()}<ol>${steps}</ol></div></details>`;
+      return `<details class="help-topic"><summary><span>${escapeHelpHtml(topic.title)}</span><span class="help-topic-chevron">${helpChevron(false)}</span></summary><div class="help-topic-body"><ol>${steps}</ol></div></details>`;
     }).join("");
     const relatedLink = HELP_MODULE_LINKS[mod.key];
     const related = relatedLink ? `<a class="help-module-link" href="${escapeHelpHtml(relatedLink.href)}">${escapeHelpHtml(relatedLink.label)} →</a>` : "";
@@ -1030,7 +1026,7 @@ var ChatModule = (() => {
   const CHAT_HISTORY_LIMIT = 6;
   const FILE_SEARCH_RESULTS = 4;
   const POPULAR_CACHE_HOURS = 6;
-  const TESTING_LEAD_CAPTURE = true;
+  const TESTING_LEAD_CAPTURE = false;
   const VISITOR_MINUTE_LIMIT = 12;
   const FILE_LIMIT_BYTES = 8 * 1024 * 1024;
   const AUDIO_LIMIT_BYTES = 6 * 1024 * 1024;
@@ -4331,6 +4327,9 @@ var WebsiteModule = (() => {
   .profile-signout button:hover{border-color:#dddde0!important;background:#ededee!important;transform:translateX(2px)}
   .profile-signout button:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}
   .profile-signout button svg{width:18px;height:18px;flex:0 0 18px}
+  .profile-signout{padding-top:16px}
+  .profile-signout button{display:flex!important;width:100%;min-height:40px;padding:9px 12px!important;align-items:center;justify-content:flex-start!important;gap:12px;border:0!important;border-radius:10px!important;color:#525252!important;background:transparent!important;font-size:14px;font-weight:500;text-align:left;cursor:pointer;transform:none!important}
+  .profile-signout button:hover{background:#f2f2f2!important;color:#0a0a0a!important;transform:none!important}
   .profile-panel[data-profile-panel="subscription"] .profile-detail a{color:#111;text-decoration:underline;text-decoration-color:#a9adb2;text-underline-offset:3px}
   .profile-panel[data-profile-panel="subscription"] .profile-detail a:hover{color:#000;text-decoration-color:#111}
   .profile-panel[data-profile-panel="subscription"] .profile-plan-form select{border-color:#c9ccd0;color:#111;background:#fff}
@@ -4370,10 +4369,6 @@ var WebsiteModule = (() => {
   .help-topic-body ol{margin:0;padding-left:20px;color:#141414;font-size:15px;line-height:1.75}
   .help-topic-body li{margin:0 0 9px}
   .help-topic-body li::marker{color:#cccccc;font-weight:700}
-  .help-video-placeholder{display:flex;align-items:center;gap:14px;margin:4px 0 20px;padding:16px 18px;border-radius:12px;background:linear-gradient(135deg,#f5f5f5,#f0f0f0)}
-  .help-video-play{width:36px;height:36px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;color:#fff;background:var(--ink);font-size:11px}
-  .help-video-placeholder strong{display:block;font-size:13px;color:#0a0a0a;font-weight:800}
-  .help-video-placeholder small{color:#202020;font-size:12px}
   .help-toc{display:flex;flex-wrap:wrap;gap:10px;max-width:820px;margin:0 0 40px;padding:0;list-style:none}
   .help-toc a{display:inline-flex;align-items:center;padding:10px 18px;border:1px solid #eeeeee;border-radius:999px;color:#141414;background:#fff;font-size:14px;font-weight:750;text-decoration:none;transition:border-color .18s ease,background .18s ease,color .18s ease}
   .help-toc a:hover,.help-toc a:focus-visible{border-color:#202020;color:#202020;background:#fafafa}
@@ -5251,6 +5246,10 @@ var WebsiteModule = (() => {
             stopAuthPoll();
             if(account){account.textContent='My profile';account.href='#profile';account.dataset.authenticated='true'}
             demoLink?.classList.remove('requires-signin');
+            if(status.has_chatbot){
+              document.querySelectorAll('a[href^="/login?mode=signup"]').forEach((link)=>{link.hidden=true;link.style.display='none'});
+              document.querySelectorAll('a[href="/demo"]').forEach((link)=>{if(link.id==='demo-link'||link.classList.contains('fx-m-link')){link.textContent='Dashboard';link.href='/dashboard'}});
+            }
             if(demoLock)demoLock.hidden=true;
             if(demoFrame){demoFrame.hidden=false;if(demoFrame.dataset.dashboardLoaded!=='true')loadDashboardFrame(demoFrame)}
             let skipCredentialSetup=false;
@@ -7620,6 +7619,8 @@ var sharedStyles = html`
   .dash-topbar-actions{display:none!important}
   .dashboard-account-foot{gap:0!important}
   .dashboard-account-signout button{min-height:43px!important;gap:12px!important}
+  .dashboard-account-signout button{min-height:40px!important;padding:9px 12px!important;gap:12px!important;border:0!important;border-radius:10px!important;color:#525252!important;background:transparent!important;font-size:14px!important;font-weight:500!important}
+  .dashboard-account-signout button:hover{background:#f2f2f2!important;color:#0a0a0a!important}
   .dashboard-account-tab-icon img{display:block;width:18px;height:18px;object-fit:contain}
   .chatbot-settings-page .eyebrow,.leads-page .eyebrow{color:#050505!important}
   .settings-page-header-actions{display:grid;min-width:178px;gap:10px}
@@ -7678,7 +7679,7 @@ __name(appIcon, "appIcon");
 function dashboardAppShell(title, body, options = {}) {
   const active = options.active || "overview";
   const botMatch = String(body).match(/\/dashboard\/chatbots\/([^/"?#\s]+)\/(?:settings|leads)/);
-  const keyMatch = String(body).match(/\/widget\/test\?key=([^"&\s]+)/);
+  const keyMatch = String(body).match(/\/widget\/test\?key=([^"&\s]+)/) || String(body).match(/<!--preview-key:([^\s>]+)-->/);
   const botId = botMatch ? botMatch[1] : "";
   const link = (key, href, label, extra = "") => `<a class="app-nav-link${active === key ? " is-active" : ""}" href="${href}"${active === key ? ' aria-current="page"' : ""}${extra}>${appIcon(key)}<span>${label}</span></a>`;
   const nav = [
@@ -7688,8 +7689,8 @@ function dashboardAppShell(title, body, options = {}) {
     keyMatch ? link("preview", `/widget/test?key=${keyMatch[1]}`, "Live preview") : "",
     link("help", "/help", "Help centre")
   ].join("");
-  const logo = `<a class="app-logo" href="/dashboard" aria-label="Fise dashboard"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a>`;
-  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app"><a class="app-skip" href="#app-main">Skip to content</a><div class="app-layout"><aside class="app-sidebar" id="app-sidebar" aria-label="Dashboard">${logo}<nav class="app-nav" aria-label="Dashboard sections">${nav}</nav><div class="app-sidebar-foot"><a class="app-nav-link${active === "profile" ? " is-active" : ""}" href="/profile">${appIcon("profile")}<span>Profile &amp; plan</span></a><form method="post" action="/logout"><button class="app-nav-link" type="submit">${appIcon("signout")}<span>Sign out</span></button></form></div></aside><div class="app-scrim" data-app-close hidden></div><div class="app-content"><header class="app-mobilebar">${logo}<button class="app-menu" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button></header><div class="app-main" id="app-main">${body}</div>${fiseLandingFooter()}</div></div><div class="app-toasts" aria-live="polite" aria-atomic="false"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
+  const logo = `<a class="app-logo" href="/" aria-label="Fise AI home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a>`;
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app"><a class="app-skip" href="#app-main">Skip to content</a><div class="app-layout"><aside class="app-sidebar" id="app-sidebar" aria-label="Dashboard">${logo}<nav class="app-nav" aria-label="Dashboard sections">${nav}</nav><div class="app-sidebar-foot"><a class="app-nav-link${active === "profile" ? " is-active" : ""}" href="/profile">${appIcon("profile")}<span>My profile</span></a><form method="post" action="/logout"><button class="app-nav-link" type="submit">${appIcon("signout")}<span>Sign out</span></button></form></div></aside><div class="app-scrim" data-app-close hidden></div><div class="app-content"><header class="app-mobilebar">${logo}<button class="app-menu" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button></header><div class="app-main" id="app-main">${body}</div>${fiseLandingFooter()}</div></div><div class="app-toasts" aria-live="polite" aria-atomic="false"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
 }
 __name(dashboardAppShell, "dashboardAppShell");
 function authShellPage(title, body) {
@@ -7877,8 +7878,8 @@ function renderSetupWizard(bot, stage, embedded = false) {
         <label class="full-field">Popular questions <span class="muted">(one per line, up to three)</span><textarea name="popular_questions" maxlength="800" required>${escapeHtml(questions.slice(0, 3).join("\n"))}</textarea></label>
         <label>Chatbot version<select name="widget_version"><option value="1" ${selected(ui.widget_version, "1")}>Version 1.1 — Older, but your brand colours</option><option value="2" ${selected(ui.widget_version, "2")}>Version 2.1 — Modern and professional (Recommended)</option></select></label>
         <div class="full-field"><label for="primary_colour_wizard">Brand colour</label>${brandColourField("primary_colour_wizard", bot.primary_colour || "#1769e0")}</div>
-        <label>Answer length<select name="answer_length"><option value="short" ${selected(bot.answer_length || "short", "short")}>Short (Recommended)</option><option value="standard" ${selected(bot.answer_length, "standard")}>Medium</option><option value="detailed" ${selected(bot.answer_length, "detailed")}>Long</option></select></label>
-        <label>Tone<select name="formality"><option value="friendly" ${selected(bot.formality || "professional", "friendly")}>Friendly — warm and casual</option><option value="professional" ${selected(bot.formality || "professional", "professional")}>Professional (Recommended) — clear and confident</option><option value="formal" ${selected(bot.formality, "formal")}>Formal — polished and reserved</option></select></label>
+        <label>Answer length ${info("How long the chatbot's answers will be.")}<select name="answer_length"><option value="short" ${selected(bot.answer_length || "short", "short")}>Short (Recommended)</option><option value="standard" ${selected(bot.answer_length, "standard")}>Medium</option><option value="detailed" ${selected(bot.answer_length, "detailed")}>Long</option></select></label>
+        <label>Tone ${info("How formal or casual the chatbot sounds.")}<select name="formality"><option value="friendly">Friendly</option><option value="professional" selected>Professional (Recommended)</option><option value="formal">Formal</option></select></label>
         <label>Opening size<select name="default_size"><option value="standard" ${selected(bot.default_size, "standard")}>Standard</option><option value="large" ${selected(bot.default_size || "large", "large")}>Large (Recommended)</option></select></label>
         <div class="setup-checks">
           <label><input type="checkbox" name="allow_files" value="1" ${checked(bot.allow_files)}> Allow attachments</label>
@@ -8004,9 +8005,9 @@ function dashboardPage(user, chatbots, platformOrigin, message = "", isError = f
         </div>
         <form class="create-bot-form" method="post" action="/api/chatbots${embedded ? "?embed=1" : ""}">
           <div class="form-grid">
-            <label>Business name<input id="business_name" name="business_name" maxlength="100" required placeholder="Example Company" /></label>
-            <label>Chatbot name<input id="name" name="name" maxlength="80" required placeholder="Example Assistant" /></label>
-            <label class="full-field">Website URL<input id="website_url" name="website_url" type="url" maxlength="500" required placeholder="https://example.com" /></label>
+            <label>Business name<input id="business_name" name="business_name" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore="true" data-form-type="other" maxlength="100" required placeholder="Example Company" /></label>
+            <label>Chatbot name<input id="name" name="name" maxlength="80" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore="true" data-form-type="other" required placeholder="Example Assistant" /></label>
+            <label class="full-field">Website URL<input id="website_url" name="website_url" type="url" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore="true" data-form-type="other" maxlength="500" required placeholder="https://example.com" /></label>
           </div>
           <button class="btn full" type="submit">Continue to website scan</button>
           <p class="form-assurance">Your website remains unchanged until you install the finished chatbot.</p>
@@ -9276,7 +9277,7 @@ async function scanStatus(request, env) {
 }
 __name(scanStatus, "scanStatus");
 function planHasLeadCapture(bot) {
-  return true;
+  return ["active", "trialing"].includes(String(bot.subscription_status || "").toLowerCase()) && ["grow", "growth", "pro", "professional", "business", "enterprise"].includes(String(bot.plan_code || "").toLowerCase());
 }
 __name(planHasLeadCapture, "planHasLeadCapture");
 async function ownedChatbot(env, userId, chatbotId) {
@@ -9328,31 +9329,6 @@ function brandColourField(id, value) {
   const safeValue = /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#1769e0";
   return html`<div class="brand-colour-field" data-brand-colour-field>
     <input id="${escapeHtml(id)}" name="primary_colour" type="color" value="${escapeHtml(safeValue)}" required data-colour-input>
-    <div class="brand-colour-codes">
-      <label>Hex<input type="text" class="brand-colour-hex" value="${escapeHtml(safeValue)}" maxlength="7" spellcheck="false" autocomplete="off"></label>
-      <label>RGB<input type="text" class="brand-colour-rgb" readonly tabindex="-1"></label>
-      <label>HSL<input type="text" class="brand-colour-hsl" readonly tabindex="-1"></label>
-    </div>
-    <script>(function(){
-      const field=document.currentScript.parentElement;
-      function hexToRgb(hex){const m=/^#([0-9a-f]{6})$/i.exec(hex||'');if(!m)return null;const n=parseInt(m[1],16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255}}
-      function rgbToHsl(r,g,b){r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b);let h=0,s=0;const l=(max+min)/2;if(max!==min){const d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break}h/=6}return{h:Math.round(h*360),s:Math.round(s*100),l:Math.round(l*100)}}
-      const colourInput=field.querySelector('[data-colour-input]');
-      const hexField=field.querySelector('.brand-colour-hex');
-      const rgbField=field.querySelector('.brand-colour-rgb');
-      const hslField=field.querySelector('.brand-colour-hsl');
-      function apply(hex,updateInput){
-        const rgb=hexToRgb(hex);if(!rgb)return;
-        if(updateInput)colourInput.value=hex;
-        hexField.value=hex;
-        rgbField.value='rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')';
-        const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
-        hslField.value='hsl('+hsl.h+', '+hsl.s+'%, '+hsl.l+'%)';
-      }
-      colourInput.addEventListener('input',()=>apply(colourInput.value,false));
-      hexField.addEventListener('input',()=>{const v=hexField.value.trim();if(/^#[0-9a-fA-F]{6}$/.test(v))apply(v,true)});
-      apply(colourInput.value,false);
-    })();</script>
   </div>`;
 }
 __name(brandColourField, "brandColourField");
@@ -9445,7 +9421,7 @@ function settingsPage(user, bot, origin, message = "", isError = false, suggeste
                   <p>Keep replies consistent and easy to read.</p>
                   <label for="answer_length"
                     >Answer length
-                    `, '</label\n                  ><select id="answer_length" name="answer_length">\n                    <option\n                      value="short"\n                      ', '\n                    >\n                      Short (Recommended)\n                    </option>\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Medium\n                    </option>\n                    <option\n                      value="detailed"\n                      ', '\n                    >\n                      Long\n                    </option>\n                  </select>\n                  <label for="formality"\n                    >Tone\n                    ', '</label\n                  ><select id="formality" name="formality">\n                    <option\n                      value="friendly"\n                      ', '\n                    >\n                      Friendly\n                    </option>\n                    <option\n                      value="professional"\n                      ', '\n                    >\n                      Professional (Recommended)\n                    </option>\n                    <option value="formal" ', '>\n                      Formal\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Extra guidance</h2>\n                  <p>\n                    Optional instructions for how the chatbot should respond.\n                  </p>\n                  <label for="instructions"\n                    >Instructions\n                    ', '</label\n                  >\n                  <textarea\n                    id="instructions"\n                    name="instructions"\n                    maxlength="2000"\n                    placeholder="For example: Always mention our free consultation."\n                  >\n', '</textarea>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>3. Features</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section">\n                  <h2>Popular questions</h2>\n                  <p>Enter up to three. Put one question on each line.</p>\n                  <label\n                    >Question list\n                    ', '</label\n                  ><textarea\n                    name="popular_questions"\n                    maxlength="800"\n                    style="min-height:190px"\n                  >\n', '</textarea>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_question_icons_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show relevant icons beside popular questions\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_questions_bold"\n                      value="1"\n                      ', "\n                    />\n                    Use bold question text\n                    ", '</label\n                  >\n                  <label for="popular_question_border"\n                    >Question border\n                    ', '</label\n                  >\n                  <select\n                    id="popular_question_border"\n                    name="popular_question_border"\n                  >\n                    <option\n                      value="bold"\n                      ', '\n                    >\n                      Bold border\n                    </option>\n                    <option\n                      value="normal"\n                      ', '\n                    >\n                      Normal border\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Visitor tools</h2>\n                  <p>', '</p>\n                  <label for="default_size"\n                    >Opening size\n                    ', '</label\n                  >\n                  <select id="default_size" name="default_size">\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Standard\n                    </option>\n                    <option\n                      value="large"\n                      ', '\n                    >\n                      Large (Recommended)\n                    </option>\n                  </select>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_files"\n                      value="1"\n                      ', "\n                    />\n                    Allow document attachments\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_voice"\n                      value="1"\n                      ', "\n                    />\n                    Allow voice messages\n                    ", '</label\n                  >\n                  <label class="check" style="', '"\n                    ><input\n                      type="checkbox"\n                      name="allow_emoji"\n                      value="1"\n                      ', "\n                    />\n                    Allow emoji picker\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="helpful_pages_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show the separate Helpful pages list\n                    ", '</label\n                  >\n                  <p class="fine">\n                    Helpful pages are off by default. Relevant links inside\n                    answers still remain clickable.\n                  </p>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>4. Lead capture</summary>\n            <div class="settings-group-body">\n              <section class="setting-section full">\n                <h2>\n                  Contact survey\n                  <span class="plan-badge">Public during testing</span>\n                </h2>\n                ', '\n              </section>\n            </div>\n          </details>\n\n          <section class="setting-section full save-bar">\n            <div>\n              <strong>Ready to update the chatbot?</strong>\n              <div class="fine">\n                The existing website embed code does not change.\n              </div>\n            </div>\n            <button class="btn" type="submit">Save changes</button>\n          </section>\n        </div>\n      </form>\n      <script src="/dashboard-settings.js" defer><\/script>\n    </main>'])), escapeHtml(bot.name), notice, encodeURIComponent(bot.id), ui.widget_version === "2" ? "2.1" : "1.1", selected(ui.widget_version, "1"), selected(ui.widget_version, "2"), encodeURIComponent(bot.public_key), encodeURIComponent(bot.id), encodeURIComponent(bot.id), escapeHtml(ui.widget_version), info("The name customers see inside the chatbot."), escapeHtml(bot.name), ui.widget_version === "2" ? "Version 2 shows the chatbot name in bold black text in the centre of the top banner." : "Version 1 shows the chatbot name with its existing branded header.", ui.widget_version === "2" ? "display:none" : "", info("Changes buttons, the header and highlights."), brandColourField("primary_colour", bot.primary_colour), info("Adds small shapes to the coloured header. Choose None for a plain header."), selected(ui.header_pattern, "none"), selected(ui.header_pattern, "circles"), selected(ui.header_pattern, "pluses"), selected(ui.header_pattern, "crosses"), selected(ui.header_pattern, "lines"), info("Move left for softer shapes or right for darker shapes."), escapeHtml(ui.pattern_intensity), checked(ui.header_gradient), info("Adds gentle light and shade to the header."), ui.widget_version === "2" ? "" : "display:none", ui.widget_version === "2" ? "display:none" : "", info("The first message a visitor sees when chat opens."), escapeHtml(bot.greeting), encodeURIComponent(bot.id), ui.widget_version === "2" ? "" : "display:none", escapeHtml(bot.name), info("Controls how short or detailed each answer is."), selected(bot.answer_length, "short"), selected(bot.answer_length, "standard"), selected(bot.answer_length, "detailed"), info("Changes how friendly or formal the chatbot sounds."), selected(bot.formality, "friendly"), selected(bot.formality, "professional"), selected(bot.formality, "formal"), info("Add one simple rule the chatbot should follow."), escapeHtml(bot.instructions || ""), info("Put one common customer question on each line."), escapeHtml(questions.slice(0, 3).join("\n")), checked(ui.popular_question_icons_enabled), info("Turn this off to remove every popular-question icon."), checked(ui.popular_questions_bold), info("Makes the popular questions easier to notice."), info("Choose a normal or stronger outline around each question."), selected(ui.popular_question_border, "bold"), selected(ui.popular_question_border, "normal"), ui.widget_version === "2" ? "Files and Voice appear together below the message box." : "Choose what visitors are allowed to use.", info("Choose how large the chatbot is when opened."), selected(bot.default_size || "large", "standard"), selected(bot.default_size || "large", "large"), checked(bot.allow_files), info("Visitors can upload a document for the chatbot to read."), checked(bot.allow_voice), info("Visitors can speak instead of typing."), ui.widget_version === "2" ? "display:none" : "", checked(ui.allow_emoji), info("Adds a simple emoji button beside the message box."), checked(ui.helpful_pages_enabled), info("Adds website page links below an answer. Off by default."), growth ? html` <p>
+                    `, '</label\n                  ><select id="answer_length" name="answer_length">\n                    <option\n                      value="short"\n                      ', '\n                    >\n                      Short (Recommended)\n                    </option>\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Medium\n                    </option>\n                    <option\n                      value="detailed"\n                      ', '\n                    >\n                      Long\n                    </option>\n                  </select>\n                  <label for="formality"\n                    >Tone\n                    ', '</label\n                  ><select id="formality" name="formality">\n                    <option\n                      value="friendly"\n                      ', '\n                    >\n                      Friendly\n                    </option>\n                    <option\n                      value="professional"\n                      ', '\n                    >\n                      Professional (Recommended)\n                    </option>\n                    <option value="formal" ', '>\n                      Formal\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Extra guidance</h2>\n                  <p>\n                    Optional instructions for how the chatbot should respond.\n                  </p>\n                  <label for="instructions"\n                    >Instructions\n                    ', '</label\n                  >\n                  <textarea\n                    id="instructions"\n                    name="instructions"\n                    maxlength="2000"\n                    placeholder="For example: Always mention our free consultation."\n                  >\n', '</textarea>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>3. Features</summary>\n            <div class="settings-group-body">\n              <div class="settings-grid">\n                <section class="setting-section">\n                  <h2>Popular questions</h2>\n                  <p>Enter up to three. Put one question on each line.</p>\n                  <label\n                    >Question list\n                    ', '</label\n                  ><textarea\n                    name="popular_questions"\n                    maxlength="800"\n                    style="min-height:190px"\n                  >\n', '</textarea>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_question_icons_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show relevant icons beside popular questions\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="popular_questions_bold"\n                      value="1"\n                      ', "\n                    />\n                    Use bold question text\n                    ", '</label\n                  >\n                  <label for="popular_question_border"\n                    >Question border\n                    ', '</label\n                  >\n                  <select\n                    id="popular_question_border"\n                    name="popular_question_border"\n                  >\n                    <option\n                      value="bold"\n                      ', '\n                    >\n                      Bold border\n                    </option>\n                    <option\n                      value="normal"\n                      ', '\n                    >\n                      Normal border\n                    </option>\n                  </select>\n                </section>\n                <section class="setting-section">\n                  <h2>Visitor tools</h2>\n                  <p>', '</p>\n                  <label for="default_size"\n                    >Opening size\n                    ', '</label\n                  >\n                  <select id="default_size" name="default_size">\n                    <option\n                      value="standard"\n                      ', '\n                    >\n                      Standard\n                    </option>\n                    <option\n                      value="large"\n                      ', '\n                    >\n                      Large (Recommended)\n                    </option>\n                  </select>\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_files"\n                      value="1"\n                      ', "\n                    />\n                    Allow document attachments\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="allow_voice"\n                      value="1"\n                      ', "\n                    />\n                    Allow voice messages\n                    ", '</label\n                  >\n                  <label class="check" style="', '"\n                    ><input\n                      type="checkbox"\n                      name="allow_emoji"\n                      value="1"\n                      ', "\n                    />\n                    Allow emoji picker\n                    ", '</label\n                  >\n                  <label class="check"\n                    ><input\n                      type="checkbox"\n                      name="helpful_pages_enabled"\n                      value="1"\n                      ', "\n                    />\n                    Show the separate Helpful pages list\n                    ", '</label\n                  >\n                  <p class="fine">\n                    Helpful pages are off by default. Relevant links inside\n                    answers still remain clickable.\n                  </p>\n                </section>\n              </div>\n            </div>\n          </details>\n\n          <details class="settings-group">\n            <summary>4. Lead capture</summary>\n            <div class="settings-group-body">\n              <section class="setting-section full">\n                <h2>\n                  Contact survey\n                  <span class="plan-badge">Grow plan and higher</span>\n                </h2>\n                ', '\n              </section>\n            </div>\n          </details>\n\n          <section class="setting-section full save-bar">\n            <div>\n              <strong>Ready to update the chatbot?</strong>\n              <div class="fine">\n                The existing website embed code does not change.\n              </div>\n            </div>\n            <button class="btn" type="submit">Save changes</button>\n          </section>\n        </div>\n      </form>\n      <script src="/dashboard-settings.js" defer><\/script>\n    </main>'])), escapeHtml(bot.name), notice, encodeURIComponent(bot.id), ui.widget_version === "2" ? "2.1" : "1.1", selected(ui.widget_version, "1"), selected(ui.widget_version, "2"), encodeURIComponent(bot.public_key), encodeURIComponent(bot.id), encodeURIComponent(bot.id), escapeHtml(ui.widget_version), info("The name customers see inside the chatbot."), escapeHtml(bot.name), ui.widget_version === "2" ? "Version 2 shows the chatbot name in bold black text in the centre of the top banner." : "Version 1 shows the chatbot name with its existing branded header.", ui.widget_version === "2" ? "display:none" : "", info("Changes buttons, the header and highlights."), brandColourField("primary_colour", bot.primary_colour), info("Adds small shapes to the coloured header. Choose None for a plain header."), selected(ui.header_pattern, "none"), selected(ui.header_pattern, "circles"), selected(ui.header_pattern, "pluses"), selected(ui.header_pattern, "crosses"), selected(ui.header_pattern, "lines"), info("Move left for softer shapes or right for darker shapes."), escapeHtml(ui.pattern_intensity), checked(ui.header_gradient), info("Adds gentle light and shade to the header."), ui.widget_version === "2" ? "" : "display:none", ui.widget_version === "2" ? "display:none" : "", info("The first message a visitor sees when chat opens."), escapeHtml(bot.greeting), encodeURIComponent(bot.id), ui.widget_version === "2" ? "" : "display:none", escapeHtml(bot.name), info("Controls how short or detailed each answer is."), selected(bot.answer_length, "short"), selected(bot.answer_length, "standard"), selected(bot.answer_length, "detailed"), info("Changes how friendly or formal the chatbot sounds."), selected(bot.formality, "friendly"), selected(bot.formality, "professional"), selected(bot.formality, "formal"), info("Add one simple rule the chatbot should follow."), escapeHtml(bot.instructions || ""), info("Put one common customer question on each line."), escapeHtml(questions.slice(0, 3).join("\n")), checked(ui.popular_question_icons_enabled), info("Turn this off to remove every popular-question icon."), checked(ui.popular_questions_bold), info("Makes the popular questions easier to notice."), info("Choose a normal or stronger outline around each question."), selected(ui.popular_question_border, "bold"), selected(ui.popular_question_border, "normal"), ui.widget_version === "2" ? "Files and Voice appear together below the message box." : "Choose what visitors are allowed to use.", info("Choose how large the chatbot is when opened."), selected(bot.default_size || "large", "standard"), selected(bot.default_size || "large", "large"), checked(bot.allow_files), info("Visitors can upload a document for the chatbot to read."), checked(bot.allow_voice), info("Visitors can speak instead of typing."), ui.widget_version === "2" ? "display:none" : "", checked(ui.allow_emoji), info("Adds a simple emoji button beside the message box."), checked(ui.helpful_pages_enabled), info("Adds website page links below an answer. Off by default."), growth ? html` <p>
                           Fise captures name, email, phone and the visitor's
                           query. Leads remain in the dashboard and can also go
                           to email and Google Sheets.
@@ -9886,7 +9862,7 @@ function leadsPage(bot, leads) {
       </tr>`;
   return documentPage(
     `Leads for ${bot.name}`,
-    html` <main class="wrap">
+    html`<!--preview-key:${encodeURIComponent(bot.public_key || "")}--> <main class="wrap">
       <div class="dashboard-head">
         <div>
           <div class="eyebrow">Growth lead capture</div>
@@ -9901,8 +9877,23 @@ function leadsPage(bot, leads) {
       <div class="top-actions">
         <a
           class="btn"
+          href="/api/chatbots/${encodeURIComponent(bot.id)}/leads.xls"
+          >Download Excel (.xls)</a
+        >
+        <a
+          class="btn ghost"
           href="/api/chatbots/${encodeURIComponent(bot.id)}/leads.csv"
-          >Download for Excel</a
+          >Download CSV</a
+        >
+        <a
+          class="btn ghost"
+          href="/api/chatbots/${encodeURIComponent(bot.id)}/leads.json"
+          >Download JSON</a
+        >
+        <a
+          class="btn ghost"
+          href="/api/chatbots/${encodeURIComponent(bot.id)}/leads.txt"
+          >Download text (.txt)</a
         >
         <a
           class="btn ghost"
@@ -9930,6 +9921,26 @@ function leadsPage(bot, leads) {
   );
 }
 __name(leadsPage, "leadsPage");
+function leadsLockedPage(bot) {
+  return documentPage(
+    `Leads for ${bot.name}`,
+    html`<!--preview-key:${encodeURIComponent(bot.public_key || "")}--> <main class="wrap">
+      <div class="dashboard-head">
+        <div>
+          <div class="eyebrow">Grow plan and higher</div>
+          <h1>${escapeHtml(bot.name)} leads</h1>
+          <p class="muted">Lead collection is available on the Grow plan and higher.</p>
+        </div>
+        <a class="btn ghost" href="/dashboard">Back to dashboard</a>
+      </div>
+      <section class="card">
+        <div class="locked"><strong>Upgrade to collect leads.</strong><br />Your chatbot can still answer questions. Upgrade to the Grow plan to capture visitor contact details, view them here and export them.</div>
+        <div class="top-actions"><a class="btn" href="/profile?tab=subscription">View plans</a></div>
+      </section>
+    </main>`
+  );
+}
+__name(leadsLockedPage, "leadsLockedPage");
 async function showLeads(request, env, chatbotId) {
   const user = await currentUser(request, env);
   if (!user) return redirect("/login");
@@ -9941,6 +9952,7 @@ async function showLeads(request, env, chatbotId) {
   const result = await env.DB.prepare(
     "SELECT name,email,phone,business_name,enquiry,created_at FROM leads WHERE chatbot_id=? ORDER BY created_at DESC LIMIT 500"
   ).bind(chatbotId).all();
+  if (!planHasLeadCapture(bot)) return htmlResponse(leadsLockedPage(bot));
   return htmlResponse(leadsPage(bot, result.results || []));
 }
 __name(showLeads, "showLeads");
@@ -9948,28 +9960,40 @@ function csvCell(value) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 __name(csvCell, "csvCell");
-async function downloadLeads(request, env, chatbotId) {
+async function downloadLeads(request, env, chatbotId, format = "csv") {
   const user = await currentUser(request, env);
   if (!user) return redirect("/login");
   const bot = await ownedChatbot(env, user.id, chatbotId);
   if (!bot) return json({ error: "Chatbot not found" }, 404);
+  if (!planHasLeadCapture(bot)) return json({ error: "Lead collection is available on the Grow plan and higher." }, 403);
   const result = await env.DB.prepare(
     "SELECT phone,email,name,business_name,enquiry,created_at FROM leads WHERE chatbot_id=? ORDER BY created_at DESC"
   ).bind(chatbotId).all();
-  const lines = [
-    ["Name", "Email", "Phone", "Query", "Date"],
-    ...(result.results || []).map((lead) => [
-      lead.name,
-      lead.email,
-      lead.phone,
-      lead.enquiry,
-      lead.created_at
-    ])
-  ].map((row) => row.map(csvCell).join(","));
-  return new Response("\uFEFF" + lines.join("\r\n"), {
+  const header = ["Name", "Email", "Phone", "Query", "Date"];
+  const rows = (result.results || []).map((lead) => [lead.name, lead.email, lead.phone, lead.enquiry, lead.created_at]);
+  const baseName = String(bot.name || "fise").replace(/[^A-Za-z0-9_-]/g, "-");
+  let body;
+  let contentType;
+  if (format === "json") {
+    body = JSON.stringify(rows.map((row) => Object.fromEntries(header.map((key, index) => [key.toLowerCase(), row[index] ?? ""]))), null, 2);
+    contentType = "application/json; charset=utf-8";
+  } else if (format === "txt") {
+    const clean = (value) => String(value ?? "").replace(/[\t\r\n]+/g, " ");
+    body = "\uFEFF" + [header, ...rows].map((row) => row.map(clean).join("\t")).join("\r\n");
+    contentType = "text/plain; charset=utf-8";
+  } else if (format === "xls") {
+    const cell = (value, tag) => `<${tag}>${escapeHtml(String(value ?? ""))}</${tag}>`;
+    body = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1"><thead><tr>${header.map((value) => cell(value, "th")).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((value) => cell(value, "td")).join("")}</tr>`).join("")}</tbody></table></body></html>`;
+    contentType = "application/vnd.ms-excel; charset=utf-8";
+  } else {
+    format = "csv";
+    body = "\uFEFF" + [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+    contentType = "text/csv; charset=utf-8";
+  }
+  return new Response(body, {
     headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="${String(bot.name || "fise").replace(/[^A-Za-z0-9_-]/g, "-")}-leads.csv"`,
+      "content-type": contentType,
+      "content-disposition": `attachment; filename="${baseName}-leads.${format}"`,
       "cache-control": "no-store",
       "x-content-type-options": "nosniff"
     }
@@ -10108,7 +10132,7 @@ async function createChatbot(request, env) {
     `).bind(
       chatbotId,
       "short",
-      "friendly",
+      "professional",
       "[]",
       "large",
       1,
@@ -10215,7 +10239,7 @@ async function quickstartCreate(request, env) {
     `).bind(
       chatbotId,
       "short",
-      "friendly",
+      "professional",
       "[]",
       "large",
       1,
@@ -10515,8 +10539,17 @@ async function routeFiseRequest(request, env, url) {
         return personalisePublicWebsiteForChatbotOwner(request, env, publicWebsiteResponse);
       if (url.pathname === "/api/auth/status" && request.method === "GET") {
         const user = await currentUser(request, env);
+        let hasChatbot = false;
+        if (user) {
+          try {
+            hasChatbot = Boolean(await env.DB.prepare("SELECT id FROM chatbots WHERE user_id = ? LIMIT 1").bind(user.id).first());
+          } catch (error) {
+            console.error("Chatbot lookup for auth status failed", error);
+          }
+        }
         return json({
           authenticated: Boolean(user),
+          has_chatbot: hasChatbot,
           email: user?.email || "",
           credentials_required: Boolean(user && !Number(user.password_set || 0))
         });
@@ -10636,13 +10669,14 @@ async function routeFiseRequest(request, env, url) {
       if (leadsPageMatch && request.method === "GET")
         return showLeads(request, env, decodeURIComponent(leadsPageMatch[1]));
       const leadsCsvMatch = url.pathname.match(
-        /^\/api\/chatbots\/([^/]+)\/leads\.csv$/
+        /^\/api\/chatbots\/([^/]+)\/leads\.(csv|xls|json|txt)$/
       );
       if (leadsCsvMatch && request.method === "GET")
         return downloadLeads(
           request,
           env,
-          decodeURIComponent(leadsCsvMatch[1])
+          decodeURIComponent(leadsCsvMatch[1]),
+          leadsCsvMatch[2]
         );
       if (url.pathname === "/api/chatbots" && request.method === "POST")
         return createChatbot(request, env);
