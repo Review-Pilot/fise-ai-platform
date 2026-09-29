@@ -115,3 +115,37 @@ test('checkout reflects the annual billing choice', async () => {
   assert.match(html, /R20,000\/year/);
   assert.match(html, /noindex/);
 });
+
+function signedInEnvironment(hasChatbot) {
+  const DB = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async first() {
+          if (sql.includes('FROM website_state')) return { content_json: '{}', revision: 1, updated_at: '', updated_by: '' };
+          if (sql.includes('FROM sessions JOIN users')) return { id: 'u', email: 'u@example.invalid', password_set: 1 };
+          if (sql.includes('FROM chatbots WHERE user_id')) return hasChatbot ? { id: 'bot' } : null;
+          return null;
+        },
+        async run() { return { success: true }; },
+        async all() { return { results: [] }; },
+      };
+    },
+  };
+  return { DB };
+}
+
+test('signed-in header is rendered by the server so it never flashes the signed-out header', async () => {
+  const request = () => new Request(origin + '/', { headers: { cookie: 'fise_session=x' } });
+  const withBot = await (await worker.fetch(request(), signedInEnvironment(true))).text();
+  assert.match(withBot, /id="demo-link" href="\/dashboard">Dashboard</);
+  assert.match(withBot, />My profile</);
+  assert.doesNotMatch(withBot, /href="\/login\?mode=signup"[^>]*>\s*Start free/);
+  const noBot = await (await worker.fetch(request(), signedInEnvironment(false))).text();
+  assert.match(noBot, />My profile</);
+  assert.match(noBot, /href="\/login\?mode=signup"[^>]*>\s*Start free/);
+  assert.match(noBot, /id="demo-link" href="\/demo">Live demo</);
+  const anonymous = (await page('/')).html;
+  assert.match(anonymous, />Sign in</);
+  assert.match(anonymous, /href="\/login\?mode=signup"[^>]*>\s*Start free/);
+});
