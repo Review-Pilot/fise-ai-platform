@@ -193,12 +193,17 @@ export function pickPalette(cands: ColorCandidate[], defaults: { primary: string
     }
     return fallbackColors(defaults);
   }
-  const primary = brand[0];
+  // Secondary/accent are used as borders and fills on white, so skip pale tints.
+  const usable = (c: ColorCandidate) => {
+    const l = rgbToHsl(c.color)[2];
+    return l >= 0.15 && l <= 0.75;
+  };
+  const primary = brand.find(usable) ?? brand[0];
   const secondary =
-    brand.slice(1).find((c) => hueDiff(c.color, primary.color) > 25 || Math.abs(rgbToHsl(c.color)[2] - rgbToHsl(primary.color)[2]) > 0.25) ??
+    brand.filter((c) => c !== primary && usable(c)).find((c) => hueDiff(c.color, primary.color) > 25 || Math.abs(rgbToHsl(c.color)[2] - rgbToHsl(primary.color)[2]) > 0.25) ??
     null;
   const accent =
-    brand.slice(1).find((c) => c !== secondary && hueDiff(c.color, primary.color) > 40) ?? null;
+    brand.filter((c) => c !== primary && c !== secondary && usable(c)).find((c) => hueDiff(c.color, primary.color) > 40) ?? null;
 
   const [h, s, l] = rgbToHsl(primary.color);
   const secondaryHex = secondary ? toHex(secondary.color) : toHex(hslToRgb(h, Math.min(1, s * 0.9), Math.max(0.15, l - 0.25)));

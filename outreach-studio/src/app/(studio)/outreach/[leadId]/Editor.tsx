@@ -256,7 +256,14 @@ export function Editor({ initial, lead, publicBase, consentFirst }: { initial: E
             <iframe
               title="Email preview"
               srcDoc={previewHtml}
-              sandbox="allow-popups"
+              // No scripts are allowed; same-origin only lets us measure the height to avoid clipping.
+              sandbox="allow-popups allow-same-origin"
+              onLoad={(e) => {
+                const f = e.currentTarget;
+                const h = f.contentDocument?.documentElement.scrollHeight;
+                if (h) f.style.height = `${h + 20}px`;
+              }}
+              key={view}
               className="rounded border border-gray-300 bg-white"
               style={{ width: view === "desktop" ? 680 : 375, height: 1400, maxWidth: "100%" }}
             />

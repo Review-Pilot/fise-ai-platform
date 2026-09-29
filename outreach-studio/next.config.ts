@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [
@@ -10,6 +11,7 @@ const nextConfig: NextConfig = {
     "satori",
   ],
   poweredByHeader: false,
+  outputFileTracingRoot: path.resolve(import.meta.dirname),
 };
 
 export default nextConfig;

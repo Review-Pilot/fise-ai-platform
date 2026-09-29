@@ -119,7 +119,9 @@ export function detectPlatform(html: string, finalUrl: string, headers: Record<s
       return "";
     }
   })();
+  // Only headers that identify the platform — not CSP/Link lists that merely mention other hosts.
   const headerBlob = Object.entries(headers)
+    .filter(([k]) => /^(server|x-powered-by|x-generator|x-pingback|x-wix-.*|x-shopify-.*|x-shopid|x-drupal-.*|x-served-by)$/i.test(k))
     .map(([k, v]) => `${k}: ${v}`)
     .join("\n");
 

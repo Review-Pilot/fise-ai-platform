@@ -1,5 +1,6 @@
 import { getSettings } from "@/lib/settings";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "FiseOutreachBot" };
 
 export default function BotInfo() {

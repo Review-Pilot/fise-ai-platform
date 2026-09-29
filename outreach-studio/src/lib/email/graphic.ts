@@ -11,11 +11,24 @@ import { fetchBinary } from "../http";
 import { parseColor, toHex, rgbToHsl, hslToRgb, ensureContrast, INK } from "../color";
 import type { BrandColors, EmailCopy } from "../types";
 
-const require = createRequire(import.meta.url);
 let fonts: { name: string; data: Buffer; weight: 400 | 600 | 700; style: "normal" }[] | null = null;
+
+/** Locates @fontsource/inter without require.resolve (webpack rewrites that to a module id inside Next). */
+function fontDir(): string {
+  const candidates = [path.join(process.cwd(), "node_modules", "@fontsource", "inter")];
+  try {
+    candidates.push(path.dirname(createRequire(path.join(process.cwd(), "package.json")).resolve("@fontsource/inter/package.json")));
+  } catch {
+    /* ignore */
+  }
+  const found = candidates.find((d) => typeof d === "string" && fs.existsSync(path.join(d, "files")));
+  if (!found) throw new Error("Font files not found — run npm install in outreach-studio");
+  return found;
+}
+
 function loadFonts() {
   if (!fonts) {
-    const dir = path.dirname(require.resolve("@fontsource/inter/package.json"));
+    const dir = fontDir();
     fonts = ([400, 600, 700] as const).map((w) => ({
       name: "Inter",
       data: fs.readFileSync(path.join(dir, "files", `inter-latin-${w}-normal.woff`)),

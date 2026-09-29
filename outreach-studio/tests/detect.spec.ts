@@ -19,6 +19,16 @@ describe("platform detection", () => {
   it("flags Google Sites", () => {
     expect(detectPlatform('<meta name="generator" content="Google Sites">', "https://sites.google.com/view/x").canInstall).toBe("no");
   });
+  it("ignores hosts that are merely listed in a CSP header", () => {
+    const r = detectPlatform("<html><body>hi</body></html>", "https://x.co.za", {
+      "content-security-policy": "img-src 'self' https://static.wixstatic.com https://cdn.shopify.com",
+    });
+    expect(r.platform).toBe("Custom HTML");
+  });
+  it("detects the Fise embed snippet, not mere mentions of Fise", () => {
+    expect(detectChatTools('<link rel="canonical" href="https://fise-ai-platform.seb-slabbert1.workers.dev/">').map((t) => t.id)).toEqual([]);
+    expect(detectChatTools('<script src="https://x/widget.js" data-chatbot-key="fise_1"></script>')[0].id).toBe("fise");
+  });
   it("defaults to custom HTML", () => {
     expect(detectPlatform("<html><body>hi</body></html>", "https://x.co.za").platform).toBe("Custom HTML");
   });

@@ -33,7 +33,7 @@ export function listBatches(limit = 30): (Batch & { items: number })[] {
     .all(limit) as (Batch & { items: number })[];
 }
 
-function pendingBatch(type: BatchType, note?: string): string {
+export function pendingBatch(type: BatchType, note?: string): string {
   const existing = db()
     .prepare("SELECT id FROM batches WHERE type = ? AND status = 'pending_approval' AND COALESCE(note,'') = ? ORDER BY created_at DESC LIMIT 1")
     .get(type, note ?? "") as { id: string } | undefined;

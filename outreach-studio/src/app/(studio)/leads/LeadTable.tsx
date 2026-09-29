@@ -41,6 +41,7 @@ export function LeadTable({ leads }: { leads: Row[] }) {
         <button className="btn-secondary" disabled={!sel.size || busy} onClick={() => bulk("generate")}>Generate emails</button>
         <button className="btn-secondary" disabled={!sel.size || busy} onClick={() => bulk("email_batch")}>Create email batch</button>
         <button className="btn-secondary" disabled={!sel.size || busy} onClick={() => bulk("call_batch")}>Create call batch</button>
+        <button className="btn-secondary" disabled={!sel.size || busy} onClick={() => bulk("sms_batch")}>Create SMS batch</button>
         <button className="btn-secondary" disabled={!sel.size || busy} onClick={() => bulk("tasks")}>Prepare manual tasks</button>
         {msg && <span className="text-sm text-gray-700">{msg}</span>}
       </div>

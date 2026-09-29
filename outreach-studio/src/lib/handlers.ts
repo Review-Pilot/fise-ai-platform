@@ -8,6 +8,9 @@ import { rescheduleJob } from "./jobs";
 import { sequenceTick } from "./sequences";
 import { pollReplies } from "./replies";
 import { logEvent } from "./db";
+import { placeCall } from "./calls";
+import { sendQueuedSms } from "./sms";
+import { generateEmail, latestDraft } from "./email/build";
 
 export type Handler = (job: Job) => Promise<void | "rescheduled">;
 
@@ -22,6 +25,26 @@ export const handlers: Partial<Record<JobType, Handler>> = {
     if (r.status === "rescheduled") {
       rescheduleJob(job.id, r.runAt, r.why);
       logEvent(null, "email", "send_deferred", `${job.payload.emailId}: ${r.why}`);
+      return "rescheduled";
+    }
+  },
+  generate_email: async (job) => {
+    const leadId = String(job.payload.leadId);
+    const existing = latestDraft(leadId);
+    if (existing && existing.status === "draft" && existing.kind === "initial") return;
+    await generateEmail(leadId);
+  },
+  place_call: async (job) => {
+    const r = await placeCall(String(job.payload.callId));
+    if (r.status === "rescheduled") {
+      rescheduleJob(job.id, r.runAt, r.why);
+      return "rescheduled";
+    }
+  },
+  send_sms: async (job) => {
+    const r = await sendQueuedSms(String(job.payload.smsId));
+    if (r.status === "rescheduled" && r.runAt) {
+      rescheduleJob(job.id, r.runAt, r.why);
       return "rescheduled";
     }
   },

@@ -31,7 +31,7 @@ export const WIDGETS: WidgetSig[] = [
   { id: "landbot", name: "Landbot", category: "ai_chatbot", patterns: [/landbot\.io/i] },
   { id: "manychat", name: "ManyChat", category: "ai_chatbot", patterns: [/manychat\.com/i] },
   { id: "tiledesk", name: "Tiledesk", category: "ai_chatbot", patterns: [/tiledesk\.com/i] },
-  { id: "fise", name: "Fise", category: "ai_chatbot", patterns: [/fise-ai-platform/i, /fise\.chat/i] },
+  { id: "fise", name: "Fise", category: "ai_chatbot", patterns: [/data-chatbot-key=/i] },
   { id: "fb_messenger", name: "Facebook Messenger chat", category: "messenger", patterns: [/fb-customerchat/i, /xfbml\.customerchat/i] },
   { id: "whatsapp", name: "WhatsApp button", category: "whatsapp", patterns: [/wa\.me\/\d/i, /api\.whatsapp\.com\/send/i, /joinchat/i, /click-to-chat/i, /whatsapp-button/i, /elfsight.*whatsapp/i] },
 ];
