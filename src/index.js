@@ -5745,6 +5745,28 @@ ${message}`,
     return redirect(sent ? "/contact?status=sent" : "/contact?status=error");
   }
   __name(submitContactRequest2, "submitContactRequest");
+  async function personalizeHeader(response, request, env) {
+    if (!cookieValue(request, SESSION_COOKIE)) return response;
+    const user = await currentUser(request, env);
+    if (!user) return response;
+    let hasChatbot = false;
+    try {
+      hasChatbot = Boolean(await env.DB.prepare("SELECT id FROM chatbots WHERE user_id = ? LIMIT 1").bind(user.id).first());
+    } catch (error) {
+      console.error("Chatbot lookup for header failed", error);
+    }
+    let body = await response.text();
+    body = body.replace('<a class="fx-nav-signin" id="account-button" href="/login">Sign in</a>', '<a class="fx-nav-signin" id="account-button" href="#profile" data-authenticated="true">My profile</a>');
+    if (hasChatbot) {
+      body = body.replace(/<a [^>]*href="\/login\?mode=signup"[^>]*>\s*Start free[\s\S]*?<\/a>/g, "");
+      body = body.replace('<a class="fx-nav-signin" id="demo-link" href="/demo">Live demo</a>', '<a class="fx-nav-signin" id="demo-link" href="/dashboard">Dashboard</a>');
+      body = body.replace('<a class="fx-m-link" href="/demo">Live demo</a>', '<a class="fx-m-link" href="/dashboard">Dashboard</a>');
+    }
+    const headers = new Headers(response.headers);
+    headers.delete("content-length");
+    return new Response(body, { status: response.status, headers });
+  }
+  __name(personalizeHeader, "personalizeHeader");
   async function handlePublicWebsite2(request, env) {
     const url = new URL(request.url);
     if (request.method !== "GET" || !PUBLIC_PATHS.has(url.pathname)) return null;
@@ -5762,6 +5784,11 @@ ${message}`,
       return response2(referenceProfilePage(), 200, url);
     }
     const { content: c } = await readWebsiteContent2(env);
+    const inner = await handlePublicPage2(url, c);
+    return inner.headers.get("content-type")?.startsWith("text/html") ? personalizeHeader(inner, request, env) : inner;
+  }
+  __name(handlePublicWebsite2, "handlePublicWebsite");
+  async function handlePublicPage2(url, c) {
     if (url.pathname === "/") return response2(referenceHome(c), 200, url);
     if (url.pathname === "/privacy-policy") return response2(referenceLegal("privacy", c, url.origin), 200, url);
     if (url.pathname === "/terms-and-conditions") return response2(referenceLegal("terms", c, url.origin), 200, url);
@@ -5780,7 +5807,7 @@ ${message}`,
     }
     return response2(referenceContact(c, String(url.searchParams.get("status") || "")), 200, url);
   }
-  __name(handlePublicWebsite2, "handlePublicWebsite");
+  __name(handlePublicPage2, "handlePublicPage");
   async function updateWebsiteContent2(request, env, user) {
     const form = await request.formData();
     const current = await readWebsiteContent2(env);
