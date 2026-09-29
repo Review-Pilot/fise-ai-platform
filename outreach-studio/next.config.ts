@@ -3,7 +3,6 @@ import path from "node:path";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [
-    "better-sqlite3",
     "sharp",
     "@resvg/resvg-js",
     "playwright-core",

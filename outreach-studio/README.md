@@ -8,19 +8,21 @@ This app is separate from the Fise Worker in the repo root and has its own `pack
 
 ## Run it locally
 
-Requirements: Node 20+ (22 recommended).
+Requirements: **Node 22.13 or newer** (including 24). The database uses Node's built-in SQLite, so nothing needs compiling and no Python or Visual Studio tools are needed on Windows.
+
+On Windows PowerShell, if `npm` is blocked with "running scripts is disabled", run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 ```bash
 cd outreach-studio
 npm install
 npx playwright install chromium   # only needed for the chat test and render check
-cp .env.example .env              # then fill in the keys you have
+cp .env.example .env              # (Windows: copy .env.example .env) then fill in the keys you have
 npm run build && npm start        # app on http://localhost:3100  (or: npm run dev)
 npm run worker                    # in a second terminal: background jobs
 ```
 
 The worker runs searches, research, chat tests, sending, calls, follow-ups and reply polling.
-Without it, jobs wait in the queue. The database is a single SQLite file at `data/outreach.db`.
+Without it, jobs wait in the queue. The database is a single SQLite file at `data/outreach.db`. Node prints an "ExperimentalWarning: SQLite" line; that is expected.
 
 Everything works in stages, so you can start with only some keys:
 

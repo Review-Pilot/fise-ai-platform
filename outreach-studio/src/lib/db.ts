@@ -1,5 +1,5 @@
 // SQLite storage (single file, WAL mode so the Next.js app and the worker can share it).
-import Database from "better-sqlite3";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config";
@@ -205,20 +205,66 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __fiseDb: Database.Database | undefined;
+/**
+ * SQLite comes from Node's built-in `node:sqlite` (Node 22.13+), so there is no native module to
+ * compile on Windows. It is loaded with process.getBuiltinModule so bundlers never touch it.
+ * This thin wrapper keeps the small better-sqlite3-style API the rest of the app uses.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+class Stmt {
+  constructor(private s: StatementSync) {}
+  get(...args: unknown[]): any {
+    return this.s.get(...(args as never[]));
+  }
+  all(...args: unknown[]): any[] {
+    return this.s.all(...(args as never[]));
+  }
+  run(...args: unknown[]): { changes: number; lastInsertRowid: number } {
+    const r = this.s.run(...(args as never[]));
+    return { changes: Number(r.changes), lastInsertRowid: Number(r.lastInsertRowid) };
+  }
 }
 
-export function db(): Database.Database {
+export class Db {
+  constructor(private conn: DatabaseSync) {}
+  exec(sql: string) {
+    this.conn.exec(sql);
+  }
+  prepare(sql: string) {
+    return new Stmt(this.conn.prepare(sql));
+  }
+  /** Returns a function that runs `fn` inside one transaction. */
+  transaction<T>(fn: () => T): () => T {
+    return () => {
+      this.conn.exec("BEGIN IMMEDIATE");
+      try {
+        const result = fn();
+        this.conn.exec("COMMIT");
+        return result;
+      } catch (e) {
+        this.conn.exec("ROLLBACK");
+        throw e;
+      }
+    };
+  }
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __fiseDb: Db | undefined;
+}
+
+export function db(): Db {
   if (!globalThis.__fiseDb) {
     fs.mkdirSync(config.dataDir, { recursive: true });
-    const conn = new Database(path.join(config.dataDir, "outreach.db"));
-    conn.pragma("journal_mode = WAL");
-    conn.pragma("busy_timeout = 5000");
-    conn.pragma("foreign_keys = ON");
+    const sqlite = process.getBuiltinModule?.("node:sqlite") as typeof import("node:sqlite") | undefined;
+    if (!sqlite) throw new Error("This app needs Node.js 22.13 or newer (built-in SQLite). Your version: " + process.version);
+    const conn = new sqlite.DatabaseSync(path.join(config.dataDir, "outreach.db"));
+    conn.exec("PRAGMA journal_mode = WAL");
+    conn.exec("PRAGMA busy_timeout = 5000");
+    conn.exec("PRAGMA foreign_keys = ON");
     conn.exec(SCHEMA);
-    globalThis.__fiseDb = conn;
+    globalThis.__fiseDb = new Db(conn);
   }
   return globalThis.__fiseDb;
 }
