@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EmailRow } from "@/lib/email/build";
 import type { BrandColors, EmailCopy } from "@/lib/types";
@@ -12,6 +12,16 @@ type LeadInfo = {
   whatsapp: string | null;
   contactForm: string | null;
   socials: { kind: string; value: string }[];
+  demo: {
+    offer: "auto" | "on" | "off";
+    effective: boolean;
+    warm: boolean;
+    status: "none" | "building" | "ready" | "failed";
+    error: string | null;
+    chatLink: string | null;
+    photo: "own" | "example" | "none";
+    canBuild: boolean;
+  };
 };
 
 function Field({ label, value, onChange, rows = 0, hint }: { label: string; value: string; onChange: (v: string) => void; rows?: number; hint?: string }) {
@@ -63,6 +73,14 @@ export function Editor({ initial, lead, publicBase, consentFirst }: { initial: E
   const [msg, setMsg] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const editable = email.status === "draft";
+
+  // When the server re-renders the draft (e.g. the real chatbot photo just arrived), show it without
+  // throwing away anything you are typing.
+  useEffect(() => {
+    setEmail((cur) => (initial.updated_at !== cur.updated_at ? { ...initial, copy: dirty ? cur.copy : initial.copy } : cur));
+    if (!dirty) setCopy(initial.copy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.updated_at]);
 
   const set = <K extends keyof EmailCopy>(k: K, v: EmailCopy[K]) => {
     setCopy({ ...copy, [k]: v });
@@ -156,20 +174,6 @@ export function Editor({ initial, lead, publicBase, consentFirst }: { initial: E
               </>
             )}
             <Field label="Button text" value={copy.ctaText} onChange={(v) => set("ctaText", v)} />
-            {email.kind === "initial" && (
-              <div className="space-y-2 rounded-lg border border-gray-200 p-3">
-                <div className="text-xs font-semibold uppercase text-gray-500">Chat graphic messages</div>
-                {copy.chatMockup.map((m, i) => (
-                  <div key={i} className="flex gap-2">
-                    <select className="input w-28" value={m.from} onChange={(e) => set("chatMockup", copy.chatMockup.map((x, j) => (j === i ? { ...x, from: e.target.value as "visitor" | "bot" } : x)))}>
-                      <option value="visitor">Customer</option>
-                      <option value="bot">Chatbot</option>
-                    </select>
-                    <input className="input" aria-label={`Chat message ${i + 1}`} value={m.text} onChange={(e) => set("chatMockup", copy.chatMockup.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="text-xs text-gray-500">Body: {wordCount} words (target 120–200)</div>
             <div className="space-y-2 rounded-lg border border-gray-200 p-3">
               <div className="text-xs font-semibold uppercase text-gray-500">Brand colours</div>
@@ -184,7 +188,7 @@ export function Editor({ initial, lead, publicBase, consentFirst }: { initial: E
               <button className="btn-secondary" disabled={!editable || !!busy} onClick={() => save({ colors })}>Apply colours</button>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button className="btn-primary" disabled={!editable || !!busy || !dirty} onClick={() => save({ regenerateImage: true })}>
+              <button className="btn-primary" disabled={!editable || !!busy || !dirty} onClick={() => save()}>
                 {busy === "save" ? "Updating…" : "Update preview"}
               </button>
               <button className="btn-secondary" disabled={!editable || !!busy} onClick={() => { if (!dirty || confirm("Discard your edits and rewrite the email?")) call("regen", `/api/emails/${email.id}`, "POST", { action: "regenerate" }); }}>
@@ -268,6 +272,48 @@ export function Editor({ initial, lead, publicBase, consentFirst }: { initial: E
               style={{ width: view === "desktop" ? 680 : 375, height: 1400, maxWidth: "100%" }}
             />
           </div>
+        </div>
+
+        <div className="card space-y-3">
+          <h2 className="h2">Free demo &amp; real chatbot photo</h2>
+          <div>
+            <label className="label" htmlFor="demo-offer">“Get your free demo” button for this lead</label>
+            <select id="demo-offer" className="input" value={lead.demo.offer} disabled={!editable || !!busy} onChange={async (e) => {
+              await call("offer", `/api/leads/${lead.id}`, "PATCH", { demo_offer: e.target.value });
+              router.refresh();
+            }}>
+              <option value="auto">Automatic ({lead.demo.warm ? "warm lead → on" : "cold lead → off"})</option>
+              <option value="on">Always on</option>
+              <option value="off">Off (button says “See how Fise works”)</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {lead.demo.effective
+                ? "On: the button opens a page where they press “Build my free demo”. We build their chatbot, email it, and include sign-up steps. Each build uses Fise credits."
+                : "Off: no chatbot is built. The email asks them to reply, and nothing costs credits."}
+            </p>
+          </div>
+          <div className="text-sm">
+            <div>
+              Photo in the email:{" "}
+              <strong>{lead.demo.photo === "own" ? "a real photo of their own chatbot" : lead.demo.photo === "example" ? "a real photo of your example chatbot" : "none (text-only email)"}</strong>
+            </div>
+            <div className="text-xs text-gray-500">
+              Demo chatbot: {lead.demo.status === "none" ? "not built" : lead.demo.status}
+              {lead.demo.error ? ` — ${lead.demo.error}` : ""}
+              {lead.demo.chatLink && <> · <a className="underline" href={lead.demo.chatLink} target="_blank" rel="noreferrer">open</a></>}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="btn-secondary" disabled={!!busy || !lead.demo.canBuild || lead.demo.status === "building" || lead.demo.status === "ready"} onClick={async () => {
+              const r = await call("build", `/api/leads/${lead.id}`, "POST", { action: "build_demo" });
+              if (r?.message) setMsg(r.message);
+              router.refresh();
+            }}>
+              {lead.demo.status === "ready" ? "Chatbot built ✓" : lead.demo.status === "building" ? "Building…" : "Build their chatbot + take a real photo now"}
+            </button>
+            {!lead.demo.canBuild && <span className="text-xs text-amber-700">Set FISE_QUICKSTART_TOKEN in .env first.</span>}
+          </div>
+          <p className="text-xs text-gray-500">The photo is a real screenshot of the Fise chatbot answering a real question. Nothing in the email is mocked up. Takes 1–3 minutes; the preview updates when it is done.</p>
         </div>
 
         <div className="card space-y-3">

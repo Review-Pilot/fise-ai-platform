@@ -112,6 +112,24 @@ export default function SettingsPage() {
         ]} />
       </Section>
 
+      <Section id="demo" title="Free demo button & chatbot photo" intro="The email button says “Get your free demo”. It opens a page on your domain where pressing “Build my free demo” makes a real Fise chatbot from their website, takes a real photo of it, and emails it to them with sign-up steps. Each build uses Fise credits, so it's on automatically only for warm leads; switch it on or off per lead in the editor.">
+        <SectionForm section="demo" values={s.demo as unknown as Record<string, unknown>} extra={<ActionPanel action="capture_showcase" label="Take the example photo now" />} fields={[
+          { key: "autoForWarm", label: "Turn the free demo on automatically for warm leads", type: "checkbox", help: "Warm = replied, booked, or consented. Cold leads get a plain “See how Fise works” button." },
+          { key: "maxPerDay", label: "Maximum demo chatbots built per day", type: "number", min: 1, help: "Extra requests wait until the next morning." },
+          { key: "signupUrl", label: "Where “Create your account” points", type: "text" },
+          { key: "showcaseLink", label: "Example chatbot link for the email photo", type: "text", help: "A Fise chat link (…/chat/fise_…) of a chatbot you're proud of, for example your Kin Electrical one. Leads without their own demo see a real photo of it. Leave empty for no photo." },
+          { key: "showcaseQuestion", label: "Question to ask the example chatbot", type: "text" },
+        ]} />
+        {s.demo.showcaseImage && (
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500">Current example photo (real chatbot):</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/i/${s.demo.showcaseImage}`} alt={s.demo.showcaseAlt} className="max-h-72 rounded border" />
+          </div>
+        )}
+        {!i.fiseQuickstart && <p className="text-sm text-amber-700">FISE_QUICKSTART_TOKEN is not set in .env, so demo chatbots can't be built yet.</p>}
+      </Section>
+
       <Section id="landing" title="Landing pages">
         <SectionForm section="landingPages" values={s.landingPages as unknown as Record<string, unknown>} fields={[
           { key: "enabled", label: "Link emails to a personalised landing page on your domain", type: "checkbox", help: "Otherwise the button goes to your demo booking link." },

@@ -5,6 +5,10 @@ import { getEmail, latestDraft } from "@/lib/email/build";
 import { getSettings } from "@/lib/settings";
 import { config } from "@/lib/config";
 import { Editor } from "./Editor";
+import { demoOfferOn, isWarm } from "@/lib/demo/offer";
+import { photoFor } from "@/lib/email/build";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { integrationStatus } from "@/lib/config";
 import { GenerateButton } from "./GenerateButton";
 
 export default async function OutreachEditor({ params, searchParams }: { params: Promise<{ leadId: string }>; searchParams: Promise<{ email?: string }> }) {
@@ -20,6 +24,7 @@ export default async function OutreachEditor({ params, searchParams }: { params:
         <div>
           <Link href={`/leads/${leadId}`} className="muted hover:underline">← {lead.business_name}</Link>
           <h1 className="h1">Outreach · {lead.business_name}</h1>
+          {lead.demo_status === "building" && <div className="mt-1 flex items-center gap-2 text-sm text-blue-700">Building their demo chatbot and taking a real photo… <AutoRefresh seconds={8} /></div>}
           {lead.research_error && <p className="text-sm text-amber-700">Website research problem: {lead.research_error}. Using manual/neutral colours — set them below.</p>}
         </div>
       </div>
@@ -31,6 +36,16 @@ export default async function OutreachEditor({ params, searchParams }: { params:
             whatsapp: lead.contacts.find((c) => c.kind === "whatsapp")?.value ?? null,
             contactForm: lead.contacts.find((c) => c.kind === "contact_form")?.value ?? null,
             socials: lead.contacts.filter((c) => ["facebook", "instagram", "linkedin"].includes(c.kind)).map((c) => ({ kind: c.kind, value: c.value })),
+            demo: {
+              offer: lead.demo_offer === 1 ? "on" : lead.demo_offer === 0 ? "off" : "auto",
+              effective: demoOfferOn(lead),
+              warm: isWarm(lead),
+              status: lead.demo_status,
+              error: lead.demo_error,
+              chatLink: lead.demo_chat_link,
+              photo: lead.demo_photo ? "own" : photoFor(lead) ? "example" : "none",
+              canBuild: integrationStatus().fiseQuickstart,
+            },
           }}
           publicBase={config.publicBaseUrl}
           consentFirst={consent.consentFirstMode}

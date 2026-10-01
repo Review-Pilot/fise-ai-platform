@@ -9,15 +9,16 @@ import { fallbackColors } from "../color";
 import { unsubscribeUrls } from "../unsubscribe";
 import { bestEmail } from "../site/contacts";
 import { generateCopy } from "./copy";
-import { renderChatGraphic, saveGraphic } from "./graphic";
-import { OutreachEmail, type TemplateProps } from "./Template";
+import { imagesDir } from "./graphic";
+import { demoOfferOn, CTA_DEMO, CTA_INFO } from "../demo/offer";
+import { OutreachEmail, DEMO_NOTE, INFO_NOTE, type TemplateProps } from "./Template";
 import { runChecks } from "./checks";
 import type { EmailCheck, EmailCopy, Lead } from "../types";
 
 export interface EmailRow {
   id: string;
   lead_id: string;
-  kind: "initial" | "followup1" | "followup2";
+  kind: "initial" | "followup1" | "followup2" | "demo_ready";
   to_email: string | null;
   subject: string;
   preheader: string;
@@ -58,12 +59,24 @@ function ensureLandingSlug(lead: Lead): string {
 
 export function ctaUrlFor(lead: Lead): string {
   const s = getSettings();
-  if (s.landingPages.enabled) return `${config.publicBaseUrl}/p/${ensureLandingSlug(lead)}`;
+  // The free-demo button needs the landing page, so it is used whenever the demo is offered.
+  if (s.landingPages.enabled || demoOfferOn(lead)) return `${config.publicBaseUrl}/p/${ensureLandingSlug(lead)}`;
   return s.profile.demoUrl;
 }
 
-export function reasonLine(lead: Lead, toEmail: string): string {
+/** The real photo for this email: the prospect's own chatbot if built, else the example chatbot. */
+export function photoFor(lead: Lead): { file: string; alt: string } | null {
+  if (lead.demo_photo) return { file: lead.demo_photo, alt: lead.demo_photo_alt ?? `Screenshot of the ${lead.business_name} Fise chatbot answering a customer question` };
+  const d = getSettings().demo;
+  if (d.showcaseImage) return { file: d.showcaseImage, alt: d.showcaseAlt || "Example of a Fise chatbot answering a customer question" };
+  return null;
+}
+
+export function reasonLine(lead: Lead, toEmail: string, kind: EmailRow["kind"] = "initial"): string {
   const s = getSettings();
+  if (kind === "demo_ready") {
+    return `You're receiving this because you asked for a free demo chatbot on our page for ${lead.business_name}. I'm ${s.profile.senderName} from ${s.profile.company}. If you'd prefer not to hear from us, unsubscribe below and we won't contact you again.`;
+  }
   const found = lead.contacts.find((c) => c.kind === "email" && c.value === toEmail);
   const src = found?.sourceUrl ?? "";
   const source = src.startsWith("http")
@@ -83,19 +96,18 @@ export function plainText(p: TemplateProps): string {
     if (p.image) lines.push(`[${p.image.alt}]`, "");
     if (p.copy.comparison) lines.push(p.copy.comparison, "");
   }
-  lines.push(`${p.copy.ctaText}: ${p.ctaUrl}`, "");
+  lines.push(`${p.copy.ctaText}: ${p.ctaUrl}`);
+  if (p.kind !== "demo_ready") lines.push(p.demoOffer ? DEMO_NOTE : INFO_NOTE);
+  lines.push("");
   if (!p.followupBody) lines.push(p.copy.closing, "");
   lines.push("Kind regards,", p.sender.name, `${p.sender.title}, ${p.sender.company}`, `${p.sender.phone} · ${p.websiteUrl}`, "", "--", p.reasonLine, `${p.sender.company}, ${p.sender.address}`, `Unsubscribe: ${p.unsubscribeUrl}`);
   return lines.join("\n");
 }
 
-export function imageAlt(copy: EmailCopy, businessName: string) {
-  const convo = copy.chatMockup.map((m) => `${m.from === "visitor" ? "Customer" : "Assistant"}: ${m.text}`).join(" / ");
-  return `Example ${businessName} website chat. ${convo}`.slice(0, 400);
-}
+const AUTO_CTAS = [CTA_DEMO, CTA_INFO, "See your demo chatbot", "Book a 15-minute demo"];
 
 /** Renders HTML/text/checks for a draft and saves it. */
-export async function renderEmail(emailId: string, opts: { regenerateImage?: boolean } = {}): Promise<EmailRow> {
+export async function renderEmail(emailId: string, _opts: { regenerateImage?: boolean } = {}): Promise<EmailRow> {
   const email = getEmail(emailId)!;
   const lead = getLead(email.lead_id)!;
   const s = getSettings();
@@ -103,41 +115,34 @@ export async function renderEmail(emailId: string, opts: { regenerateImage?: boo
   const to = email.to_email ?? bestEmail(lead.contacts)?.value ?? "recipient@example.com";
   const unsub = unsubscribeUrls(to, lead.id);
 
-  let imageFile = email.image_file;
-  let imageMeta: { width: number; height: number } | null = null;
-  if (email.kind === "initial" && (opts.regenerateImage || !imageFile)) {
-    const buf = await renderChatGraphic({
-      businessName: lead.business_name,
-      colors,
-      messages: email.copy.chatMockup,
-      logoUrl: lead.research?.logoUrl,
-    });
-    const saved = await saveGraphic(lead.id, buf);
-    imageFile = saved.file;
-    imageMeta = { width: saved.width, height: saved.height };
-  }
-  if (imageFile && !imageMeta) {
+  const offer = demoOfferOn(lead);
+  const photo = email.kind === "initial" || email.kind === "demo_ready" ? photoFor(lead) : null;
+  let image: TemplateProps["image"] = null;
+  if (photo) {
     const sharp = (await import("sharp")).default;
     const path = await import("node:path");
-    const { imagesDir } = await import("./graphic");
-    const meta = await sharp(path.join(imagesDir(), imageFile)).metadata().catch(() => null);
-    imageMeta = meta ? { width: meta.width ?? 560, height: meta.height ?? 400 } : null;
+    const meta = await sharp(path.join(imagesDir(), photo.file)).metadata().catch(() => null);
+    if (meta?.width && meta.height) image = { src: `${config.publicBaseUrl}/i/${photo.file}`, width: meta.width, height: meta.height, alt: photo.alt };
+  }
+  const imageFile = image ? photo!.file : null;
+  // The button wording follows the free-demo switch (unless you typed your own wording).
+  let copyForRender = email.copy;
+  if ((email.kind === "initial" || email.kind === "followup1" || email.kind === "followup2") && AUTO_CTAS.includes(email.copy.ctaText)) {
+    copyForRender = { ...email.copy, ctaText: offer ? CTA_DEMO : CTA_INFO };
   }
 
   const props: TemplateProps = {
     kind: email.kind,
-    copy: email.copy,
+    copy: copyForRender,
     followupBody: email.copy.followupBody,
+    demoOffer: offer && email.kind !== "demo_ready",
     colors,
     businessName: lead.business_name,
-    image:
-      email.kind === "initial" && imageFile && imageMeta
-        ? { src: `${config.publicBaseUrl}/i/${imageFile}`, ...imageMeta, alt: imageAlt(email.copy, lead.business_name) }
-        : null,
+    image,
     ctaUrl: ctaUrlFor(lead),
     websiteUrl: s.profile.websiteUrl,
     unsubscribeUrl: unsub.page,
-    reasonLine: reasonLine(lead, to),
+    reasonLine: reasonLine(lead, to, email.kind),
     sender: {
       name: s.profile.senderName,
       title: s.profile.senderTitle,
@@ -151,7 +156,7 @@ export async function renderEmail(emailId: string, opts: { regenerateImage?: boo
   const checks = runChecks({
     html,
     text,
-    copy: email.copy,
+    copy: copyForRender,
     subject: email.copy.subject,
     ownDomains: ownDomains(),
     unsubscribeUrl: unsub.page,
@@ -192,12 +197,12 @@ export async function generateEmail(leadId: string, existingId?: string): Promis
       .run(id, leadId, to, copy.subject, copy.preheader, JSON.stringify(copy), now(), now());
   }
   logEvent(leadId, "email", "draft_generated", `${source}${issues.length ? ` (${issues.length} rule warnings)` : ""}`);
-  const email = await renderEmail(id!, { regenerateImage: true });
+  const email = await renderEmail(id!);
   return { email, issues, source };
 }
 
 /** Saves user edits to a draft and re-renders. */
-export async function saveEdits(emailId: string, patch: Partial<EmailCopy> & { to_email?: string }, regenerateImage = false) {
+export async function saveEdits(emailId: string, patch: Partial<EmailCopy> & { to_email?: string }) {
   const email = getEmail(emailId);
   if (!email) throw new Error("Email not found");
   if (email.status !== "draft") throw new Error(`This email is ${email.status} and can no longer be edited`);
@@ -206,5 +211,5 @@ export async function saveEdits(emailId: string, patch: Partial<EmailCopy> & { t
   db()
     .prepare("UPDATE emails SET copy = ?, to_email = COALESCE(?, to_email), updated_at = ? WHERE id = ?")
     .run(JSON.stringify(copy), to_email?.trim().toLowerCase() || null, now(), emailId);
-  return renderEmail(emailId, { regenerateImage });
+  return renderEmail(emailId);
 }

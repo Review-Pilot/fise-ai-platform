@@ -1,34 +1,57 @@
 // Personalised landing page on your domain. No popups, no tracking scripts — views are counted server-side only.
-import { notFound } from "next/navigation";
+// The free-demo button is a form POST (not a link) so email security scanners that pre-open links can't start a build.
+import { notFound, redirect } from "next/navigation";
 import { db, logEvent } from "@/lib/db";
 import { rowToLead } from "@/lib/leads";
-import { latestDraft } from "@/lib/email/build";
+import { latestDraft, photoFor } from "@/lib/email/build";
 import { getSettings } from "@/lib/settings";
 import { fallbackColors, ensureReadableOnWhite } from "@/lib/color";
+import { demoOfferOn } from "@/lib/demo/offer";
+import { requestDemoFromLanding } from "@/lib/demo/flow";
+import { bestEmail } from "@/lib/site/contacts";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
-  return { title: "Your website assistant demo", robots: { index: false, follow: false } };
+  return { title: "Your free Fise demo", robots: { index: false, follow: false } };
+}
+
+function leadBySlug(slug: string) {
+  const row = db().prepare("SELECT * FROM leads WHERE landing_slug = ?").get(slug) as Record<string, unknown> | undefined;
+  return row ? rowToLead(row) : null;
+}
+
+async function buildMyDemo(formData: FormData) {
+  "use server";
+  const slug = String(formData.get("slug") ?? "");
+  await requestDemoFromLanding(slug);
+  redirect(`/p/${slug}`);
+}
+
+function maskEmail(email: string | undefined) {
+  if (!email) return "your email address";
+  const [user, domain] = email.split("@");
+  return `${user.slice(0, 1)}${"*".repeat(Math.max(2, Math.min(5, user.length - 1)))}@${domain}`;
 }
 
 export default async function Landing({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const row = db().prepare("SELECT * FROM leads WHERE landing_slug = ?").get(slug) as Record<string, unknown> | undefined;
-  if (!row) notFound();
-  const lead = rowToLead(row);
-  if (lead.status === "Do not contact") notFound();
-  const { profile } = getSettings();
+  const lead = leadBySlug(slug);
+  if (!lead || lead.status === "Do not contact") notFound();
+  const { profile, demo } = getSettings();
   const colors = lead.colors ?? fallbackColors(profile.defaultColors);
-  const draft = latestDraft(lead.id);
-  const copy = draft?.copy;
+  const copy = latestDraft(lead.id)?.copy;
   const heading = ensureReadableOnWhite(colors.primary);
+  const offer = demoOfferOn(lead);
+  const photo = photoFor(lead);
+  const sentTo = (db().prepare("SELECT to_email FROM emails WHERE lead_id = ? AND status = 'sent' ORDER BY sent_at LIMIT 1").get(lead.id) as { to_email: string } | undefined)?.to_email ?? bestEmail(lead.contacts)?.value;
   logEvent(lead.id, "web", "landing_view", slug);
-
-  const messages = copy?.chatMockup ?? [
-    { from: "visitor" as const, text: lead.research?.likelyCustomerQuestions?.[0] ?? "Are you open on Saturdays?" },
-    { from: "bot" as const, text: `Thanks for asking. I can help with that and pass your details to the ${lead.business_name} team.` },
-  ];
+  const photoDims = photo ? (await import("sharp").then(async ({ default: sharp }) => {
+    const path = await import("node:path");
+    const { imagesDir } = await import("@/lib/email/graphic");
+    return sharp(path.join(imagesDir(), photo.file)).metadata().catch(() => null);
+  })) : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -50,44 +73,59 @@ export default async function Landing({ params }: { params: Promise<{ slug: stri
             </div>
           ))}
           {lead.comparison && <p className="text-gray-700">{lead.comparison}</p>}
-          <div className="flex flex-wrap gap-3">
-            {lead.demo_chat_link && (
-              <a href={lead.demo_chat_link} className="rounded-lg px-5 py-3 font-semibold" style={{ background: colors.primary, color: colors.onPrimary }}>
-                Try your demo chatbot
-              </a>
-            )}
-            <a href={profile.demoUrl} className="rounded-lg border px-5 py-3 font-semibold" style={{ borderColor: heading, color: heading }}>
-              Book a 15-minute demo
-            </a>
-          </div>
         </section>
 
-        <section aria-label="Example conversation" className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex items-center gap-3 px-4 py-3" style={{ background: colors.primary, color: colors.onPrimary }}>
-            {lead.research?.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={lead.research.logoUrl} alt="" className="h-10 w-10 rounded-lg bg-white object-contain p-1" />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 font-bold">{lead.business_name[0]}</div>
-            )}
-            <div>
-              <div className="font-semibold">{lead.business_name}</div>
-              <div className="text-xs opacity-90">Online now · replies in seconds</div>
-            </div>
-          </div>
-          <div className="space-y-3 p-4">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.from === "visitor" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className="max-w-[80%] rounded-2xl px-4 py-2 text-sm"
-                  style={m.from === "visitor" ? { background: colors.primary, color: colors.onPrimary } : { background: "#f1f5f9", color: "#111827" }}
-                >
-                  {m.text}
+        <section className="space-y-5">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold">Your free demo</h2>
+            {!offer ? (
+              <p className="mt-2 text-sm text-gray-700">
+                Reply to the email we sent and we&rsquo;ll build a free demo chatbot from your own website, so you can see how it would answer your customers.
+              </p>
+            ) : lead.demo_status === "ready" ? (
+              <div className="mt-2 space-y-3 text-sm text-gray-700">
+                <p>Your chatbot is ready. It was built from your website&rsquo;s public pages. Ask it a few real questions.</p>
+                {lead.demo_chat_link && (
+                  <a href={lead.demo_chat_link} className="inline-block rounded-lg px-5 py-3 font-semibold" style={{ background: colors.primary, color: colors.onPrimary }}>
+                    Open your chatbot
+                  </a>
+                )}
+                <div className="border-t pt-3">
+                  <p className="font-medium">Like it? Make it yours.</p>
+                  <p>Create your own Fise account (about a minute) and add the chatbot to your website. We&rsquo;ll help if you get stuck.</p>
+                  <a href={demo.signupUrl} className="mt-2 inline-block rounded-lg border px-4 py-2 font-semibold" style={{ borderColor: heading, color: heading }}>
+                    Create your account
+                  </a>
                 </div>
               </div>
-            ))}
+            ) : lead.demo_status === "building" ? (
+              <div className="mt-2 space-y-2 text-sm text-gray-700">
+                <p className="font-medium">We&rsquo;re building your chatbot now.</p>
+                <p>This usually takes a few minutes. We&rsquo;ll email it to {maskEmail(sentTo)} when it&rsquo;s ready, so you can close this page.</p>
+                <AutoRefresh seconds={15} />
+              </div>
+            ) : lead.demo_status === "failed" ? (
+              <p className="mt-2 text-sm text-gray-700">Sorry, we couldn&rsquo;t build your demo automatically. We&rsquo;ve been told and will email you shortly.</p>
+            ) : (
+              <form action={buildMyDemo} className="mt-2 space-y-3 text-sm text-gray-700">
+                <input type="hidden" name="slug" value={slug} />
+                <p>We&rsquo;ll build a chatbot from your website&rsquo;s public pages and email it to {maskEmail(sentTo)} in a few minutes. No account needed.</p>
+                <button className="rounded-lg px-5 py-3 font-semibold" style={{ background: colors.primary, color: colors.onPrimary }}>
+                  Build my free demo
+                </button>
+              </form>
+            )}
           </div>
-          <div className="border-t px-4 py-3 text-center text-xs text-gray-500">Powered by {profile.productName}</div>
+
+          {photo && photoDims?.width && (
+            <figure className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/i/${photo.file}`} alt={photo.alt} width={photoDims.width} height={photoDims.height} className="h-auto w-full" />
+              <figcaption className="px-4 py-2 text-xs text-gray-500">
+                {lead.demo_photo ? `A real conversation with the chatbot we built for ${lead.business_name}.` : "A real Fise chatbot answering a customer question (an example, not your chatbot)."}
+              </figcaption>
+            </figure>
+          )}
         </section>
       </main>
 

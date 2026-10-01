@@ -249,6 +249,25 @@ export class Db {
   }
 }
 
+/** Adds columns introduced after the first release to databases that already exist. */
+const LEAD_COLUMNS: [string, string][] = [
+  ["demo_offer", "INTEGER"], // null = automatic (on for warm leads), 1 = always on, 0 = off
+  ["demo_status", "TEXT NOT NULL DEFAULT 'none'"], // none | building | ready | failed
+  ["demo_error", "TEXT"],
+  ["demo_chatbot_id", "TEXT"],
+  ["demo_notify", "INTEGER NOT NULL DEFAULT 0"], // email the demo when it is ready
+  ["demo_started_at", "TEXT"],
+  ["demo_requested_at", "TEXT"],
+  ["demo_emailed_at", "TEXT"],
+  ["demo_photo", "TEXT"],
+  ["demo_photo_alt", "TEXT"],
+];
+
+function migrate(conn: DatabaseSync) {
+  const have = new Set((conn.prepare("PRAGMA table_info(leads)").all() as { name: string }[]).map((c) => c.name));
+  for (const [name, type] of LEAD_COLUMNS) if (!have.has(name)) conn.exec(`ALTER TABLE leads ADD COLUMN ${name} ${type}`);
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __fiseDb: Db | undefined;
@@ -264,6 +283,7 @@ export function db(): Db {
     conn.exec("PRAGMA busy_timeout = 5000");
     conn.exec("PRAGMA foreign_keys = ON");
     conn.exec(SCHEMA);
+    migrate(conn);
     globalThis.__fiseDb = new Db(conn);
   }
   return globalThis.__fiseDb;

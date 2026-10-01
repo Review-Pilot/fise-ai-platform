@@ -204,11 +204,15 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         </div>
 
         <div className="card space-y-3">
-          <h2 className="h2">Live demo chatbot</h2>
-          {lead.demo_chat_link ? (
-            <a className="text-brand underline" href={lead.demo_chat_link} target="_blank" rel="noreferrer">{lead.demo_chat_link}</a>
-          ) : <p className="muted">Create a working Fise chatbot trained on their site, for their landing page.</p>}
-          <ActionButton id={id} action="create_demo" label={lead.demo_chat_link ? "Recreate demo" : "Create demo chatbot"} />
+          <h2 className="h2">Free demo chatbot</h2>
+          <p className="text-sm">Status: <strong>{lead.demo_status === "none" ? "not built" : lead.demo_status}</strong>{lead.demo_error ? ` — ${lead.demo_error}` : ""}</p>
+          {lead.demo_chat_link && <a className="text-brand underline" href={lead.demo_chat_link} target="_blank" rel="noreferrer">{lead.demo_chat_link}</a>}
+          {lead.demo_photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/i/${lead.demo_photo}`} alt={lead.demo_photo_alt ?? "Chatbot photo"} className="max-h-80 rounded border" />
+          )}
+          <p className="text-xs text-gray-500">Built when the prospect presses “Build my free demo”, or here by you. {lead.demo_emailed_at ? `Emailed to them ${lead.demo_emailed_at.slice(0, 16).replace("T", " ")}.` : ""}</p>
+          {lead.demo_status !== "building" && lead.demo_status !== "ready" && <ActionButton id={id} action="build_demo" label="Build demo + take a real photo" />}
         </div>
       </div>
 

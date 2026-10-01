@@ -5,6 +5,7 @@ import { rescoreAll } from "@/lib/rescore";
 import { importDnc, removeDnc } from "@/lib/dnc";
 import { logEvent } from "@/lib/db";
 import { parseColor } from "@/lib/color";
+import { captureShowcase } from "@/lib/demo/flow";
 
 /** Coerce incoming values to the type of the default so the stored settings stay well-typed. */
 function coerce(section: keyof Settings, patch: Record<string, unknown>) {
@@ -50,6 +51,10 @@ export const POST = route(async (req: Request) => {
     case "rescore": {
       const r = rescoreAll();
       return ok({ message: `${r.qualified} qualified, ${r.excluded} excluded` });
+    }
+    case "capture_showcase": {
+      const p = await captureShowcase();
+      return ok({ message: `Photo taken. The chatbot answered: "${p.reply.slice(0, 120)}"` });
     }
     case "dnc_import": {
       const r = importDnc(String(b.text ?? ""), "manual import");

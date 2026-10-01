@@ -158,6 +158,16 @@ export interface Lead {
   notes: string | null;
   consent_status: "none" | "requested" | "granted" | "refused";
   demo_chat_link: string | null;
+  demo_offer: number | null;
+  demo_status: "none" | "building" | "ready" | "failed";
+  demo_error: string | null;
+  demo_chatbot_id: string | null;
+  demo_notify: number;
+  demo_started_at: string | null;
+  demo_requested_at: string | null;
+  demo_emailed_at: string | null;
+  demo_photo: string | null;
+  demo_photo_alt: string | null;
   landing_slug: string | null;
   last_contacted_at: string | null;
   replied_at: string | null;
@@ -174,7 +184,6 @@ export interface EmailCopy {
   comparison: string;
   ctaText: string;
   closing: string;
-  chatMockup: { from: "visitor" | "bot"; text: string }[];
   whatsappMessage: string;
   contactFormMessage: string;
   socialMessage: string;

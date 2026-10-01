@@ -93,17 +93,22 @@ export async function sendQueuedEmail(emailId: string, deps: { send?: typeof res
   if (!email.to_email) return fail("blocked", "No recipient");
   const blocked = isBlocked({ email: email.to_email, domain: lead.domain });
   if (blocked || lead.status === "Do not contact") return fail("blocked", blocked ?? "Lead is marked do not contact");
-  if (email.kind !== "initial" && s.consent.consentFirstMode && lead.consent_status !== "granted") {
+  // A requested demo is a reply to the prospect's own action: it skips the cold-send limits and business
+  // hours, but not the do-not-contact list, the DNS check or the pause switch.
+  const requested = email.kind === "demo_ready";
+  if (email.kind !== "initial" && !requested && s.consent.consentFirstMode && lead.consent_status !== "granted") {
     return fail("blocked", "Consent-first mode: follow-ups need the prospect's consent");
   }
   // Re-render so unsubscribe links/colours are current, then re-check.
   const fresh = await renderEmail(emailId);
   if (hasBlockingErrors(fresh.checks)) return fail("blocked", "Pre-send checks failed");
 
-  if (!isBusinessHours(at, 0)) return { status: "rescheduled", runAt: nextBusinessWindow(at, 0), why: "Outside business hours" };
-  if (sentToday(at) >= dailyLimit(at)) return { status: "rescheduled", runAt: tomorrowSlot(), why: `Daily warm-up limit (${dailyLimit(at)}) reached` };
   const domain = email.to_email.split("@")[1];
-  if (sentToDomainToday(domain, at) >= s.sending.perDomainPerDay) return { status: "rescheduled", runAt: tomorrowSlot(), why: `Per-domain cap for ${domain}` };
+  if (!requested) {
+    if (!isBusinessHours(at, 0)) return { status: "rescheduled", runAt: nextBusinessWindow(at, 0), why: "Outside business hours" };
+    if (sentToday(at) >= dailyLimit(at)) return { status: "rescheduled", runAt: tomorrowSlot(), why: `Daily warm-up limit (${dailyLimit(at)}) reached` };
+    if (sentToDomainToday(domain, at) >= s.sending.perDomainPerDay) return { status: "rescheduled", runAt: tomorrowSlot(), why: `Per-domain cap for ${domain}` };
+  }
 
   const unsub = unsubscribeUrls(email.to_email, lead.id);
   const replyTo = config.replyToEmail || config.fromEmail.match(/<([^>]+)>/)?.[1] || config.fromEmail;

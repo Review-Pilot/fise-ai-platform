@@ -4,7 +4,8 @@ import { enqueue } from "@/lib/jobs";
 import { addDnc } from "@/lib/dnc";
 import { finalisePalette, parseColor } from "@/lib/color";
 import { refreshPlace } from "@/lib/places";
-import { createDemoChatbot } from "@/lib/fisedemo";
+import { requestDemoBuild } from "@/lib/demo/flow";
+import { latestDraft, renderEmail } from "@/lib/email/build";
 import { refreshComparison } from "@/lib/site/analyze";
 import { logEvent } from "@/lib/db";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/types";
@@ -37,6 +38,13 @@ export const PATCH = route(async (req: Request, ctx: Ctx) => {
     const { primary, secondary, accent } = b.colors;
     if (![primary, secondary, accent].every((c) => typeof c === "string" && parseColor(c))) return bad("Invalid colour");
     updateLead(id, { colors: finalisePalette(primary, secondary, accent, "manual", ["Set manually"]) });
+  }
+  if (b.demo_offer !== undefined) {
+    const v = b.demo_offer === "on" ? 1 : b.demo_offer === "off" ? 0 : null;
+    updateLead(id, { demo_offer: v });
+    logEvent(id, "system", "demo_offer", b.demo_offer === "on" ? "switched on" : b.demo_offer === "off" ? "switched off" : "automatic");
+    const draft = latestDraft(id);
+    if (draft && draft.status === "draft") await renderEmail(draft.id);
   }
   if (typeof b.chat_test_approved === "boolean") {
     updateLead(id, { chat_test_approved: b.chat_test_approved ? 1 : 0 });
@@ -75,8 +83,10 @@ export const POST = route(async (req: Request, ctx: Ctx) => {
       if (!lead.place_id) return bad("Lead did not come from Google Places");
       await refreshPlace(lead.place_id);
       return ok({ message: "Google data refreshed" });
-    case "create_demo":
-      return ok({ message: "Demo chatbot created", link: await createDemoChatbot(id) });
+    case "build_demo": {
+      const r = await requestDemoBuild(id, { notify: false });
+      return r.state === "blocked" ? bad(r.message) : ok({ message: r.state === "ready" ? "The demo chatbot is already built" : "Building the chatbot and taking a real photo of it (1–3 minutes)…" });
+    }
     case "dnc":
       blockLead(id, "Marked do-not-contact manually");
       setStatus(id, "Do not contact", "manual");

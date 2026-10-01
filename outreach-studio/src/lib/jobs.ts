@@ -11,6 +11,7 @@ export type JobType =
   | "send_sms"
   | "sequence_tick"
   | "poll_replies"
+  | "build_demo"
   | "places_maintenance";
 
 export interface Job {

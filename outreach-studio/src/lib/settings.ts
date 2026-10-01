@@ -59,6 +59,19 @@ export interface Settings {
     recordCalls: boolean;
   };
   landingPages: { enabled: boolean };
+  demo: {
+    /** Warm leads (replied / consented) get the free-demo button automatically. */
+    autoForWarm: boolean;
+    /** Each demo uses Fise credits (scan + embeddings + one chat answer). */
+    maxPerDay: number;
+    /** Where "create your own account" points in the demo-ready email and landing page. */
+    signupUrl: string;
+    /** An existing demo chatbot used for the real example photo in emails to leads without their own demo. */
+    showcaseLink: string;
+    showcaseQuestion: string;
+    showcaseImage: string;
+    showcaseAlt: string;
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -73,7 +86,7 @@ export const DEFAULT_SETTINGS: Settings = {
       "Installs with one short snippet on WordPress, Wix, Shopify, Squarespace and most sites",
       "Plans from R500/month with no long contracts",
     ],
-    offer: "a free, no-obligation demo built on your own website content",
+    offer: "a free demo chatbot built from your own website content",
     websiteUrl: "https://fise-ai-platform.seb-slabbert1.workers.dev",
     demoUrl: "https://fise-ai-platform.seb-slabbert1.workers.dev",
     senderName: "Your Name",
@@ -111,6 +124,15 @@ export const DEFAULT_SETTINGS: Settings = {
   sequence: { followup1Days: 4, followup2Days: 9 },
   calls: { testMode: true, testNumber: "", testPassedAt: null, dailyCap: 20, recordCalls: false },
   landingPages: { enabled: true },
+  demo: {
+    autoForWarm: true,
+    maxPerDay: 10,
+    signupUrl: "https://fise-ai-platform.seb-slabbert1.workers.dev/login?mode=signup",
+    showcaseLink: "",
+    showcaseQuestion: "Do you do emergency call-outs after hours?",
+    showcaseImage: "",
+    showcaseAlt: "",
+  },
 };
 
 type Section = keyof Settings;

@@ -152,7 +152,6 @@ export const EmailCopySchema = z.object({
   comparison: z.string(),
   ctaText: z.string(),
   closing: z.string(),
-  chatMockup: z.array(z.object({ from: z.enum(["visitor", "bot"]), text: z.string() })),
   whatsappMessage: z.string(),
   contactFormMessage: z.string(),
   socialMessage: z.string(),
@@ -166,12 +165,11 @@ export const COPY_RULES = `Rules for the email:
 - Opening: 1-2 sentences about something SPECIFIC and factual from their website (a service, their area, how customers reach them). Not generic flattery ("I love your website" is banned).
 - Benefits: exactly 2 or 3 items. Each: a short title, one sentence on how Fise helps THIS type of business, and one realistic question their customers would type into the chatbot.
 - Comparison: 1-2 sentences using ONLY the provided comparison/observations; empty string if none.
-- ctaText: 2-5 words for the single button, e.g. "See your demo chatbot" or "Book a 15-minute demo".
-- Closing: 1-2 sentences. If consentFirst is true, politely ask whether they'd like to see a demo (a yes/no question they can reply to), and say you won't follow up if they'd rather not hear from you.
+- ctaText: always exactly "Get your free demo" (the app adjusts it). Never offer a call, a meeting, a booking or a time slot, and never mention minutes.
+- Closing: 1-2 sentences. Ask whether they'd like to see how a chatbot built from their own website would answer their customers, and say you won't follow up if they'd rather not hear from us. Do not describe the button mechanics; the app adds a line about it under the button.
 - Total body (opening + benefits + comparison + closing) must be 120-200 words.
 - Professional, warm, plain South African English. No hype, no ALL CAPS words, no exclamation marks, no emoji.
 - Never use these words/phrases: free money, act now, guaranteed, 100%, risk-free, limited time, urgent, winner, cash, click here, buy now, no obligation, special promotion, once in a lifetime, amazing, revolutionary.
-- chatMockup: 3 or 4 short messages alternating visitor/bot, starting with the visitor, realistic for this business (e.g. a question at 21:40 about a quote). Bot replies must be plausible and not promise specific prices unless given.
 - whatsappMessage: under 400 characters, introduces the sender and asks permission to share details.
 - contactFormMessage: 60-120 words for pasting into their website contact form.
 - socialMessage: under 300 characters for a LinkedIn/Facebook/Instagram DM.

@@ -5,7 +5,7 @@ export const SPAM_PHRASES = [
   "free money", "act now", "guaranteed", "guarantee", "100%", "risk-free", "risk free", "limited time", "urgent",
   "winner", "cash bonus", "click here", "buy now", "no obligation", "special promotion", "once in a lifetime",
   "amazing", "revolutionary", "earn money", "make money", "double your", "no cost", "lowest price", "best price",
-  "call now", "order now", "apply now", "exclusive deal", "congratulations", "dear friend", "miracle", "$$$",
+  "call now", "order now", "15-minute", "15 minute", "apply now", "exclusive deal", "congratulations", "dear friend", "miracle", "$$$",
   "increase sales", "incredible deal", "unbelievable", "!!!",
 ];
 
@@ -44,7 +44,6 @@ export function validateCopy(c: EmailCopy): string[] {
   if (/[!?]{2,}|!|\$|%|[\u{1F300}-\u{1FAFF}]/u.test(c.subject)) issues.push("Subject contains spammy punctuation or emoji.");
   if (c.subject === c.subject.toUpperCase() && /[A-Z]/.test(c.subject)) issues.push("Subject is in all caps.");
   if (c.benefits.length < 2 || c.benefits.length > 3) issues.push("Use 2 or 3 benefits.");
-  if (c.chatMockup.length < 2 || c.chatMockup.length > 4) issues.push("Chat mockup needs 2–4 messages.");
   const everything = [c.subject, c.preheader, body, c.ctaText].join(" ");
   const caps = capsWords(everything);
   if (caps.length) issues.push(`Avoid ALL CAPS words: ${[...new Set(caps)].join(", ")}.`);

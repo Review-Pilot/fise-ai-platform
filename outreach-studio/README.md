@@ -39,7 +39,7 @@ Everything works in stages, so you can start with only some keys:
 Checks:
 
 ```bash
-npm test               # 44 unit/integration tests (fixture websites, mocked APIs, real headless Chromium)
+npm test               # 52 unit/integration tests (fixture websites, mocked APIs, real headless Chromium)
 npm run typecheck
 npm run render:check   # screenshots a sample email at Gmail / Outlook / Apple Mail widths, images on and off → data/render-check/
 ```
@@ -81,6 +81,16 @@ npm run render:check   # screenshots a sample email at Gmail / Outlook / Apple M
   Emails are syntax- and MX-checked, never guessed, and every contact detail keeps its source page.
 - **Chat test**: only for leads you tick. It sends one question, and the approval is used up by
   that single test. Observations feed the "why Fise" note, which only states what was observed.
+- **Free demo** (button "Get your free demo"): the email button opens a page on your domain. There the
+  prospect presses **Build my free demo** (a real button press, so email security scanners that
+  pre-open links can't trigger it). That calls the Fise quickstart API, builds a real chatbot from their
+  website, opens it in a headless browser, asks it one real question, and takes a **real screenshot** of
+  the answer. They then get a "your chatbot is ready" email with a link and sign-up steps. Asking for the
+  demo marks them as consenting and stops follow-ups. Builds cost Fise credits, so the switch is **on
+  automatically only for warm leads** (replied / booked / consented) and off for cold leads; override it per
+  lead in the editor, and cap builds per day in Settings → Free demo. Needs `FISE_QUICKSTART_TOKEN`.
+- **Photos in emails are always real**: their own chatbot's screenshot if it has been built, otherwise
+  a screenshot of an example chatbot you choose in Settings → Free demo, otherwise no image. Nothing is mocked up.
 - **Email**: React Email, table layout, inline CSS, system fonts, one hosted image, a VML
   "bulletproof" button for Outlook, at most 3 links, a plain-text part, and a footer with sender,
   address, why they're getting it, and one-click unsubscribe (`List-Unsubscribe` +

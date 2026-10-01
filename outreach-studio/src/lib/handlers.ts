@@ -11,6 +11,7 @@ import { logEvent } from "./db";
 import { placeCall } from "./calls";
 import { sendQueuedSms } from "./sms";
 import { generateEmail, latestDraft } from "./email/build";
+import { advanceDemoBuild } from "./demo/flow";
 
 export type Handler = (job: Job) => Promise<void | "rescheduled">;
 
@@ -33,6 +34,13 @@ export const handlers: Partial<Record<JobType, Handler>> = {
     const existing = latestDraft(leadId);
     if (existing && existing.status === "draft" && existing.kind === "initial") return;
     await generateEmail(leadId);
+  },
+  build_demo: async (job) => {
+    const r = await advanceDemoBuild(String(job.payload.leadId));
+    if (r.state === "waiting" || r.state === "deferred") {
+      rescheduleJob(job.id, r.runAt);
+      return "rescheduled";
+    }
   },
   place_call: async (job) => {
     const r = await placeCall(String(job.payload.callId));

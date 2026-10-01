@@ -74,3 +74,14 @@ export function nextBusinessWindow(from: Date = new Date(), endBufferMin = 15): 
   }
   return new Date(from.getTime() + 86400_000);
 }
+
+/** ISO timestamp of the most recent SAST midnight. */
+export function sastDayStartIso(at: Date = new Date()): string {
+  const s = toSast(at);
+  return new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate()) - SAST_OFFSET_MS).toISOString();
+}
+
+/** 08:00 SAST on the next calendar day. */
+export function tomorrowMorning(at: Date = new Date()): Date {
+  return new Date(new Date(sastDayStartIso(at)).getTime() + 32 * 3600_000);
+}

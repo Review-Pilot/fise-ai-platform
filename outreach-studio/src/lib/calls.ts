@@ -58,7 +58,7 @@ function templateBrief(lead: Lead | null) {
       `If asked how you got the number: it is listed publicly on their website or Google listing.`,
       `What Fise does: ${p.description}`,
       `Why it may help them: ${gap}`,
-      `Goal: ask whether they'd like a free 15-minute demo, or permission to email details to the owner. Get a good time or email address if they agree.`,
+      `Goal: ask whether they'd like a free demo chatbot built from their own website, or permission to email details to the owner. Get an email address if they agree.`,
       `If they say no, not interested, stop, remove me or don't call: apologise, confirm they won't be contacted again, thank them and end the call immediately.`,
       `Keep the whole call under two minutes. Do not pressure, argue or make claims beyond these facts. If you reach voicemail, hang up without leaving a message.`,
     ].join("\n"),

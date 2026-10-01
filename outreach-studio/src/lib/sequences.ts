@@ -87,14 +87,14 @@ export async function sequenceTick(at: Date = new Date()): Promise<{ drafted: nu
           ? {
               subject: `Re: ${first!.subject}`.slice(0, 49),
               preheader: "A quick follow-up on my earlier note",
-              body: `I wanted to follow up on my note from last week about a website assistant for ${lead!.business_name}.\n\nIt answers common questions like the ones your customers ask, takes their details when you're closed, and passes them straight to you. Setting up a demo on your own site content takes about 15 minutes.\n\nWould it be useful to see it?`,
-              ctaText: "See your demo chatbot",
+              body: `I wanted to follow up on my note from last week about a website assistant for ${lead!.business_name}.\n\nIt answers common questions like the ones your customers ask, takes their details when you're closed, and passes them straight to you.\n\nWould it be useful to see it on your own website content?`,
+              ctaText: "Get your free demo",
             }
           : {
               subject: `Closing the loop, ${lead!.business_name}`.slice(0, 49),
               preheader: "My last note on this",
               body: `I haven't heard back, so I'll assume the timing isn't right and won't email again about this.\n\nIf after-hours enquiries ever become a priority, the demo link below stays open for you.`,
-              ctaText: "See your demo chatbot",
+              ctaText: "Get your free demo",
             };
     }
     const copy: EmailCopy & { followupBody: string } = {

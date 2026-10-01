@@ -6,13 +6,18 @@ import { Body, Container, Head, Html, Img, Link, Preview, Section, Text } from "
 import type { BrandColors, EmailCopy } from "../types";
 import { ensureReadableOnWhite, parseColor, rgbToHsl, hslToRgb, toHex } from "../color";
 
+export const DEMO_NOTE = "Press the button and we'll build a chatbot from your website's public pages and email it to you in a few minutes. No account needed.";
+export const INFO_NOTE = "Prefer to talk it through first? Just reply to this email.";
+
 export const FONT = "Arial, Helvetica, 'Segoe UI', sans-serif";
 
 export interface TemplateProps {
-  kind: "initial" | "followup1" | "followup2";
+  kind: "initial" | "followup1" | "followup2" | "demo_ready";
   copy: EmailCopy;
   /** Follow-ups use a plain body instead of benefits. */
   followupBody?: string;
+  /** The free-demo button is on for this lead (pressing it on the landing page builds their demo). */
+  demoOffer?: boolean;
   colors: BrandColors;
   businessName: string;
   image?: { src: string; width: number; height: number; alt: string } | null;
@@ -150,6 +155,14 @@ export function OutreachEmail(props: TemplateProps) {
               </tbody>
             </table>
           </Section>
+
+          {props.kind !== "demo_ready" && (
+            <Section style={{ padding: "0 32px 12px" }}>
+              <Text style={{ ...p, fontSize: "14px", lineHeight: "20px", color: "#4b5563", margin: 0, textAlign: "center" }}>
+                {props.demoOffer ? DEMO_NOTE : INFO_NOTE}
+              </Text>
+            </Section>
+          )}
 
           <Section style={{ padding: "0 32px 8px" }}>
             {!props.followupBody && <Text style={p}>{copy.closing}</Text>}

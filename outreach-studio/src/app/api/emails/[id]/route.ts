@@ -17,14 +17,12 @@ export const PATCH = route(async (req: Request, ctx: Ctx) => {
   const email = getEmail(id);
   if (!email) return bad("Not found", 404);
   const b = await req.json();
-  let regenerateImage = Boolean(b.regenerateImage);
   if (b.colors) {
     const { primary, secondary, accent } = b.colors;
     if (![primary, secondary, accent].every((c: unknown) => typeof c === "string" && parseColor(c))) return bad("Invalid colour");
     updateLead(email.lead_id, { colors: finalisePalette(primary, secondary, accent, "manual", ["Set in the editor"]) });
-    regenerateImage = true;
   }
-  const saved = await saveEdits(id, b.copy ?? {}, regenerateImage);
+  const saved = await saveEdits(id, b.copy ?? {});
   return ok({ email: saved, issues: saved.kind === "initial" ? validateCopy(saved.copy) : [] });
 });
 
@@ -39,6 +37,6 @@ export const POST = route(async (req: Request, ctx: Ctx) => {
     const r = await generateEmail(email.lead_id, id);
     return ok({ email: r.email, issues: r.issues, source: r.source });
   }
-  if (action === "rerender") return ok({ email: await renderEmail(id, { regenerateImage: true }) });
+  if (action === "rerender") return ok({ email: await renderEmail(id) });
   return bad("Unknown action");
 });

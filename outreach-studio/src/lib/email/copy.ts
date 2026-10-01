@@ -5,6 +5,7 @@ import { claudeEnabled, writeEmailCopy, ClaudeUnavailable } from "../claude";
 import { validateCopy, wordCount, copyBodyText } from "./rules";
 import { hasRealChat } from "../site/widgets";
 import { logEvent } from "../db";
+import { CTA_DEMO } from "../demo/offer";
 
 export function prospectBrief(lead: Lead) {
   const s = getSettings();
@@ -52,8 +53,8 @@ export function templateCopy(lead: Lead): EmailCopy {
     ? `I was looking at ${lead.business_name}'s website and saw that you offer ${service} in ${place}. Customers looking for that often have a quick question before they pick up the phone.`
     : `I was looking at ${lead.business_name}'s website and the ${industry} work you do in ${place}. Customers in your line of work often have a quick question before they pick up the phone.`;
   const closing = s.consent.consentFirstMode
-    ? `Would you like me to set up a short demo using your own website content? A simple yes or no reply is perfect, and if you'd rather not hear from us, I won't follow up.`
-    : `I can set up a short demo using your own website content so you can see exactly how it would answer your customers.`;
+    ? `Would you like to see how a chatbot built from your own website content would answer your customers? If you'd rather not hear from us, just say so and I won't follow up.`
+    : `I can build a demo from your own website content so you can see exactly how it would answer your customers.`;
   const copy: EmailCopy = {
     subject: `A website assistant for ${lead.business_name}`.slice(0, 49),
     preheader: `How ${lead.business_name} could answer customer questions after hours`,
@@ -77,17 +78,12 @@ export function templateCopy(lead: Lead): EmailCopy {
       },
     ],
     comparison: lead.comparison ?? (hasChat ? "" : "At the moment, visitors who arrive after hours have no way to get an answer straight away."),
-    ctaText: "See your demo chatbot",
+    ctaText: CTA_DEMO,
     closing,
-    chatMockup: [
-      { from: "visitor", text: qs[0] },
-      { from: "bot", text: `Thanks for asking. ${lead.business_name} can help with that. Could I take your name and number so the team can confirm the details first thing tomorrow?` },
-      { from: "visitor", text: "Sure, it's Sam, 082 000 0000." },
-    ],
-    whatsappMessage: `Hi, this is ${s.profile.senderName} from ${s.profile.company}. I found ${lead.business_name}'s number on your website. We build AI chatbots that answer customer questions on your site after hours. May I send you a short demo? If not, no problem and I won't message again.`,
-    contactFormMessage: `Hi ${lead.business_name} team, I'm ${s.profile.senderName} from ${s.profile.company}. We build AI website chatbots for small businesses that answer customer questions in seconds, day and night, and pass the enquiry details to you. I had a look at your site and think it could help with questions like "${qs[0]}". Would you be open to a short demo built on your own website content? If not, no problem at all. Kind regards, ${s.profile.senderName}, ${s.profile.phone}`,
-    socialMessage: `Hi, I'm ${s.profile.senderName} from ${s.profile.company}. We build AI chatbots that answer website visitors' questions after hours. I think it could suit ${lead.business_name}. Open to a quick demo?`,
-    smsMessage: `Hi, ${s.profile.senderName} from ${s.profile.company} here. We build AI chatbots that answer your website visitors after hours. May I email you a short demo for ${lead.business_name}? Reply STOP to opt out`,
+    whatsappMessage: `Hi, this is ${s.profile.senderName} from ${s.profile.company}. I found ${lead.business_name}'s number on your website. We build AI chatbots that answer customer questions on your site after hours. May I send you a free demo? If not, no problem and I won't message again.`,
+    contactFormMessage: `Hi ${lead.business_name} team, I'm ${s.profile.senderName} from ${s.profile.company}. We build AI website chatbots for small businesses that answer customer questions in seconds, day and night, and pass the enquiry details to you. I had a look at your site and think it could help with questions like "${qs[0]}". Would you be open to a free demo built on your own website content? If not, no problem at all. Kind regards, ${s.profile.senderName}, ${s.profile.phone}`,
+    socialMessage: `Hi, I'm ${s.profile.senderName} from ${s.profile.company}. We build AI chatbots that answer website visitors' questions after hours. I think it could suit ${lead.business_name}. Open to a free demo?`,
+    smsMessage: `Hi, ${s.profile.senderName} from ${s.profile.company} here. We build AI chatbots that answer your website visitors after hours. May I email you a free demo for ${lead.business_name}? Reply STOP to opt out`,
   };
   // Pad/trim to stay within 120–200 words.
   const wc = wordCount(copyBodyText(copy));
