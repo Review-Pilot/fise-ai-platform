@@ -6,7 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { config } from "@/lib/config";
 import { Editor } from "./Editor";
 import { demoOfferOn, isWarm } from "@/lib/demo/offer";
-import { photoFor } from "@/lib/email/build";
+import { photoFor, renderEmail } from "@/lib/email/build";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { integrationStatus } from "@/lib/config";
 import { GenerateButton } from "./GenerateButton";
@@ -16,7 +16,9 @@ export default async function OutreachEditor({ params, searchParams }: { params:
   const { email: emailId } = await searchParams;
   const lead = getLead(leadId);
   if (!lead) notFound();
-  const email = emailId ? getEmail(emailId) : latestDraft(leadId);
+  let email = emailId ? getEmail(emailId) : latestDraft(leadId);
+  // Drafts saved by an older version (or before a photo/switch changed) are re-drawn so you always see what would go out now.
+  if (email && email.status === "draft") email = await renderEmail(email.id);
   const { consent } = getSettings();
   return (
     <div className="space-y-4">

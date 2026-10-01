@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db, parseJson } from "@/lib/db";
 import { getBatch } from "@/lib/batches";
+import { renderEmail } from "@/lib/email/build";
 import { config } from "@/lib/config";
 import { dailyLimit, sentToday } from "@/lib/sending";
 import { getSettings } from "@/lib/settings";
@@ -13,6 +14,11 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
   const batch = getBatch(id);
   if (!batch) notFound();
   const pending = batch.status === "pending_approval";
+  if (pending) {
+    // Show exactly what would go out now, not a stale copy.
+    const stale = db().prepare("SELECT id FROM emails WHERE batch_id = ? AND status = 'draft'").all(id) as { id: string }[];
+    for (const e of stale) await renderEmail(e.id);
+  }
   const s = getSettings();
   const emails = db().prepare("SELECT e.*, l.business_name FROM emails e JOIN leads l ON l.id = e.lead_id WHERE e.batch_id = ? ORDER BY e.created_at").all(id) as {
     id: string; lead_id: string; kind: string; to_email: string; subject: string; preheader: string; html: string; text: string; status: string; checks: string; business_name: string; error: string | null; sent_at: string | null;

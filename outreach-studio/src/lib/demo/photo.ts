@@ -23,6 +23,8 @@ export async function captureChatPhoto(opts: {
   /** e.g. "Kin Electrical's Fise chatbot" or "Example of a Fise chatbot" — used in the image alt text. */
   subject: string;
   timeoutMs?: number;
+  /** Browser window width. The widget switches to its phone layout below 700px, so stay above that. */
+  viewportWidth?: number;
 }): Promise<ChatPhoto> {
   const url = new URL(opts.chatLink);
   await assertPublicHost(url.hostname);
@@ -34,7 +36,8 @@ export async function captureChatPhoto(opts: {
 
   const browser = await chromium.launch({ headless: true, executablePath: config.chromiumPath || undefined });
   try {
-    const context = await browser.newContext({ viewport: { width: 480, height: 700 }, deviceScaleFactor: 1 });
+    const width = opts.viewportWidth ?? 760;
+    const context = await browser.newContext({ viewport: { width, height: 700 }, deviceScaleFactor: 2 });
     await context.addInitScript(init);
     const page = await context.newPage();
     await page.goto(opts.chatLink, { waitUntil: "domcontentloaded", timeout: 30000 });
@@ -69,10 +72,11 @@ export async function captureChatPhoto(opts: {
     const box = await answers.last().boundingBox();
     if (box) {
       const needed = Math.min(700, Math.max(380, Math.ceil(box.y + box.height) + 150));
-      await page.setViewportSize({ width: 480, height: needed });
+      await page.setViewportSize({ width, height: needed });
       await page.waitForTimeout(500);
     }
-    const png = await page.screenshot({ type: "png" });
+    // Captured at 2x for sharp text, then scaled to the email's content width (max 600px per the email rules).
+    const png = await sharp(await page.screenshot({ type: "png" })).resize({ width: 560, kernel: "lanczos3" }).png().toBuffer();
 
     let out: Buffer | null = null;
     for (const colours of [256, 128, 64]) {
