@@ -1,0 +1,44 @@
+{
+  "name": "fise-outreach-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "worker": "tsx --tsconfig tsconfig.worker.json scripts/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "render:check": "tsx --tsconfig tsconfig.worker.json scripts/render-check.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
+    "cheerio": "^1.2.0",
+    "imapflow": "^2.1.2",
+    "next": "^15.5.26",
+    "playwright-core": "^1.63.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "resend": "^6.31.0",
+    "robots-parser": "^3.0.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}
