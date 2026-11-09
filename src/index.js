@@ -7373,7 +7373,7 @@ var sharedStyles = html`
   .dash-progress-title strong{display:block;font-size:13px}.dash-progress-title small{display:block;margin-top:4px;color:#858985;font-size:10px}
   .dash-state-pill{padding:5px 8px;border-radius:999px;background:#f1f1ef;font-size:9px;font-weight:800}
   .dash-progress-track{margin:16px 0 18px}
-  .dash-progress-metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .dash-progress-metrics{display:grid;grid-template-columns:1fr;gap:9px}
   .dash-progress-metrics>div{padding:12px;border:1px solid #e5e5e2;border-radius:7px;background:#fafafa}
   .dash-progress-metrics small,.dash-scan-summary>small{display:block;color:#858985;font-size:9px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
   .dash-progress-metrics strong{display:block;margin-top:5px;font-size:11px}
@@ -7851,13 +7851,12 @@ function renderDashboardKnowledge(bot, embedded = false) {
     <div class="dash-knowledge-body">
       <div class="dash-progress-area">
         <div class="dash-progress-title">
-          <div><strong>${Math.max(found, processed) ? `${processed} / ${Math.max(found, processed)} pages processed` : "0 pages processed"}</strong><small>${percent}% complete</small></div>
+          <div><strong>${percent}% complete</strong></div>
           <span class="dash-state-pill">${stateLabel}</span>
         </div>
         <div class="dash-progress-track" role="progressbar" aria-label="Website scan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
         <div class="dash-progress-metrics">
           <div><small>Discovery</small><strong>${found} pages found</strong></div>
-          <div><small>Processing</small><strong>${processed} processed</strong></div>
         </div>
       </div>
     </div>
