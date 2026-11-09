@@ -67,7 +67,7 @@ test('internal links on public pages resolve to live routes or assets', async ()
 
 test('homepage renders every redesigned section with accessible controls', async () => {
   const { html } = await page('/');
-  for (const id of ['features', 'how', 'demo', 'insights', 'pricing', 'faq']) assert.match(html, new RegExp(`id="${id}"`), id);
+  for (const id of ['features', 'how', 'install', 'insights', 'pricing', 'faq']) assert.match(html, new RegExp(`id="${id}"`), id);
   assert.match(html, /role="tablist"/);
   assert.match(html, /role="radiogroup" aria-label="Billing period"/);
   assert.match(html, /data-carousel/);
