@@ -102,3 +102,35 @@ test('dashboard shell has real navigation and a What’s new card', async () => 
   assert.match(html, /What’s new/);
   assert.doesNotMatch(html, /Search actions|aria-label="Notifications"/);
 });
+
+test('profile page is server-rendered inside the dashboard shell with real tab links', async () => {
+  const DB = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async first() {
+          if (sql.includes('FROM sessions JOIN users')) return { id: 'u', email: 'u@example.invalid', password_set: 0, created_at: '2026-08-22T10:00:00Z' };
+          if (sql.includes('FROM website_state')) return { content_json: '{}', revision: 1, updated_at: '', updated_by: '' };
+          if (sql.includes('FROM testing_plan_overrides')) return { plan_code: 'grow', updated_at: '' };
+          return null;
+        },
+        async run() { return {}; },
+        async all() { return sql.includes('FROM chatbots') ? { results: [{ id: 'bot-1', name: 'Alex', business_name: 'Biz', status: 'ready' }] } : { results: [] }; },
+      };
+    },
+  };
+  const get = async (path, cookie = 'fise_session=x') => worker.fetch(new Request(origin + path, { headers: cookie ? { cookie } : {} }), { DB });
+  const account = await (await get('/profile')).text();
+  assert.match(account, /class="app-sidebar"/);
+  assert.match(account, /href="\/profile\?tab=subscription"/);
+  assert.match(account, /u@example\.invalid/);
+  assert.match(account, /action="\/api\/account\/credentials"/, 'password not set shows the set-password form');
+  assert.match(account, /href="\/dashboard\/chatbots\/bot-1\/settings"/);
+  const subscription = await (await get('/profile?tab=subscription')).text();
+  assert.match(subscription, /id="pf-plan-form"/);
+  assert.match(subscription, /<option value="grow" selected>/);
+  const affiliate = await (await get('/profile?tab=affiliate')).text();
+  assert.match(affiliate, /Programme status/);
+  const anonymous = await get('/profile', '');
+  assert.ok(anonymous.status >= 300 && anonymous.status < 400);
+});

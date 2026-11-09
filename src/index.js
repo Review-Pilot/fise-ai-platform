@@ -5151,7 +5151,7 @@ var WebsiteModule = (() => {
     account?.addEventListener('click',(event)=>{
       event.preventDefault();
       nav?.classList.remove('open');
-      if(authenticated)openProfile();else openAccount();
+      if(authenticated)location.assign('/profile');else openAccount();
     });
     document.querySelectorAll('a[href="/#demo"]').forEach((link)=>link.addEventListener('click',(event)=>{if(!authenticated){event.preventDefault();nav?.classList.remove('open');openAccount()}}));
     demoSignin?.addEventListener('click',openAccount);
@@ -5777,11 +5777,7 @@ ${message}`,
       "/terms": "/terms-and-conditions"
     };
     if (canonicalPaths[url.pathname]) return go(canonicalPaths[url.pathname]);
-    if (url.pathname === "/profile") {
-      const user = await currentUser(request, env);
-      if (!user) return go("/login");
-      return response2(referenceProfilePage(), 200, url);
-    }
+    if (url.pathname === "/profile") return showProfilePage(request, env, url);
     const { content: c } = await readWebsiteContent2(env);
     const inner = await handlePublicPage2(url, c);
     return inner.headers.get("content-type")?.startsWith("text/html") ? personalizeHeader(inner, request, env) : inner;
@@ -7685,7 +7681,7 @@ function fiseEmailFooter(origin) {
   return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
-var APP_ASSET_VERSION = "20260924-app2";
+var APP_ASSET_VERSION = "20260924-app3";
 function appHead(title) {
   return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#FAFAFA"><title>${escapeHtml(title)} · Fise AI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site.css?v=${APP_ASSET_VERSION}"><link rel="stylesheet" href="/dashboard-v2.css?v=${APP_ASSET_VERSION}">`;
 }
@@ -7697,6 +7693,9 @@ var APP_ICONS = {
   preview: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z",
   help: "M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114.3 1.7c-.8.8-1.8 1.3-1.8 2.3M12 17h.01",
   profile: "M12 12a4 4 0 100-8 4 4 0 000 8zM5 21a7 7 0 0114 0",
+  account: "M12 12a4 4 0 100-8 4 4 0 000 8zM5 21a7 7 0 0114 0",
+  subscription: "M4 7a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 11h16",
+  affiliate: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8z",
   signout: "M15 17l5-5-5-5M20 12H9M11 4H5v16h6"
 };
 function appIcon(name) {
@@ -7709,7 +7708,13 @@ function dashboardAppShell(title, body, options = {}) {
   const keyMatch = String(body).match(/\/widget\/test\?key=([^"&\s]+)/) || String(body).match(/<!--preview-key:([^\s>]+)-->/);
   const botId = botMatch ? botMatch[1] : "";
   const link = (key, href, label, extra = "") => `<a class="app-nav-link${active === key ? " is-active" : ""}" href="${href}"${active === key ? ' aria-current="page"' : ""}${extra}>${appIcon(key)}<span>${label}</span></a>`;
-  const nav = [
+  const nav = options.profileTab ? [
+    link("overview", "/dashboard", "Overview"),
+    link("account", "/profile?tab=account", "Profile"),
+    link("subscription", "/profile?tab=subscription", "Subscription"),
+    link("affiliate", "/profile?tab=affiliate", "Affiliate"),
+    link("help", "/help", "Help centre")
+  ].join("") : [
     link("overview", "/dashboard", "Overview"),
     botId ? link("settings", `/dashboard/chatbots/${botId}/settings`, "Customise") : "",
     botId ? link("leads", `/dashboard/chatbots/${botId}/leads`, "Leads") : "",
@@ -7717,9 +7722,75 @@ function dashboardAppShell(title, body, options = {}) {
     link("help", "/help", "Help centre")
   ].join("");
   const logo = `<a class="app-logo" href="/" aria-label="Fise AI home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a>`;
-  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app"><a class="app-skip" href="#app-main">Skip to content</a><div class="app-layout"><aside class="app-sidebar" id="app-sidebar" aria-label="Dashboard">${logo}<nav class="app-nav" aria-label="Dashboard sections">${nav}</nav><div class="app-sidebar-foot"><a class="app-nav-link${active === "profile" ? " is-active" : ""}" href="/profile">${appIcon("profile")}<span>My profile</span></a><form method="post" action="/logout"><button class="app-nav-link" type="submit">${appIcon("signout")}<span>Sign out</span></button></form></div></aside><div class="app-scrim" data-app-close hidden></div><div class="app-content"><header class="app-mobilebar">${logo}<button class="app-menu" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button></header><div class="app-main" id="app-main">${body}</div>${fiseLandingFooter()}</div></div><div class="app-toasts" aria-live="polite" aria-atomic="false"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
+  return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app"><a class="app-skip" href="#app-main">Skip to content</a><div class="app-layout"><aside class="app-sidebar" id="app-sidebar" aria-label="Dashboard">${logo}<nav class="app-nav" aria-label="Dashboard sections">${nav}</nav><div class="app-sidebar-foot">${options.profileTab ? "" : `<a class="app-nav-link${active === "profile" ? " is-active" : ""}" href="/profile">${appIcon("profile")}<span>My profile</span></a>`}<form method="post" action="/logout"><button class="app-nav-link" type="submit">${appIcon("signout")}<span>Sign out</span></button></form></div></aside><div class="app-scrim" data-app-close hidden></div><div class="app-content"><header class="app-mobilebar">${logo}<button class="app-menu" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button></header><div class="app-main" id="app-main">${body}</div>${fiseLandingFooter()}</div></div><div class="app-toasts" aria-live="polite" aria-atomic="false"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script><script src="/website-frame.js" defer><\/script></body></html>`;
 }
 __name(dashboardAppShell, "dashboardAppShell");
+function profileStatusPill(label) {
+  const key = String(label || "").toLowerCase();
+  return `<span class="pf-pill ${key === "active" ? "is-active" : "is-muted"}">${escapeHtml(titleCase(label || "None"))}</span>`;
+}
+__name(profileStatusPill, "profileStatusPill");
+function profileAppPage(data, tab, notice = "") {
+  const account = data.account || {};
+  const subscription = data.subscription || null;
+  const planCode = String(subscription?.plan_code || "").toLowerCase();
+  const planLabel = planCode ? titleCase(planCode) : "None";
+  const displayStatus = String(subscription?.display_status || "None");
+  const created = account.created_at ? new Date(account.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Johannesburg" }) : "—";
+  const initial = escapeHtml(String(account.email || "?").trim().charAt(0).toUpperCase() || "?");
+  const titles = {
+    account: ["Profile", "Your personal details and secure sign-in information."],
+    subscription: ["Subscription", "Your current plan, billing status and testing controls."],
+    affiliate: ["Affiliate programme", "View your programme status or contact the Fise AI team."]
+  };
+  const row = (label, value) => `<div class="pf-row"><small>${label}</small><strong>${value}</strong></div>`;
+  let content = "";
+  if (tab === "subscription") {
+    const options = ["free", "essential", "grow", "enterprise"].map((code) => `<option value="${code}"${(planCode || "free") === code ? " selected" : ""}>${titleCase(code)}</option>`).join("");
+    content = `<div class="pf-grid">
+      <section class="app-card pf-card"><div class="app-card-head"><h2>Current plan</h2>${profileStatusPill(displayStatus)}</div>
+        <p class="pf-plan" id="pf-plan">${escapeHtml(planLabel)}</p>
+        <div class="pf-rows">${row("Billing provider", escapeHtml(subscription?.provider ? titleCase(subscription.provider) : "None"))}${row("Billing state", escapeHtml(displayStatus.toLowerCase() === "active" ? "Testing active" : titleCase(displayStatus)))}${row("Chatbot workspace", '<a href="/dashboard">Open dashboard</a>')}</div>
+      </section>
+      <section class="app-card pf-card"><div class="app-card-head"><h2>Testing plan access</h2></div>
+        <p class="pf-muted">During testing, plan fees apply without payment. Your selection updates immediately.</p>
+        <form class="pf-form" id="pf-plan-form"><label for="pf-plan-select">Choose a plan</label><select id="pf-plan-select" name="plan">${options}</select><button class="pf-button" id="pf-plan-save" type="submit">Apply plan</button></form>
+        <p class="pf-message" id="pf-plan-message" role="status" aria-live="polite"></p>
+        <p class="pf-muted pf-small">Compare plans on the <a href="/#pricing">pricing page</a>.</p>
+      </section></div>`;
+  } else if (tab === "affiliate") {
+    const contact = String(data.affiliate?.contact_email || "hello@fise.ai");
+    content = `<section class="app-card pf-card"><div class="app-card-head"><h2>Programme status</h2>${profileStatusPill("none")}</div><div class="pf-rows">${row("Affiliate status", escapeHtml(data.affiliate?.status || "Not enrolled"))}${row("Affiliate support", `<a href="mailto:${escapeHtml(contact)}">Contact Fise AI</a>`)}</div></section>`;
+  } else {
+    const bots = Array.isArray(data.chatbots) ? data.chatbots : [];
+    const botList = bots.length ? bots.map((bot) => `<li><div><strong>${escapeHtml(bot.name || "Chatbot")}</strong><small>${escapeHtml(bot.business_name || "")}</small></div><div class="pf-bot-actions">${profileStatusPill(bot.status === "ready" ? "active" : bot.status || "setup")}<a href="/dashboard/chatbots/${encodeURIComponent(bot.id)}/settings">Customise</a></div></li>`).join("") : `<li class="pf-empty">No chatbots yet. <a href="/dashboard">Create your first chatbot</a>.</li>`;
+    const passwordBlock = account.password_set
+      ? `<p class="pf-muted">Your password is set and stored as a secure one-way hash. It cannot be viewed, only replaced.</p>`
+      : `<form class="pf-form" method="post" action="/api/account/credentials"><input type="hidden" name="return_to" value="/profile?tab=account&amp;password=saved"><label for="pf-password">Choose a password</label><input id="pf-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="pf-button" type="submit">Save password</button></form>`;
+    content = `<div class="pf-grid">
+      <section class="app-card pf-card"><div class="app-card-head"><h2>Account information</h2></div><div class="pf-rows">${row("Email address", escapeHtml(account.email || "—"))}${row("Member since", escapeHtml(created))}${row("Password", account.password_set ? "••••••••••" : "Not set")}</div>${passwordBlock}</section>
+      <section class="app-card pf-card"><div class="app-card-head"><h2>Your chatbots</h2><a href="/dashboard">Open dashboard</a></div><ul class="pf-bots">${botList}</ul></section></div>`;
+  }
+  const heading = titles[tab] || titles.account;
+  const body = `${notice ? `<div class="alert ok">${escapeHtml(notice)}</div>` : ""}<div class="app-pagehead"><div><small>Account centre</small><h1>${heading[0]}</h1><p>${heading[1]}</p></div><span class="app-avatar" aria-hidden="true">${initial}</span></div><div class="pf-wrap">${content}</div>`;
+  return dashboardAppShell(heading[0], body, { active: titles[tab] ? tab : "account", profileTab: true });
+}
+__name(profileAppPage, "profileAppPage");
+async function showProfilePage(request, env, url) {
+  const user = await currentUser(request, env);
+  if (!user) return redirect("/login");
+  const tab = ["account", "subscription", "affiliate"].includes(url.searchParams.get("tab")) ? url.searchParams.get("tab") : "account";
+  let data;
+  try {
+    data = await accountProfileData(env, user);
+  } catch (error) {
+    console.error("Could not load profile", error);
+    data = { account: { email: user.email, password_set: Boolean(Number(user.password_set || 0)), created_at: user.created_at || "" }, subscription: null, chatbots: [], affiliate: { status: "Not enrolled", contact_email: "hello@fise.ai" } };
+  }
+  const notice = url.searchParams.get("password") === "saved" ? "Your password has been saved." : "";
+  return htmlResponse(profileAppPage(data, tab, notice));
+}
+__name(showProfilePage, "showProfilePage");
 function authShellPage(title, body) {
   return `<!doctype html><html lang="en"><head>${appHead(title)}</head><body class="app app-auth"><header class="auth-top"><a class="app-logo" href="/" aria-label="Fise AI home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#0A0A0A"/><path d="M8 18V8h10M8 13h7" stroke="#FAFAFA" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg><span>Fise</span></a><a class="auth-back" href="/">← Back to site</a></header>${body}<div class="app-toasts" aria-live="polite"></div><script src="/dashboard-v2.js?v=${APP_ASSET_VERSION}" defer><\/script></body></html>`;
 }
@@ -8927,6 +8998,10 @@ __name(changeTestingPlan, "changeTestingPlan");
 async function accountProfile(request, env) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: "Sign in again" }, 401);
+  return json(await accountProfileData(env, user));
+}
+__name(accountProfile, "accountProfile");
+async function accountProfileData(env, user) {
   try {
     await ensureTestingPlanSchema(env);
   } catch (error) {
@@ -8965,7 +9040,7 @@ async function accountProfile(request, env) {
     ...subscription,
     display_status: ["active", "trialing"].includes(rawSubscriptionStatus) ? "Active" : "Inactive"
   } : null;
-  return json({
+  return {
     account: {
       email: user.email,
       username: user.username || "",
@@ -8978,9 +9053,9 @@ async function accountProfile(request, env) {
       status: "Not enrolled",
       contact_email: website.content.contact_email || "hello@fise.ai"
     }
-  });
+  };
 }
-__name(accountProfile, "accountProfile");
+__name(accountProfileData, "accountProfileData");
 var DATABASE_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS idx_chatbots_user_created ON chatbots(user_id,created_at)",
   "CREATE INDEX IF NOT EXISTS idx_conversations_chatbot_created ON conversations(chatbot_id,created_at)",

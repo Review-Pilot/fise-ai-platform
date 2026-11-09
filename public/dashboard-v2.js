@@ -20,6 +20,27 @@ window.fiseToast=toast;
 /* turn server success notices into toasts (errors stay inline so they remain visible) */
 $$('.alert.ok').forEach((alert)=>{toast(alert.textContent.trim(),'ok');alert.hidden=true});
 
+/* profile: apply testing plan without a reload */
+const planForm=doc.getElementById('pf-plan-form');
+if(planForm){
+  planForm.addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    const select=doc.getElementById('pf-plan-select'),button=doc.getElementById('pf-plan-save'),message=doc.getElementById('pf-plan-message'),label=doc.getElementById('pf-plan');
+    const plan=select.value;
+    button.disabled=true;select.disabled=true;message.classList.remove('is-error');message.textContent='Applying plan…';
+    try{
+      const response=await fetch('/api/account/testing-plan',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({plan})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||'Could not change the plan. Please try again.');
+      const code=String((data.subscription&&data.subscription.plan_code)||plan);
+      if(label)label.textContent=code.charAt(0).toUpperCase()+code.slice(1);
+      message.textContent='';toast('Plan updated to '+code.charAt(0).toUpperCase()+code.slice(1)+'.','ok');
+    }catch(error){
+      message.classList.add('is-error');message.textContent=error.message||'Could not change the plan.';
+    }finally{button.disabled=false;select.disabled=false}
+  });
+}
+
 /* mobile sidebar */
 const sidebar=doc.getElementById('app-sidebar'),menu=doc.querySelector('.app-menu'),scrim=doc.querySelector('.app-scrim');
 function setNav(open){
