@@ -427,12 +427,11 @@ var ScannerModule = /* @__PURE__ */ (() => {
     const active = ["queued", "discovering", "running", "indexing"].includes(status);
     const complete = ["completed", "completed_with_errors"].includes(status);
     if (active) {
-      const percent = found ? Math.min(100, Math.round(processed / found * 100)) : 5;
+      const percent = processed > 0 && found ? Math.min(100, Math.round(processed / found * 100)) : 0;
       return `<div class="scan-box active" data-scan-progress data-chatbot-id="${escapeHtml2(bot.id)}">
       <div class="scan-label">Website knowledge</div>
       <div class="scan-title-row"><span class="scan-state-dot"></span><strong>Scanning your website</strong><span class="scan-percent">${percent}%</span></div>
-      <p class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages\u2026"}</p>
-      <div class="progress"><span style="width:${percent}%"></span></div>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
       <p class="scan-time-note">You can leave this page. Progress updates automatically.</p>
     </div>`;
     }
@@ -7873,7 +7872,7 @@ function renderSetupWizard(bot, stage, embedded = false) {
   const scanFailed = scanStatusValue === "failed";
   const found = Number(bot.pages_found || 0);
   const processed = Number(bot.pages_processed || 0);
-  const percent = found ? Math.min(100, Math.round(processed / found * 100)) : 0;
+  const percent = processed > 0 && found ? Math.min(100, Math.round(processed / found * 100)) : 0;
   const ui = uiSettings(bot.ui_settings_json);
   let questions = [];
   try {
@@ -7906,7 +7905,7 @@ function renderSetupWizard(bot, stage, embedded = false) {
   } else if (activeStep === 2) {
     const scanAction = embedded ? "/api/scans/start?embed=1&setup=1" : "/api/scans/start?setup=1";
     const progress = scanActive ? html`<div class="setup-scan-progress" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
-      <div class="setup-scan-progress-head"><div><strong>Scanning your website</strong><small class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</small></div><span class="scan-percent">${percent}%</span></div>
+      <div class="setup-scan-progress-head"><div><strong>Scanning your website</strong></div><span class="scan-percent">${percent}%</span></div>
       <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%" data-fake-progress></span></div>
     </div>` : html`${scanFailed && bot.scan_error ? `<p class="setup-error">${escapeHtml(bot.scan_error)}</p>` : ""}<form method="post" action="${scanAction}"><input type="hidden" name="chatbot_id" value="${escapeHtml(bot.id)}"><button class="btn full" type="submit" style="background:#0a0a0a!important;color:#fff!important">${scanFailed ? "Try website scan again" : "Scan website"}</button></form>`;
     stageContent = html`<div class="setup-stage-card"><h2>Scan your website</h2><p>Fise will securely read your public pages and prepare the knowledge your chatbot needs. This normally takes a few minutes.</p><div class="setup-site-summary"><div><small>Website to scan</small><strong>${escapeHtml(bot.website_url || "")}</strong></div><span>${scanActive ? "Scan in progress" : scanFailed ? "Scan needs attention" : "Ready to scan"}</span></div>${progress}</div>`;
@@ -9222,54 +9221,74 @@ function dashboardProgressJavascript() {
     const boxes = [...document.querySelectorAll('[data-scan-progress]')];
     if (!boxes.length) return;
     const active = new Set(['queued','discovering','running','indexing']);
+    const RAMP_PERCENT = 53, RAMP_SECONDS = 120;
     let finished = false;
-    const fakeTimers = new WeakMap();
-    function currentWidth(bar) { return bar ? parseFloat(bar.style.width) || 0 : 0; }
-    function scheduleFake(box) {
-      const bar = box.querySelector('[data-fake-progress]');
-      if (!bar) return;
-      const tick = () => {
-        if (finished) return;
-        const width = currentWidth(bar);
-        if (width < 40) bar.style.width = Math.min(40, width + 1 + Math.random() * 2) + '%';
-        fakeTimers.set(box, setTimeout(tick, 10000 + Math.random() * 5000));
+    function store(box) {
+      const key = 'fise-scan-' + box.dataset.chatbotId;
+      return {
+        read() { try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; } },
+        write(value) { try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {} },
+        clear() { try { sessionStorage.removeItem(key); } catch {} }
       };
-      fakeTimers.set(box, setTimeout(tick, 10000 + Math.random() * 5000));
     }
-    async function update(box) {
+    function setup(box) {
+      const bar = box.querySelector('.progress span');
+      const percentLabel = box.querySelector('.scan-percent');
+      const track = box.querySelector('.progress');
+      const saved = store(box);
+      const previous = saved.read();
+      const fresh = !!previous && Date.now() - previous.start < 15 * 60 * 1000;
+      const state = { box, bar, percentLabel, track, saved, start: fresh && previous.start ? previous.start : Date.now(), shown: Math.max(fresh && previous.shown || 0, bar ? parseFloat(bar.style.width) || 0 : 0), real: 0 };
+      state.render = function render(next) {
+        // One value drives the bar and the percentage, and it can never go down.
+        state.shown = Math.max(state.shown, Math.min(100, next));
+        const value = Math.round(state.shown);
+        if (state.bar) state.bar.style.width = state.shown + '%';
+        if (state.track) state.track.setAttribute('aria-valuenow', String(value));
+        if (state.percentLabel) state.percentLabel.textContent = value + '%';
+        state.saved.write({ start: state.start, shown: state.shown });
+      };
+      state.ramp = function ramp() {
+        const elapsed = (Date.now() - state.start) / 1000;
+        return Math.min(RAMP_PERCENT, RAMP_PERCENT * elapsed / RAMP_SECONDS);
+      };
+      state.tick = function tick() { if (!finished) state.render(Math.max(state.ramp(), state.real)); };
+      if (state.bar) state.bar.style.transition = 'width 1.2s ease';
+      state.render(Math.max(state.shown, state.ramp()));
+      return state;
+    }
+    const states = boxes.map(setup);
+    async function update(state) {
       if (finished) return;
       try {
-        const response = await fetch('/api/scans/status?chatbot_id=' + encodeURIComponent(box.dataset.chatbotId), { headers: { accept: 'application/json' } });
+        const response = await fetch('/api/scans/status?chatbot_id=' + encodeURIComponent(state.box.dataset.chatbotId), { headers: { accept: 'application/json' } });
         const data = await response.json();
         if (!response.ok) return;
-        const percent = Math.max(0, Math.min(100, Number(data.percent || 0)));
-        const bar = box.querySelector('.progress span');
-        const label = box.querySelector('.scan-progress-label');
-        const percentLabel = box.querySelector('.scan-percent');
-        if (bar && percent > currentWidth(bar)) bar.style.width = percent + '%';
-        if (label) label.textContent = data.pages_found ? data.pages_processed + ' of ' + data.pages_found + ' pages processed' : 'Finding the most useful public pages…';
-        if (percentLabel) percentLabel.textContent = percent + '%';
-        if (!active.has(data.status) && !finished) {
-          finished = true;
-          const timer = fakeTimers.get(box);
-          if (timer) clearTimeout(timer);
-          if (bar) bar.style.width = '100%';
-          if (percentLabel) percentLabel.textContent = '100%';
-          const isWizard = box.classList.contains('setup-scan-progress');
-          setTimeout(() => {
-            if (isWizard) {
-              const url = new URL(location.href);
-              url.searchParams.set('setup', 'customise');
-              location.href = url.toString();
-            } else {
-              location.reload();
-            }
-          }, 600);
+        if (active.has(data.status)) {
+          // Real progress only counts once pages are actually being processed.
+          if (Number(data.pages_processed) > 0 && Number(data.pages_found) > 0) state.real = Math.min(99, Math.round(Number(data.pages_processed) / Number(data.pages_found) * 100));
+          state.tick();
+          return;
         }
+        if (finished) return;
+        finished = true;
+        state.render(100);
+        state.saved.clear();
+        const isWizard = state.box.classList.contains('setup-scan-progress');
+        setTimeout(() => {
+          if (isWizard) {
+            const url = new URL(location.href);
+            url.searchParams.set('setup', 'customise');
+            url.searchParams.delete('back');
+            location.href = url.toString();
+          } else {
+            location.reload();
+          }
+        }, 900);
       } catch {}
     }
-    boxes.forEach(scheduleFake);
-    const poll = () => { if (!finished) boxes.forEach(update); };
+    setInterval(() => states.forEach((state) => state.tick()), 4000);
+    const poll = () => { if (!finished) states.forEach(update); };
     poll();
     const pollTimer = setInterval(() => {
       if (finished) { clearInterval(pollTimer); return; }
