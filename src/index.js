@@ -1221,29 +1221,87 @@ var ChatModule = (() => {
     };
   }
   __name(parseUiSettings, "parseUiSettings");
+  const GENERIC_PAGE_PATTERN = /^(home|homepage|welcome|contact|contact us|about|about us|privacy|privacy policy|terms|terms and conditions|terms of service|cookies?|cookie policy|404|not found|page not found|sitemap|login|log in|sign in|register|cart|checkout|my account|search)$/i;
+  function cleanTitleParts(title) {
+    return String(title || "").split(/\s*[|–—•·]\s*|\s+-\s+|\s+:\s+/).map((part) => part.replace(/\s+/g, " ").trim()).filter(Boolean);
+  }
+  __name(cleanTitleParts, "cleanTitleParts");
+  function hostLabel(value) {
+    try {
+      const host = new URL(value).hostname.replace(/^www\./, "");
+      return host.split(".").slice(0, -1).filter((part) => !["co", "com", "org", "net", "gov"].includes(part)).join("") || host.split(".")[0];
+    } catch {
+      return "";
+    }
+  }
+  __name(hostLabel, "hostLabel");
+  function scannedSiteName(bot, pages) {
+    const label = hostLabel(bot.website_url).toLowerCase().replace(/[^a-z0-9]/g, "");
+    const squash = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const pathDepth = (page) => {
+      try {
+        return new URL(page.source_url).pathname.split("/").filter(Boolean).length;
+      } catch {
+        return 99;
+      }
+    };
+    const ordered = [...pages].filter((page) => page.title).sort((first, second) => pathDepth(first) - pathDepth(second));
+    for (const page of ordered.slice(0, 5)) {
+      const parts = cleanTitleParts(page.title);
+      const brand = parts.find((part) => label && label.length > 3 && squash(part).includes(label)) || parts.find((part) => label && label.length > 3 && label.includes(squash(part)) && squash(part).length > 3);
+      if (brand && brand.length <= 60) return brand;
+    }
+    const homepage = ordered[0];
+    if (homepage) {
+      const parts = cleanTitleParts(homepage.title);
+      const short = parts.filter((part) => part.split(/\s+/).length <= 4 && !GENERIC_PAGE_PATTERN.test(part)).sort((first, second) => first.length - second.length)[0];
+      if (short && parts.length > 1) return short;
+    }
+    if (label) return label.charAt(0).toUpperCase() + label.slice(1);
+    return String(bot.business_name || bot.name || "this business").trim();
+  }
+  __name(scannedSiteName, "scannedSiteName");
+  function scannedTopics(pages, siteName) {
+    const site = String(siteName || "").toLowerCase();
+    const seen = /* @__PURE__ */ new Set();
+    const topics = [];
+    for (const page of pages) {
+      for (const part of cleanTitleParts(page.title)) {
+        const text = part.replace(/[.!?]+$/, "");
+        const key = text.toLowerCase();
+        if (!text || key === site || site.includes(key) || key.includes(site) || GENERIC_PAGE_PATTERN.test(text)) continue;
+        if (text.split(/\s+/).length > 6 || text.length > 48 || seen.has(key)) continue;
+        seen.add(key);
+        topics.push(text);
+      }
+    }
+    return topics;
+  }
+  __name(scannedTopics, "scannedTopics");
   async function tailoredPopularQuestions2(env, bot) {
     const result = await env.DB.prepare(`
     SELECT title,source_url FROM knowledge_sources
     WHERE chatbot_id=? AND status='completed'
-    ORDER BY updated_at DESC LIMIT 30
+    ORDER BY updated_at DESC LIMIT 60
   `).bind(bot.id).all();
     const pages = result.results || [];
     const haystack = pages.map((page) => `${page.title || ""} ${page.source_url || ""}`.toLowerCase()).join(" ");
-    const business = String(bot.business_name || bot.name || "this business").trim();
+    const business = scannedSiteName(bot, pages);
+    const topics = scannedTopics(pages, business);
     const questions = [];
     const add = /* @__PURE__ */ __name((question) => {
       if (question && !questions.includes(question)) questions.push(question);
     }, "add");
-    if (/service|product|solution|what-we-do|offering/.test(haystack)) add(`What does ${business} offer?`);
+    for (const topic of topics.slice(0, 2)) add(`Tell me about ${topic}`);
     if (/price|pricing|plan|package|rate|cost/.test(haystack)) add("What are your prices or plans?");
     if (/book|quote|contact|enquir|appointment|consult/.test(haystack)) add(`How can I contact or book with ${business}?`);
     if (/location|branch|store|office|visit|find-us/.test(haystack)) add(`Where is ${business} located?`);
     if (/about|story|team|company/.test(haystack)) add(`Tell me about ${business}`);
     if (/faq|frequently-asked|help|support/.test(haystack)) add("What should I know before getting started?");
-    add(`How can ${business} help me?`);
-    add(`What does ${business} offer?`);
-    add("How do I get started?");
-    add(`How can I contact ${business}?`);
+    if (questions.length < 3) {
+      add(`What does ${business} offer?`);
+      add(`How can I contact ${business}?`);
+    }
     return questions.slice(0, 4);
   }
   __name(tailoredPopularQuestions2, "tailoredPopularQuestions");
@@ -1253,8 +1311,19 @@ var ChatModule = (() => {
     if (!bot || bot.status !== "ready" || !bot.vector_store_id) return json2({ error: "Chatbot unavailable" }, 404);
     const auth = authorizeBrowser(request, bot);
     if (!auth.ok) return json2({ error: "This website is not allowed to use the chatbot" }, 403, corsHeaders(auth.origin));
-    const questions = parseQuestions(bot.popular_questions_json);
+    let questions = parseQuestions(bot.popular_questions_json);
     const ui = parseUiSettings(bot.ui_settings_json);
+    const typedName = String(bot.business_name || "").trim();
+    if (questions.length && typedName.length > 2 && questions.some((question) => question.toLowerCase().includes(typedName.toLowerCase()))) {
+      const scannedPages = (await env.DB.prepare("SELECT title,source_url FROM knowledge_sources WHERE chatbot_id=? AND status='completed' ORDER BY updated_at DESC LIMIT 60").bind(bot.id).all()).results || [];
+      if (scannedPages.length) {
+        const scannedName = scannedSiteName(bot, scannedPages);
+        if (scannedName && scannedName.toLowerCase() !== typedName.toLowerCase()) {
+          const escaped = typedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          questions = questions.map((question) => question.replace(new RegExp(escaped, "ig"), scannedName));
+        }
+      }
+    }
     const fallbackQuestions = ui.widget_version === "2" ? await tailoredPopularQuestions2(env, bot) : ["What do you offer?", "Plans and pricing", "How does it work?", "Who is it for?"];
     return json2({
       name: bot.name,
