@@ -149,3 +149,25 @@ test('signed-in header is rendered by the server so it never flashes the signed-
   assert.match(anonymous, />Sign in</);
   assert.match(anonymous, /href="\/login\?mode=signup"[^>]*>\s*Start free/);
 });
+
+test('widget popular questions come from the scanned site, not the typed business name', async () => {
+  const bot = { id: 'b1', user_id: 'u', name: 'Assistant', business_name: 'Cape Tou', website_url: 'https://affordableroofing.co.za', status: 'ready', public_key: 'pk', vector_store_id: 'vs', primary_colour: '#111111', greeting: 'Hi', allowed_domains_json: '[]', monthly_message_limit: 500, popular_questions_json: '[]', ui_settings_json: '{"widget_version":"2"}', default_size: 'large', allow_files: 1, allow_voice: 1, lead_capture_enabled: 0, lead_cta_label: 'Talk to us', subscription_status: 'active', plan_code: 'grow' };
+  const pages = [
+    { title: 'Affordable Roofing | Roof Repairs Cape Town', source_url: 'https://affordableroofing.co.za/' },
+    { title: 'Waterproofing - Affordable Roofing', source_url: 'https://affordableroofing.co.za/waterproofing' },
+    { title: 'Contact Us | Affordable Roofing', source_url: 'https://affordableroofing.co.za/contact' },
+  ];
+  const makeEnv = (saved) => ({ DB: { prepare(sql) { return { bind() { return this; },
+    async first() { return sql.includes('FROM chatbots c') ? { ...bot, popular_questions_json: saved } : null; },
+    async run() { return {}; },
+    async all() { return sql.includes('FROM knowledge_sources') ? { results: pages } : { results: [] }; } }; } } });
+  const get = async (saved) => (await worker.fetch(new Request(origin + '/api/widget/config?key=pk', { headers: { origin } }), makeEnv(saved))).json();
+  const generated = await get('[]');
+  const joined = generated.popular_questions.join(' | ');
+  assert.doesNotMatch(joined, /Cape Tou/);
+  assert.match(joined, /Affordable Roofing|Waterproofing/);
+  assert.ok(generated.popular_questions.length >= 3);
+  const saved = await get(JSON.stringify(['How can Cape Tou help me?', 'What does Cape Tou offer?']));
+  assert.doesNotMatch(saved.popular_questions.join(' '), /Cape Tou/);
+  assert.match(saved.popular_questions[0], /Affordable Roofing/);
+});
