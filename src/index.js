@@ -5302,7 +5302,7 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
-  const FX_ASSET_VERSION = "20260924-fx5";
+  const FX_ASSET_VERSION = "20260924-fx6";
   const FX_SITE_NAME = "Fise AI";
   function fxText(c, key) {
     const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
@@ -5411,7 +5411,7 @@ var WebsiteModule = (() => {
   }
   __name(fxHowItWorks, "fxHowItWorks");
   function fxVideo() {
-    return html2`<section class="fx-section" id="demo" aria-labelledby="fx-demo-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">See it in action</p><h2 class="fx-h2" id="fx-demo-title">From sign-up to a live assistant, in one short walkthrough.</h2></div><div class="fx-video fx-reveal" data-video="/fise-product-walkthrough.mp4"><div class="fx-poster" aria-hidden="true"><aside><span style="width:60%"></span><span></span><span style="width:80%"></span><span style="width:70%"></span></aside><div><span></span><span></span><span></span><span></span></div></div><div class="fx-video-scrim" aria-hidden="true"></div><button class="fx-play" type="button" aria-label="Play the Fise product walkthrough, 33 seconds"><span class="fx-play-dot fx-pulse"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3l10 6-10 6z" fill="#FAFAFA"/></svg></span><span class="fx-play-label">Watch the walkthrough · 0:33</span></button></div></div></section>`;
+    return html2`<section class="fx-section" id="demo" aria-labelledby="fx-demo-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">See it in action</p><h2 class="fx-h2" id="fx-demo-title">From sign-up to a live assistant, in one short walkthrough.</h2></div><div class="fx-video fx-reveal"><video src="/fise-walkthrough.mp4" autoplay muted loop playsinline></video></div></div></section>`;
   }
   __name(fxVideo, "fxVideo");
   function fxCapabilities() {
@@ -10397,7 +10397,7 @@ async function routeFiseRequest(request, env, url) {
           );
         }
       }
-      if (url.pathname === "/fise-product-walkthrough.mp4" && request.method === "GET" && env.ASSETS)
+      if ((url.pathname === "/fise-product-walkthrough.mp4" || url.pathname === "/fise-walkthrough.mp4") && request.method === "GET" && env.ASSETS)
         return env.ASSETS.fetch(request);
       if (url.pathname === "/fise-signup-demo.mp4" && request.method === "GET")
         return redirect("/fise-product-walkthrough.mp4");

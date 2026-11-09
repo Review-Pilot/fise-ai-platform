@@ -106,20 +106,6 @@ $$('[data-tabs]').forEach((wrap)=>{
   if('IntersectionObserver' in window){new IntersectionObserver((e)=>{visible=e[0].isIntersecting;visible?schedule():clearTimeout(timer)},{threshold:.4}).observe(wrap)}
 });
 
-/* video: lazy-attach on click */
-$$('[data-video]').forEach((box)=>{
-  const btn=box.querySelector('.fx-play');
-  btn?.addEventListener('click',()=>{
-    const v=doc.createElement('video');
-    v.src=box.dataset.video;v.controls=true;v.playsInline=true;v.autoplay=true;v.preload='auto';
-    v.setAttribute('aria-label',btn.getAttribute('aria-label')||'Product walkthrough');
-    box.appendChild(v);
-    box.querySelector('.fx-video-scrim')?.remove();btn.remove();
-    v.addEventListener('error',()=>{const note=doc.createElement('p');note.className='fx-video-fallback';note.innerHTML='This browser can\u2019t play the video inline. <a href="'+box.dataset.video+'">Download the walkthrough</a>.';box.appendChild(note)},{once:true});
-    const p=v.play();if(p&&p.catch)p.catch(()=>{});v.focus();
-  });
-});
-
 /* newsletter */
 const form=doc.getElementById('fx-newsletter');
 if(form){
