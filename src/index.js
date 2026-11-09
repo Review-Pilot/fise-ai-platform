@@ -5302,7 +5302,7 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
-  const FX_ASSET_VERSION = "20260924-fx6";
+  const FX_ASSET_VERSION = "20260924-fx7";
   const FX_SITE_NAME = "Fise AI";
   function fxText(c, key) {
     const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
@@ -5411,7 +5411,7 @@ var WebsiteModule = (() => {
   }
   __name(fxHowItWorks, "fxHowItWorks");
   function fxVideo() {
-    return html2`<section class="fx-section" id="demo" aria-labelledby="fx-demo-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">See it in action</p><h2 class="fx-h2" id="fx-demo-title">From sign-up to a live assistant, in one short walkthrough.</h2></div><div class="fx-video fx-reveal"><video src="/fise-walkthrough.mp4" autoplay muted loop playsinline></video></div></div></section>`;
+    return html2`<section class="fx-section" id="demo" aria-labelledby="fx-demo-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">See it in action</p><h2 class="fx-h2" id="fx-demo-title">From sign-up to a live assistant, in one short walkthrough.</h2></div><div class="fx-video fx-reveal"><video src="/fise-walkthrough-v2.mp4" autoplay muted loop playsinline></video></div></div></section>`;
   }
   __name(fxVideo, "fxVideo");
   function fxCapabilities() {
@@ -7281,6 +7281,7 @@ var sharedStyles = html`
   .advanced-body .delete-tools{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:18px;padding:16px;border-color:#f0d4d4;background:#fffafa}.advanced-body .delete-tools p{margin:4px 0 0}.advanced-body .delete-tools form{flex:0 0 auto}
   .onboarding-card{display:grid;grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr);gap:38px;padding:34px;border-radius:20px;box-shadow:0 18px 50px rgba(20,20,20,.08)}
   .onboarding-copy .eyebrow{display:inline-flex;align-items:center;min-height:28px;margin-bottom:16px;padding:0 11px;border-radius:8px;color:#fff;background:#050505}.onboarding-copy>p{color:#202020;line-height:1.6}
+  .setup-wizard{position:relative}.setup-wizard.has-back{padding-top:76px}.setup-back{position:absolute;top:20px;left:20px;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--g500,#737373);border-radius:10px;color:var(--g500,#737373);background:#fff;text-decoration:none;transition:background .15s,color .15s}.setup-back:hover{background:#f6f6f6}.setup-back:focus-visible{outline:2px solid var(--g500,#737373);outline-offset:2px}
   .setup-wizard .setup-steps>div.completed{color:#141414}.setup-wizard .setup-steps>div.completed span{background:#111}
   .setup-stage-card{padding:26px;border:1px solid #e6e6e6;border-radius:16px;background:#fbfbfb}.setup-stage-card h2{margin-bottom:7px}.setup-stage-card>p{margin-bottom:20px;color:#202020;line-height:1.55}
   .setup-site-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;padding:14px 16px;border:1px solid #e6e6e6;border-radius:12px;background:#fff}.setup-site-summary small{display:block;margin-bottom:4px;color:#202020}.setup-site-summary strong{overflow-wrap:anywhere}
@@ -7866,7 +7867,7 @@ function renderDashboardKnowledge(bot, embedded = false) {
 __name(renderDashboardKnowledge, "renderDashboardKnowledge");
 var _g;
 function renderSetupWizard(bot, stage, embedded = false) {
-  const activeStep = stage === "customise" ? 3 : 2;
+  const activeStep = stage === "customise" ? 3 : stage === "details" ? 1 : 2;
   const scanStatusValue = bot.scan_status || (bot.status === "scanning" ? "running" : "not_started");
   const scanActive = ["queued", "discovering", "running", "indexing"].includes(scanStatusValue);
   const scanFailed = scanStatusValue === "failed";
@@ -7888,7 +7889,21 @@ function renderSetupWizard(bot, stage, embedded = false) {
     <div class="${activeStep === 3 ? "active" : ""}"><span>3</span><strong>Customise and launch</strong><small>Review the design, answers and installation.</small></div>
   </div>`;
   let stageContent = "";
-  if (activeStep === 2) {
+  const embedQuery = embedded ? "&embed=1" : "";
+  const backHref = activeStep === 3 ? `/dashboard?setup=scan&back=1${embedQuery}` : activeStep === 2 ? `/dashboard?setup=details${embedQuery}` : "";
+  const backLabel = activeStep === 3 ? "Back to Scan website" : "Back to Business details";
+  const backLink = backHref ? `<a class="setup-back" href="${backHref}" aria-label="${backLabel}" title="${backLabel}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a>` : "";
+  if (activeStep === 1) {
+    stageContent = html`<form class="setup-stage-card" method="post" action="/api/chatbots/${encodeURIComponent(bot.id)}/details${embedded ? "?embed=1" : ""}">
+      <h2>Business details</h2><p>Update your business or website details, then scan your website again to refresh your chatbot's knowledge.</p>
+      <div class="setup-form-grid">
+        <label>Business name<input name="business_name" maxlength="100" required value="${escapeHtml(bot.business_name || "")}" autocomplete="off"></label>
+        <label>Chatbot name<input name="name" maxlength="80" required value="${escapeHtml(bot.name || "")}" autocomplete="off"></label>
+        <label class="full-field">Website URL<input name="website_url" type="url" maxlength="500" required value="${escapeHtml(bot.website_url || "")}" autocomplete="off"></label>
+      </div>
+      <div class="setup-stage-actions"><button class="btn" type="submit">Save and continue to website scan</button></div>
+    </form>`;
+  } else if (activeStep === 2) {
     const scanAction = embedded ? "/api/scans/start?embed=1&setup=1" : "/api/scans/start?setup=1";
     const progress = scanActive ? html`<div class="setup-scan-progress" data-scan-progress data-chatbot-id="${escapeHtml(bot.id)}">
       <div class="setup-scan-progress-head"><div><strong>Scanning your website</strong><small class="scan-progress-label">${found ? `${processed} of ${found} pages processed` : "Finding the most useful public pages…"}</small></div><span class="scan-percent">${percent}%</span></div>
@@ -7917,7 +7932,7 @@ function renderSetupWizard(bot, stage, embedded = false) {
       <div class="setup-stage-actions"><button class="btn" type="submit">Finish setup and open dashboard</button></div>
     </form>`;
   }
-  return html`<section class="card onboarding-card setup-wizard"><div class="onboarding-copy"><div class="eyebrow">Quick setup</div><h2>Set up your chatbot</h2><p>Complete all three steps here. Your dashboard will open when the chatbot is ready.</p>${steps}</div>${stageContent}</section>`;
+  return html`<section class="card onboarding-card setup-wizard${backHref ? " has-back" : ""}">${backLink}<div class="onboarding-copy"><div class="eyebrow">Quick setup</div><h2>Set up your chatbot</h2><p>Complete all three steps here. Your dashboard will open when the chatbot is ready.</p>${steps}</div>${stageContent}</section>`;
 }
 __name(renderSetupWizard, "renderSetupWizard");
 function dashboardWhatsNew() {
@@ -9077,7 +9092,8 @@ async function showDashboard(request, env) {
     if (requestedSetup || legacyIncomplete || guidedIncomplete) {
       const status = setupBot.scan_status || (setupBot.status === "scanning" ? "running" : "not_started");
       const scanComplete = ["completed", "completed_with_errors"].includes(status) || setupBot.status === "ready";
-      setupStage = requestedSetup === "customise" || scanComplete ? "customise" : "scan";
+      const goingBack = url.searchParams.get("back") === "1";
+      setupStage = requestedSetup === "details" ? "details" : requestedSetup === "scan" && goingBack ? "scan" : requestedSetup === "customise" || scanComplete ? "customise" : "scan";
       if (setupStage === "customise") {
         try {
           const fullBot = await ownedChatbot(env, user.id, setupBot.id);
@@ -9706,6 +9722,40 @@ function googleSheetsWebhook(value) {
   return null;
 }
 __name(googleSheetsWebhook, "googleSheetsWebhook");
+async function updateChatbotDetails(request, env, chatbotId) {
+  if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
+  const user = await currentUser(request, env);
+  if (!user) return redirect("/login");
+  const bot = await ownedChatbot(env, user.id, chatbotId);
+  if (!bot) return redirect(dashboardReturnUrl(request, { error: "Chatbot not found.", setup: "details" }));
+  const form = await request.formData();
+  const businessName = String(form.get("business_name") || "").trim().slice(0, 100);
+  const name = String(form.get("name") || "").trim().slice(0, 80);
+  let website;
+  try {
+    website = new URL(String(form.get("website_url") || "").trim().slice(0, 500));
+  } catch {
+    website = null;
+  }
+  if (!businessName || !name || !website || !["http:", "https:"].includes(website.protocol))
+    return redirect(dashboardReturnUrl(request, { error: "Check the business details and enter a valid website URL.", setup: "details" }));
+  website.hash = "";
+  let allowed = [];
+  try {
+    const row = await env.DB.prepare("SELECT allowed_domains_json FROM chatbots WHERE id=? AND user_id=?").bind(chatbotId, user.id).first();
+    const parsed = JSON.parse(row?.allowed_domains_json || "[]");
+    if (Array.isArray(parsed)) allowed = parsed;
+  } catch {}
+  let oldOrigin = "";
+  try {
+    oldOrigin = new URL(bot.website_url).origin;
+  } catch {}
+  allowed = allowed.filter((origin) => origin !== oldOrigin);
+  if (!allowed.includes(website.origin)) allowed.unshift(website.origin);
+  await env.DB.prepare("UPDATE chatbots SET name=?,business_name=?,website_url=?,allowed_domains_json=?,updated_at=? WHERE id=? AND user_id=?").bind(name, businessName, website.toString(), JSON.stringify(allowed), (/* @__PURE__ */ new Date()).toISOString(), chatbotId, user.id).run();
+  return redirect(dashboardReturnUrl(request, { setup: "scan", back: "1" }));
+}
+__name(updateChatbotDetails, "updateChatbotDetails");
 async function finishChatbotSetup(request, env, chatbotId) {
   if (!sameOrigin(request)) return json({ error: "Invalid request origin" }, 403);
   const user = await currentUser(request, env);
@@ -10397,7 +10447,7 @@ async function routeFiseRequest(request, env, url) {
           );
         }
       }
-      if ((url.pathname === "/fise-product-walkthrough.mp4" || url.pathname === "/fise-walkthrough.mp4") && request.method === "GET" && env.ASSETS)
+      if ((url.pathname === "/fise-product-walkthrough.mp4" || url.pathname === "/fise-walkthrough-v2.mp4") && request.method === "GET" && env.ASSETS)
         return env.ASSETS.fetch(request);
       if (url.pathname === "/fise-signup-demo.mp4" && request.method === "GET")
         return redirect("/fise-product-walkthrough.mp4");
@@ -10662,6 +10712,15 @@ async function routeFiseRequest(request, env, url) {
           request,
           env,
           decodeURIComponent(finishSetupMatch[1])
+        );
+      const detailsMatch = url.pathname.match(
+        /^\/api\/chatbots\/([^/]+)\/details$/
+      );
+      if (detailsMatch && request.method === "POST")
+        return updateChatbotDetails(
+          request,
+          env,
+          decodeURIComponent(detailsMatch[1])
         );
       const settingsApiMatch = url.pathname.match(
         /^\/api\/chatbots\/([^/]+)\/settings$/
