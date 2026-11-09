@@ -106,6 +106,34 @@ $$('[data-tabs]').forEach((wrap)=>{
   if('IntersectionObserver' in window){new IntersectionObserver((e)=>{visible=e[0].isIntersecting;visible?schedule():clearTimeout(timer)},{threshold:.4}).observe(wrap)}
 });
 
+/* install guide: platform switcher */
+$$('[data-install]').forEach((wrap)=>{
+  const tabs=$$('[role="tab"]',wrap),videos=$$('.fx-install-video',wrap),panels=$$('.fx-install-panel',wrap);
+  const reduce2=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let visible=false,current=tabs.find((t)=>t.getAttribute('aria-selected')==='true')||tabs[0];
+  const videoOf=(key)=>videos.find((v)=>v.dataset.video===key);
+  const play=(v)=>{if(!v||reduce2)return;const p=v.play();if(p&&p.catch)p.catch(()=>{})};
+  const select=(tab,focus)=>{
+    if(!tab||tab===current){if(focus&&tab)tab.focus();return}
+    const next=tab.dataset.platform,prev=current.dataset.platform;
+    tabs.forEach((t)=>{const on=t===tab;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1});
+    panels.forEach((p)=>{const on=p.id==='fx-ipanel-'+next;p.hidden=!on;p.classList.toggle('is-active',on)});
+    const outgoing=videoOf(prev),incoming=videoOf(next);
+    if(incoming){incoming.preload='auto';try{incoming.currentTime=0}catch(e){}incoming.classList.add('is-active');if(visible)play(incoming)}
+    if(outgoing){outgoing.classList.remove('is-active');setTimeout(()=>{if(!outgoing.classList.contains('is-active'))outgoing.pause()},480)}
+    current=tab;
+    if(focus)tab.focus();
+    else if(tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center',behavior:reduce2?'auto':'smooth'});
+  };
+  tabs.forEach((t,i)=>{
+    t.addEventListener('click',()=>select(t));
+    t.addEventListener('keydown',(e)=>{let n=-1;if(e.key==='ArrowRight'||e.key==='ArrowDown')n=(i+1)%tabs.length;else if(e.key==='ArrowLeft'||e.key==='ArrowUp')n=(i-1+tabs.length)%tabs.length;else if(e.key==='Home')n=0;else if(e.key==='End')n=tabs.length-1;if(n>=0){e.preventDefault();select(tabs[n],true)}});
+  });
+  if('IntersectionObserver' in window){
+    new IntersectionObserver((entries)=>{visible=entries[0].isIntersecting;const v=videoOf(current.dataset.platform);if(!v)return;if(visible){v.preload='auto';play(v)}else v.pause()},{threshold:.25}).observe(wrap);
+  }else{visible=true}
+});
+
 /* newsletter */
 const form=doc.getElementById('fx-newsletter');
 if(form){
