@@ -83,6 +83,7 @@ body.fx h1,body.fx h2,body.fx h3,body.fx h4{font-family:var(--fx-font);color:inh
 .fx-hero-note{margin:16px 0 0;font-size:13px;color:var(--fx-g500)}
 .fx-stage{position:relative;margin:56px auto 0;width:min(1040px,100%);perspective:1600px}
 .fx-browser{position:relative;border:1px solid var(--fx-g200);border-bottom:0;border-radius:20px 20px 0 0;background:var(--fx-white);box-shadow:var(--fx-shadow-lg),0 0 0 8px rgba(10,10,10,.025);overflow:hidden;text-align:left;transform:translateY(var(--fx-parallax,0px));will-change:transform}
+.fx-hero-video video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--fx-g100)}
 .fx-browser-bar{height:44px;display:flex;align-items:center;gap:8px;padding:0 18px;border-bottom:1px solid var(--fx-g100);background:var(--fx-paper)}
 .fx-browser-bar i{width:11px;height:11px;border-radius:50%;background:var(--fx-g300)}
 .fx-url{margin-left:18px;flex:1;max-width:420px;height:26px;border-radius:8px;background:var(--fx-g100);display:flex;align-items:center;padding:0 12px;font:12px var(--fx-mono);color:var(--fx-g500)}
