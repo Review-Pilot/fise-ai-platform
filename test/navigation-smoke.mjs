@@ -53,22 +53,34 @@ test('older public pages link directly to live destinations', async () => {
   assert.doesNotMatch(html, /href="\/(pricing|resources|privacy|terms|ai-chatbots)"/);
 });
 
-test('profile route is private and renders only the account interface', async () => {
+test('profile route is private and renders inside the dashboard shell', async () => {
   const anonymous = environment();
   const denied = await worker.fetch(new Request(origin + '/profile'), anonymous.env);
   assert.equal(denied.headers.get('location'), '/login');
 
-  const signedIn = environment();
+  const DB = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async first() {
+          if (sql.includes('FROM sessions JOIN users')) return { id: 'test-user', email: 'test@example.invalid', password_set: 1 };
+          if (sql.includes('FROM website_state')) return { content_json: '{}', revision: 1, updated_at: '', updated_by: '' };
+          return null;
+        },
+        async run() { return {}; },
+        async all() { return { results: [] }; },
+      };
+    },
+  };
   const page = await worker.fetch(new Request(origin + '/profile?tab=subscription', {
     headers: { cookie: 'fise_session=test-session' },
-  }), signedIn.env);
+  }), { DB });
   assert.equal(page.status, 200);
   const html = await page.text();
-  assert.match(html, /class="profile-route"/);
-  assert.match(html, /data-profile-panel="subscription"/);
+  assert.match(html, /class="app-sidebar"/);
+  assert.match(html, /aria-current="page"[^>]*><svg[^>]*><path d="M4 7a2 2 0 012-2h12/);
+  assert.match(html, /id="pf-plan-form"/);
   assert.doesNotMatch(html, /class="reference-hero"/);
-  assert.doesNotMatch(html, /class="demo-browser"/);
-  assert.equal(signedIn.queries.filter(sql => sql.includes('FROM website_state')).length, 0);
   for (const [, javascript] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
     assert.doesNotThrow(() => new Script(javascript));
   }
@@ -76,7 +88,7 @@ test('profile route is private and renders only the account interface', async ()
 
 test('an older dashboard failure cannot replace a newer navigation', async () => {
   const { env } = environment();
-  const page = await worker.fetch(new Request(origin + '/profile', {
+  const page = await worker.fetch(new Request(origin + '/demo', {
     headers: { cookie: 'fise_session=test-session' },
   }), env);
   const html = await page.text();
