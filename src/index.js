@@ -9146,21 +9146,26 @@ var DATABASE_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)",
   "CREATE INDEX IF NOT EXISTS idx_magic_links_expires ON magic_links(expires_at)"
 ];
-var databaseIndexesReady = null;
-function ensureDatabaseIndexes(env) {
-  if (!env?.DB?.prepare) return Promise.resolve();
-  if (!databaseIndexesReady) {
-    databaseIndexesReady = (async () => {
-      for (const sql of DATABASE_INDEX_STATEMENTS) {
-        try {
-          await env.DB.prepare(sql).run();
-        } catch (error) {
-          console.error("Index creation skipped", sql, error?.message || error);
-        }
+var databaseIndexesReady = false;
+async function ensureDatabaseIndexes(env) {
+  // Only a plain flag is shared between requests. A promise created by one
+  // request cannot safely be awaited by another in a Worker: if the first
+  // request finishes (or is cancelled) mid-way, every later request in the
+  // isolate would await a promise that never settles or rejects, and the
+  // dashboard would fail until the isolate was recycled.
+  if (databaseIndexesReady || !env?.DB?.prepare) return;
+  try {
+    for (const sql of DATABASE_INDEX_STATEMENTS) {
+      try {
+        await env.DB.prepare(sql).run();
+      } catch (error) {
+        console.error("Index creation skipped", sql, error?.message || error);
       }
-    })();
+    }
+    databaseIndexesReady = true;
+  } catch (error) {
+    console.error("Index setup skipped", error?.message || error);
   }
-  return databaseIndexesReady;
 }
 __name(ensureDatabaseIndexes, "ensureDatabaseIndexes");
 async function showDashboard(request, env) {
@@ -10962,7 +10967,7 @@ var index_default = {
     try {
       return await routeFiseRequest(request, env, url);
     } catch (error) {
-      console.error("Unhandled request error", error);
+      console.error("Unhandled request error", error?.message || String(error), error?.stack || "");
       return htmlResponse(
         documentPage(
           "Temporary error",
