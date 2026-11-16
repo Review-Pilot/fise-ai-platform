@@ -7758,7 +7758,7 @@ function fiseEmailFooter(origin) {
   return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
-var APP_ASSET_VERSION = "20260924-app3";
+var APP_ASSET_VERSION = "20260924-app4";
 function appHead(title) {
   return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#FAFAFA"><title>${escapeHtml(title)} · Fise AI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site.css?v=${APP_ASSET_VERSION}"><link rel="stylesheet" href="/dashboard-v2.css?v=${APP_ASSET_VERSION}">`;
 }
@@ -7919,56 +7919,149 @@ function dashboardDocumentPage(title, body) {
   return page.replace('<link rel="stylesheet" href="/site.css">', `<style>${sharedStyles}</style>`).replace(/\s*<div class="dash-topbar-actions">[\s\S]*?<\/div>/, "");
 }
 __name(dashboardDocumentPage, "dashboardDocumentPage");
+var googleSignInEnabled = false;
+var GOOGLE_OAUTH_COOKIE = "fise_oauth";
+var GOOGLE_LOGO = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
 function loginPage(message = "", isError = false, embedded = false, mode = "") {
   const notice = message ? html`<div class="alert ${isError ? "error" : "ok"}" role="${isError ? "alert" : "status"}">${escapeHtml(message)}</div>` : "";
   const page = embedded ? embeddedDocumentPage : documentPage;
   const embedField = embedded ? html`<input type="hidden" name="embed" value="1" />` : "";
-  const initial = mode === "signup" ? "register" : mode === "email" ? "email" : "password";
+  const initial = mode === "signup" || mode === "email" ? "register" : "password";
   const tab = (key, label) => html`<button type="button" role="tab" id="auth-tab-${key}" aria-controls="auth-panel-${key}" aria-selected="${initial === key}" tabindex="${initial === key ? 0 : -1}">${label}</button>`;
+  const google = googleSignInEnabled && !embedded ? html`<a class="auth-social" href="/auth/google"><span class="auth-social-icon">${GOOGLE_LOGO}</span><span>Continue with Google</span></a><div class="auth-or" role="separator"><span>or</span></div>` : "";
+  const legal = html`<p class="auth-legal">By continuing you agree to our <a href="/terms-and-conditions">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>`;
   return page(
     "Sign in",
     html`<main class="wrap">
-      <section class="shell">
-        <div class="eyebrow">Customer platform</div>
-        <h1>${initial === "register" ? "Create your Fise account" : "Welcome back"}</h1>
-        <p class="lead">Sign in with your password or a one-time email link, or create an account in seconds.</p>
+      <section class="shell auth-card">
         ${notice}
-        <div class="auth-tabs" role="tablist" aria-label="Sign-in method" data-initial="${initial}" hidden>${tab("password", "Sign in")}${tab("register", "Create account")}${tab("email", "Email link")}</div>
+        <div class="auth-tabs auth-tabs-hidden" role="tablist" aria-label="Sign-in method" data-initial="${initial}" hidden>${tab("password", "Sign in")}${tab("register", "Create account")}${tab("email", "Email link")}</div>
+        <div class="auth-panel" id="auth-panel-register" role="tabpanel" aria-labelledby="auth-tab-register">
+          <span class="auth-pill">Free to start · no card required</span>
+          <h1>Create your Fise account</h1>
+          <p class="lead">Add an AI assistant to your website in minutes.</p>
+          ${google}
+          <form method="post" action="/api/auth/request">
+            ${embedField}
+            <label class="sr-only" for="register-email-page">Email address</label>
+            <input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="Enter your email" />
+            <button class="btn full" type="submit">Continue with Email</button>
+          </form>
+          <p class="auth-alt">Already have an account? <button type="button" data-auth-go="password">Sign in</button></p>
+          ${legal}
+        </div>
         <div class="auth-panel" id="auth-panel-password" role="tabpanel" aria-labelledby="auth-tab-password">
-          <h2 class="sr-only">Sign in with password</h2>
+          <h1>Welcome back</h1>
+          <p class="lead">Sign in to manage your assistant.</p>
+          ${google}
           <form method="post" action="/api/auth/password">
             ${embedField}
-            <label for="identifier-page">Email address</label><input id="identifier-page" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-            <label for="password-page">Password</label><input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required />
+            <label class="sr-only" for="identifier-page">Email address</label>
+            <input id="identifier-page" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="Email address" />
+            <label class="sr-only" for="password-page">Password</label>
+            <input id="password-page" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Password" />
             <button class="btn full" type="submit">Sign in</button>
           </form>
           <p class="auth-alt">Forgot your password? <button type="button" data-auth-go="email">Get a one-time sign-in link</button> — then set a new password from your profile.</p>
-        </div>
-        <div class="auth-panel" id="auth-panel-register" role="tabpanel" aria-labelledby="auth-tab-register">
-          <h2 class="sr-only">Create an account</h2>
-          <form method="post" action="/api/auth/register">
-            ${embedField}
-            <label for="register-email-page">Email address</label><input id="register-email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
-            <label for="register-password-page">Password</label><input id="register-password-page" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters" />
-            <button class="btn full" type="submit">Create free account</button>
-          </form>
-          <p class="auth-alt">Free plan · no card required. By continuing you agree to our <a href="/terms-and-conditions">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>
+          <p class="auth-alt">New to Fise? <button type="button" data-auth-go="register">Create an account</button></p>
+          ${legal}
         </div>
         <div class="auth-panel" id="auth-panel-email" role="tabpanel" aria-labelledby="auth-tab-email">
-          <h2 class="sr-only">Sign in with an email link</h2>
+          <h1>Sign in with an email link</h1>
+          <p class="lead">We'll email you a one-time link. No password needed.</p>
           <form method="post" action="/api/auth/request">
             ${embedField}
-            <label for="email-page">Email address</label><input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com" />
+            <label class="sr-only" for="email-page">Email address</label>
+            <input id="email-page" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="Enter your email" />
             <button class="btn full" type="submit">Email me a sign-in link</button>
           </form>
-          <p class="auth-alt">The link expires after 15 minutes and can be used once.</p>
+          <p class="auth-alt">The link expires after 15 minutes and can be used once. <button type="button" data-auth-go="password">Back to sign in</button></p>
         </div>
-        <p class="fine">Passwords are stored as protected one-way hashes and cannot be displayed from storage.</p>
       </section>
     </main>`
   );
 }
 __name(loginPage, "loginPage");
+function googleBase64Url(bytes) {
+  let binary = "";
+  for (const value of bytes) binary += String.fromCharCode(value);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+__name(googleBase64Url, "googleBase64Url");
+async function startGoogleSignIn(request, env) {
+  if (!env?.GOOGLE_CLIENT_ID || !env?.GOOGLE_CLIENT_SECRET)
+    return loginPageResponse("Google sign-in is not available yet. Please continue with your email instead.", true, false, 503);
+  const url = new URL(request.url);
+  const state = randomToken();
+  const verifier = randomToken() + randomToken();
+  const challenge = googleBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
+  const returnTo = safeReturnPath(url.searchParams.get("return_to"), "/dashboard");
+  const params = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: url.origin + "/auth/google/callback",
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    prompt: "select_account"
+  });
+  const cookie = `${GOOGLE_OAUTH_COOKIE}=${encodeURIComponent(JSON.stringify([state, verifier, returnTo]))}; Path=/auth/google; Max-Age=600; HttpOnly; Secure; SameSite=Lax`;
+  return redirect("https://accounts.google.com/o/oauth2/v2/auth?" + params.toString(), { "set-cookie": cookie });
+}
+__name(startGoogleSignIn, "startGoogleSignIn");
+async function finishGoogleSignIn(request, env) {
+  const url = new URL(request.url);
+  const clearCookie = `${GOOGLE_OAUTH_COOKIE}=; Path=/auth/google; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+  const fail = (message, status = 400) => {
+    const response = loginPageResponse(message, true, false, status);
+    response.headers.append("set-cookie", clearCookie);
+    return response;
+  };
+  if (!env?.GOOGLE_CLIENT_ID || !env?.GOOGLE_CLIENT_SECRET)
+    return fail("Google sign-in is not available yet. Please continue with your email instead.", 503);
+  if (url.searchParams.get("error"))
+    return fail("Google sign-in was cancelled. You can try again or continue with your email.");
+  let saved = null;
+  try {
+    saved = JSON.parse(cookieValue(request, GOOGLE_OAUTH_COOKIE) || "null");
+  } catch {
+    saved = null;
+  }
+  const code = url.searchParams.get("code") || "";
+  if (!Array.isArray(saved) || !code || saved[0] !== url.searchParams.get("state"))
+    return fail("That Google sign-in has expired. Please try again.");
+  let claims = null;
+  try {
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: url.origin + "/auth/google/callback",
+        grant_type: "authorization_code",
+        code_verifier: String(saved[1] || "")
+      })
+    });
+    const tokens = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokens.id_token) throw new Error(tokens.error || "token exchange failed");
+    const payload = String(tokens.id_token).split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
+    claims = JSON.parse(atob(payload + "=".repeat((4 - payload.length % 4) % 4)));
+  } catch (error) {
+    console.error("Google sign-in failed", error?.message || error);
+    return fail("We could not complete Google sign-in. Please try again or continue with your email.");
+  }
+  const issuerOk = claims && (claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com");
+  const email = normalizeEmail(claims?.email);
+  if (!issuerOk || claims.aud !== env.GOOGLE_CLIENT_ID || !(Number(claims.exp) * 1e3 > Date.now()) || claims.email_verified !== true || !email)
+    return fail("Google did not confirm a verified email address for this account. Please try again or use your email.");
+  const response = await createEmailSession(email, env, safeReturnPath(saved[2], "/dashboard"));
+  response.headers.append("set-cookie", clearCookie);
+  return response;
+}
+__name(finishGoogleSignIn, "finishGoogleSignIn");
 function verificationPage(success = true, message = "You're signed in. The tab where you signed in will continue automatically.") {
   const script = success ? html`<script>try{localStorage.setItem('fise-magic-link-verified',String(Date.now()))}catch{}</script>` : "";
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${success ? "Email verified" : "Verification finished"}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;color:#0a0a0a;background:#f6f6f6;font-family:Inter,system-ui,sans-serif}.verify{width:min(440px,100%);padding:38px;border:1px solid #e7e7e7;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(10,10,10,.12);text-align:center}.check{width:64px;height:64px;display:grid;place-items:center;margin:0 auto 20px;border-radius:50%;color:#fff;background:${success ? "#0a0a0a" : "#202020"};font-size:34px;font-weight:900}h1{margin:0 0 12px;font-size:31px;letter-spacing:-.035em}p{margin:0;color:#202020;line-height:1.6}.verify-fine{margin-top:10px;color:#68686e;font-size:12px;line-height:1.5}.open-dashboard{display:inline-flex;min-height:46px;margin-top:22px;padding:0 19px;align-items:center;border-radius:10px;color:#fff;background:#0a0a0a;text-decoration:none;font-weight:800}</style></head><body><main class="verify"><div class="check" aria-hidden="true">${success ? "\u2713" : "\u2013"}</div><h1>${success ? "Email verified" : "This link is no longer available"}</h1><p>${escapeHtml(message)}</p>${success ? html`<a class="open-dashboard" href="/dashboard">Open dashboard</a><p class="verify-fine">You can also close this tab and return to the one where you signed in &mdash; it will open your dashboard on its own.</p>` : ""}</main>${script}</body></html>`;
@@ -10820,6 +10913,10 @@ async function routeFiseRequest(request, env, url) {
         return passwordLogin(request, env);
       if (url.pathname === "/api/account/credentials" && request.method === "POST")
         return saveAccountCredentials(request, env);
+      if (url.pathname === "/auth/google" && request.method === "GET")
+        return startGoogleSignIn(request, env);
+      if (url.pathname === "/auth/google/callback" && request.method === "GET")
+        return finishGoogleSignIn(request, env);
       if (url.pathname === "/auth/verify" && request.method === "GET")
         return verifyMagicLink(request, env);
       if (url.pathname === "/dashboard" && request.method === "GET")
@@ -10960,6 +11057,7 @@ __name(routeFiseRequest, "routeFiseRequest");
 var index_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
+    googleSignInEnabled = Boolean(env?.GOOGLE_CLIENT_ID && env?.GOOGLE_CLIENT_SECRET);
     try {
       return await routeFiseRequest(request, env, url);
     } catch (error) {
