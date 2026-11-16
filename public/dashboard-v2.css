@@ -189,3 +189,22 @@ body.app .lead-table-wrap,body.app .leads-page .card{overflow-x:auto}
 .pf-bots .pf-empty{display:block;color:var(--g500);font-size:14px}
 @media (max-width:860px){.pf-grid{grid-template-columns:1fr}}
 @media (max-width:600px){.pf-wrap{width:calc(100% - 32px)}.pf-row{flex-direction:column;align-items:flex-start;gap:4px}.pf-row strong{text-align:left}.pf-bots li{flex-direction:column;align-items:flex-start}}
+/* sign-in / sign-up */
+.auth-tabs.auth-tabs-hidden{display:none!important}
+body.app-auth main.wrap{width:min(440px,calc(100% - 32px))}
+body.app-auth .auth-card{text-align:center}
+body.app-auth .auth-card h1{margin:14px 0 6px;font-size:28px}
+body.app-auth .auth-card .lead{margin:0 0 22px}
+.auth-pill{display:inline-flex;align-items:center;min-height:26px;padding:0 12px;border-radius:8px;background:var(--ink);color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.auth-social{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:52px;border-radius:14px;background:var(--ink);color:#fff!important;font-size:16px;font-weight:600;text-decoration:none;transition:background-color .2s,transform .2s}
+.auth-social:hover{background:var(--g800);transform:translateY(-1px)}
+.auth-social-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff}
+.auth-or{display:flex;align-items:center;gap:14px;margin:18px 0;color:var(--g500);font-size:14px}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:var(--g200)}
+.auth-card .auth-panel form{display:grid;gap:12px;margin:0}
+.auth-card input{width:100%;min-height:52px;padding:0 16px;border:1px solid var(--g300);border-radius:14px;background:#fff;color:var(--ink);font:inherit;font-size:16px}
+.auth-card input:focus{outline:2px solid var(--ink);outline-offset:1px}
+.auth-card .btn.full{min-height:52px;margin:0;border-radius:14px;font-size:16px;font-weight:600}
+.auth-card .auth-alt{margin:16px 0 0}
+.auth-legal{margin:20px 0 0;font-size:12px;color:var(--g500);line-height:1.5}
+.auth-legal a{color:var(--g600);text-decoration:underline;text-underline-offset:3px}

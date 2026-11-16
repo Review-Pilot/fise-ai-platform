@@ -134,3 +134,32 @@ test('profile page is server-rendered inside the dashboard shell with real tab l
   const anonymous = await get('/profile', '');
   assert.ok(anonymous.status >= 300 && anonymous.status < 400);
 });
+
+test('sign-up uses a Continue-with layout and only shows Google once it is configured', async () => {
+  const { env } = authEnvironment();
+  const plain = await (await worker.fetch(new Request(origin + '/login?mode=signup'), env)).text();
+  assert.match(plain, /Continue with Email/);
+  assert.doesNotMatch(plain, /Continue with Google/, 'no Google button without credentials');
+  const withGoogle = await (await worker.fetch(new Request(origin + '/login?mode=signup'), { ...env, GOOGLE_CLIENT_ID: 'id.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'secret' })).text();
+  assert.match(withGoogle, /Continue with Google/);
+  assert.match(withGoogle, /href="\/auth\/google"/);
+});
+
+test('Google sign-in starts with PKCE and a state cookie, and rejects a callback without it', async () => {
+  const { env } = authEnvironment();
+  const unavailable = await worker.fetch(new Request(origin + '/auth/google'), env);
+  assert.equal(unavailable.status, 503);
+  const configured = { ...env, GOOGLE_CLIENT_ID: 'id.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'secret' };
+  const start = await worker.fetch(new Request(origin + '/auth/google'), configured);
+  assert.equal(start.status, 303);
+  const location = new URL(start.headers.get('location'));
+  assert.equal(location.origin + location.pathname, 'https://accounts.google.com/o/oauth2/v2/auth');
+  assert.equal(location.searchParams.get('client_id'), 'id.apps.googleusercontent.com');
+  assert.equal(location.searchParams.get('redirect_uri'), origin + '/auth/google/callback');
+  assert.equal(location.searchParams.get('code_challenge_method'), 'S256');
+  assert.ok(location.searchParams.get('state'));
+  assert.match(start.headers.get('set-cookie'), /fise_oauth=.*HttpOnly.*Secure/);
+  const badCallback = await worker.fetch(new Request(origin + '/auth/google/callback?code=abc&state=nope'), configured);
+  assert.equal(badCallback.status, 400);
+  assert.match(await badCallback.text(), /expired/);
+});
