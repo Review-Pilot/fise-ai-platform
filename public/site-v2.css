@@ -49,6 +49,8 @@ body.fx h1,body.fx h2,body.fx h3,body.fx h4{font-family:var(--fx-font);color:inh
 .fx-nav-row{height:72px;display:flex;align-items:center;justify-content:space-between;gap:24px}
 .fx-logo{display:inline-flex;align-items:center;gap:10px;font-weight:600;font-size:19px;letter-spacing:-.02em;text-decoration:none;color:var(--fx-ink)!important}
 .fx-logo svg{flex:none}
+.fx-logo-img{display:block;height:32px;width:auto;max-width:none}
+.fx-footer .fx-logo-img{height:30px}
 .fx-nav-links{display:flex;align-items:center;gap:32px;font-size:14px;font-weight:500}
 .fx-nav-links a{color:var(--fx-g600);text-decoration:none;padding:6px 0;background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat;transition:background-size .3s var(--fx-ease),color .2s}
 .fx-nav-links a:hover,.fx-nav-links a[aria-current="page"],.fx-nav-links a.is-active{color:var(--fx-ink);background-size:100% 1px}
