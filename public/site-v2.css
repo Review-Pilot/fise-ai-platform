@@ -365,13 +365,15 @@ body.fx h1,body.fx h2,body.fx h3,body.fx h4{font-family:var(--fx-font);color:inh
 .fx-promo-close{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#fff;cursor:pointer;opacity:.7;transition:opacity .2s,background-color .2s}
 .fx-promo-close:hover{opacity:1;background:rgba(255,255,255,.14)}
 .fx-promo :focus-visible{outline-color:#fff}
+.fx-price .fx-was{order:-1;align-self:center;font-size:20px;font-weight:500;letter-spacing:-.02em;color:inherit;opacity:.5;text-decoration:line-through;text-decoration-thickness:1.5px;margin-right:2px}
+.fx-price{flex-wrap:wrap}
 .fx-offer{width:fit-content;max-width:100%;margin:0 auto 20px;padding:8px 16px;border-radius:999px;background:var(--fx-ink);color:#fff;font-size:14px;text-align:center}
 @media (max-width:760px){.fx-promo-inner{justify-content:flex-start;padding:10px 44px 10px 16px}.fx-promo-ends,.fx-promo-count{display:none}}
 @media (prefers-reduced-motion:reduce){.fx-promo::before{animation:none}}
 /* capability screenshots */
 .fx-anchor{display:block;height:0}
 .fx-shot{margin:0;display:flex;flex-direction:column;gap:14px}
-.fx-shot img{display:block;width:100%;height:auto;border-radius:16px;border:1px solid var(--fx-g200);box-shadow:var(--fx-shadow-md);background:#fff}
+.fx-shot img{display:block;width:100%;max-width:100%;height:auto!important;object-fit:contain;border-radius:16px;border:1px solid var(--fx-g200);box-shadow:var(--fx-shadow-md);background:#fff}
 .fx-shot figcaption{font-size:14px;line-height:1.55;color:var(--fx-g600)}
 /* install video controls */
 .fx-install-media{cursor:pointer}

@@ -5370,7 +5370,7 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
-  const FX_ASSET_VERSION = "20260924-fx9";
+  const FX_ASSET_VERSION = "20261121-fx10";
   const FX_SITE_NAME = "Fise AI";
   function fxText(c, key) {
     const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
@@ -5405,11 +5405,11 @@ var WebsiteModule = (() => {
   __name(fxPromoActive, "fxPromoActive");
   function fxPromoBar() {
     if (!fxPromoActive()) return "";
-    return html2`<div class="fx-promo" id="fx-promo" role="region" aria-label="Limited-time offer" data-end="${FX_PROMO_END}"><div class="fx-promo-inner"><span class="fx-promo-tag">Limited offer</span><p><strong>1 month free</strong> on all paid plans<span class="fx-promo-ends"> · ends 31 December, 11:59pm</span></p><span class="fx-promo-count" data-count aria-hidden="true"></span><a class="fx-promo-cta" href="/#pricing">Claim your free month ${FX_ARROW}</a></div><button class="fx-promo-close" type="button" aria-label="Dismiss offer"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>`;
+    return html2`<div class="fx-promo" id="fx-promo" role="region" aria-label="Limited-time offer" data-end="${FX_PROMO_END}"><div class="fx-promo-inner"><span class="fx-promo-tag">Limited offer</span><p><strong>30% off</strong> all paid plans<span class="fx-promo-ends"> · ends 31 December, 11:59pm</span></p><span class="fx-promo-count" data-count aria-hidden="true"></span><a class="fx-promo-cta" href="/#pricing">Claim 30% off ${FX_ARROW}</a></div><button class="fx-promo-close" type="button" aria-label="Dismiss offer"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>`;
   }
   __name(fxPromoBar, "fxPromoBar");
   function referenceHeader(c = {}) {
-    const links = [["/#features", "Product"], ["/#how", "How it works"]];
+    const links = [["/#how", "How it works"], ["/#features", "Product"]];
     if (fxOn(c, "nav_pricing_enabled")) links.push(["/#pricing", "Pricing"]);
     links.push(["/#faq", "FAQ"]);
     if (fxOn(c, "nav_blog_enabled") || fxOn(c, "nav_resources_enabled")) links.push(["/blog", "Blog"]);
@@ -5440,14 +5440,18 @@ var WebsiteModule = (() => {
   ];
   const FX_PLANS = [
     { key: "free", name: "Free", blurb: "Try Fise and tune your assistant.", monthly: 0, items: [["50 AI conversations / month", true], ["Customisable dashboard", true], ["Website installation", false]] },
-    { key: "essential", name: "Essential", blurb: "For small sites getting started.", monthly: 500, items: [["250 AI conversations / month", true], ["Customisable dashboard", true], ["Website installation", true]] },
-    { key: "grow", name: "Grow", blurb: "For businesses that run on leads.", monthly: 2e3, featured: true, items: [["1,000 AI conversations / month", true], ["Website installation", true], ["Export leads to Excel / Sheets", true], ["Email lead collection", true]] },
-    { key: "enterprise", name: "Enterprise", blurb: "High-volume and multi-site teams.", monthly: 5e3, items: [["5,000 AI conversations / month", true], ["Website installation", true], ["Export leads to Excel / Sheets", true], ["Email lead collection", true]] }
+    { key: "essential", name: "Essential", blurb: "For small sites getting started.", base: 750, monthly: 500, items: [["250 AI conversations / month", true], ["Customisable dashboard", true], ["Website installation", true]] },
+    { key: "grow", name: "Grow", blurb: "For businesses that run on leads.", base: 3e3, monthly: 2e3, featured: true, items: [["1,000 AI conversations / month", true], ["Website installation", true], ["Export leads to Excel / Sheets", true], ["Email lead collection", true]] },
+    { key: "enterprise", name: "Enterprise", blurb: "High-volume and multi-site teams.", base: 7500, monthly: 5e3, items: [["5,000 AI conversations / month", true], ["Website installation", true], ["Export leads to Excel / Sheets", true], ["Email lead collection", true]] }
   ];
   function fxRand(value) {
     return "R" + Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
   __name(fxRand, "fxRand");
+  function fxPlanPrice(plan) {
+    return fxPromoActive() ? plan.monthly : plan.base || plan.monthly;
+  }
+  __name(fxPlanPrice, "fxPlanPrice");
   function fxHero(c) {
     return html2`<section class="fx-hero" aria-labelledby="fx-hero-title"><div class="fx-hero-grid" aria-hidden="true"></div><div class="fx-hero-glow" aria-hidden="true"></div><div class="fx-grain" aria-hidden="true"></div><div class="fx-container"><h1 id="fx-hero-title">${escapeWebsiteHtml(fxText(c, "hero_title"))}</h1><p class="fx-hero-sub">${escapeWebsiteHtml(fxText(c, "hero_text"))}</p><div class="fx-hero-ctas"><a class="fx-btn fx-btn-primary" href="/login?mode=signup">Start free ${FX_ARROW}</a></div><p class="fx-hero-note">Free plan · no card required</p><div class="fx-stage"><div class="fx-browser fx-hero-video"><video src="/fise-walkthrough-v2.mp4" autoplay muted loop playsinline preload="auto" aria-label="Fise product walkthrough"></video></div></div></div></section>`;
   }
@@ -5524,15 +5528,18 @@ var WebsiteModule = (() => {
   __name(fxStats, "fxStats");
   function fxPricing(c) {
     const plans = FX_PLANS.map((p) => {
-      const monthly = p.monthly === 0 ? "R0" : fxRand(p.monthly);
-      const annual = p.monthly === 0 ? "R0" : fxRand(p.monthly * 9 / 12);
-      const noteMonthly = p.monthly === 0 ? "Free forever" : "Billed monthly";
-      const noteAnnual = p.monthly === 0 ? "Free forever" : `${fxRand(p.monthly * 9)} billed yearly · 3 months free`;
+      const price = fxPlanPrice(p);
+      const monthly = price === 0 ? "R0" : fxRand(price);
+      const annual = price === 0 ? "R0" : fxRand(price * 8 / 12);
+      const showWas = price > 0 && p.base > price;
+      const was = showWas ? html2`<s class="fx-was" data-monthly="${fxRand(p.base)}" data-annual="${fxRand(p.base * 8 / 12)}"><span class="sr-only">Was </span>${fxRand(p.base)}</s>` : "";
+      const noteMonthly = price === 0 ? "Free forever" : showWas ? "Billed monthly · 30% off" : "Billed monthly";
+      const noteAnnual = price === 0 ? "Free forever" : `${fxRand(price * 8)} billed yearly · 4 months free`;
       const href = p.key === "free" ? "/login?mode=signup" : `/checkout?plan=${p.key}`;
       const items = p.items.map(([label, ok]) => html2`<li class="${ok ? "" : "is-off"}">${ok ? FX_CHECK : FX_CROSS}<span>${label}${ok ? "" : '<span class="sr-only"> (not included)</span>'}</span></li>`).join("");
-      return html2`<article class="fx-plan fx-reveal${p.featured ? " is-featured" : ""}" aria-label="${p.name} plan"><div class="fx-plan-top"><h3>${p.name}</h3>${p.featured ? '<span class="fx-badge">Recommended</span>' : ""}</div><p class="fx-plan-blurb">${p.blurb}</p><p class="fx-price"><strong data-monthly="${monthly}" data-annual="${annual}">${monthly}</strong><span>/month</span></p><p class="fx-price-note" data-note-monthly="${noteMonthly}" data-note-annual="${noteAnnual}">${noteMonthly}</p><a class="fx-btn fx-btn-primary" href="${href}" data-plan-link>${p.monthly === 0 ? "Start free" : "Get started"} ${FX_ARROW}</a><ul>${items}</ul></article>`;
+      return html2`<article class="fx-plan fx-reveal${p.featured ? " is-featured" : ""}" aria-label="${p.name} plan"><div class="fx-plan-top"><h3>${p.name}</h3>${p.featured ? '<span class="fx-badge">Recommended</span>' : ""}</div><p class="fx-plan-blurb">${p.blurb}</p><p class="fx-price">${was}<strong data-monthly="${monthly}" data-annual="${annual}">${monthly}</strong><span>/month</span></p><p class="fx-price-note" data-note-monthly="${noteMonthly}" data-note-annual="${noteAnnual}">${noteMonthly}</p><a class="fx-btn fx-btn-primary" href="${href}" data-plan-link>${p.monthly === 0 ? "Start free" : "Get started"} ${FX_ARROW}</a><ul>${items}</ul></article>`;
     }).join("");
-    return html2`<section class="fx-section fx-pricing" id="pricing" aria-labelledby="fx-pricing-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">Pricing</p><h2 class="fx-h2" id="fx-pricing-title">${escapeWebsiteHtml(fxText(c, "pricing_title"))}</h2><p class="fx-lead" style="margin-top:16px">${escapeWebsiteHtml(fxText(c, "pricing_text"))}</p></div>${fxPromoActive() ? '<p class="fx-offer"><strong>1 month free</strong> on every paid plan until 31 December, 11:59pm</p>' : ""}<div class="fx-toggle" role="radiogroup" aria-label="Billing period" data-billing><button type="button" role="radio" aria-checked="true" data-mode="monthly">Monthly</button><button type="button" role="radio" aria-checked="false" data-mode="annual">Annual <em>3 months free · save 25%</em></button></div><div class="fx-plans">${plans}</div><p class="fx-fine">Prices in South African rand. Conversation allowances reset on the 1st of each month.</p></div></section>`;
+    return html2`<section class="fx-section fx-pricing" id="pricing" aria-labelledby="fx-pricing-title"><div class="fx-container"><div class="fx-head-center fx-reveal"><p class="fx-eyebrow">Pricing</p><h2 class="fx-h2" id="fx-pricing-title">${escapeWebsiteHtml(fxText(c, "pricing_title"))}</h2><p class="fx-lead" style="margin-top:16px">${escapeWebsiteHtml(fxText(c, "pricing_text"))}</p></div>${fxPromoActive() ? '<p class="fx-offer"><strong>30% off</strong> every paid plan until 31 December, 11:59pm</p>' : ""}<div class="fx-toggle" role="radiogroup" aria-label="Billing period" data-billing><button type="button" role="radio" aria-checked="true" data-mode="monthly">Monthly</button><button type="button" role="radio" aria-checked="false" data-mode="annual">Annual <em>4 months free</em></button></div><div class="fx-plans">${plans}</div><p class="fx-fine">Prices in South African rand. Conversation allowances reset on the 1st of each month.</p></div></section>`;
   }
   __name(fxPricing, "fxPricing");
   function fxFaq(c) {
@@ -5549,7 +5556,7 @@ var WebsiteModule = (() => {
       "@context": "https://schema.org",
       "@graph": [
         { "@type": "Organization", name: FX_SITE_NAME, url: "__FX_ORIGIN__/", email: fxText(c, "contact_email") },
-        { "@type": "SoftwareApplication", name: FX_SITE_NAME, applicationCategory: "BusinessApplication", operatingSystem: "Web", description: fxText(c, "seo_home_description"), offers: FX_PLANS.map((p) => ({ "@type": "Offer", name: p.name, price: String(p.monthly), priceCurrency: "ZAR" })) },
+        { "@type": "SoftwareApplication", name: FX_SITE_NAME, applicationCategory: "BusinessApplication", operatingSystem: "Web", description: fxText(c, "seo_home_description"), offers: FX_PLANS.map((p) => ({ "@type": "Offer", name: p.name, price: String(fxPlanPrice(p)), priceCurrency: "ZAR" })) },
         { "@type": "FAQPage", mainEntity: FX_FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) }
       ]
     };
@@ -5738,9 +5745,9 @@ var WebsiteModule = (() => {
   }
   __name(referenceLegal, "referenceLegal");
   const checkoutPlans = {
-    essential: { name: "Essential", price: "R500/month", field: "checkout_essential_url" },
-    grow: { name: "Grow", price: "R2,000/month", field: "checkout_grow_url" },
-    enterprise: { name: "Enterprise", price: "R5,000/month", field: "checkout_enterprise_url" }
+    essential: { name: "Essential", get price() { return fxRand(fxPlanPrice(FX_PLANS[1])) + "/month"; }, field: "checkout_essential_url" },
+    grow: { name: "Grow", get price() { return fxRand(fxPlanPrice(FX_PLANS[2])) + "/month"; }, field: "checkout_grow_url" },
+    enterprise: { name: "Enterprise", get price() { return fxRand(fxPlanPrice(FX_PLANS[3])) + "/month"; }, field: "checkout_enterprise_url" }
   };
   function validCheckoutUrl(value) {
     try {
@@ -5754,7 +5761,7 @@ var WebsiteModule = (() => {
   function referenceCheckout(plan, c, billing = "monthly") {
     const monthly = Number(String(plan.price).replace(/[^0-9]/g, "")) || 0;
     const annual = billing === "annual" && monthly > 0;
-    const priceLabel = annual ? `${fxRand(monthly * 9)}/year (3 months free · save 25%)` : plan.price;
+    const priceLabel = annual ? `${fxRand(monthly * 8)}/year (4 months free)` : plan.price;
     const subject = encodeURIComponent(`Fise AI ${plan.name} checkout (${annual ? "annual" : "monthly"})`);
     return referenceShell(
       `${plan.name} checkout | Fise AI`,
