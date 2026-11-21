@@ -72,8 +72,9 @@ test('homepage renders every redesigned section with accessible controls', async
   assert.match(html, /role="radiogroup" aria-label="Billing period"/);
   assert.match(html, /data-carousel/);
   assert.match(html, /aria-controls="fx-mobile-menu"/);
-  assert.match(html, /R18,000 billed yearly · 3 months free/, 'annual price is 9x monthly (3 months free)');
-  assert.match(html, /3 months free · save 25%/);
+  assert.match(html, /R16,000 billed yearly · 4 months free/, 'annual price is 8x monthly (4 months free)');
+  assert.match(html, /Annual <em>4 months free<\/em>/);
+  assert.match(html, /33% off/);
   assert.doesNotMatch(html, /Why choose Fise AI/, 'the why-choose section is gone');
   if (Date.now() < Date.parse('2026-12-31T23:59:00+02:00')) assert.match(html, /<div class="fx-promo" id="fx-promo"/, 'promo bar above the header');
   else assert.doesNotMatch(html, /fx-promo/, 'promo bar disappears after the offer ends');
@@ -118,7 +119,7 @@ test('versioned stylesheets are cached immutably and the dead demo video route r
 
 test('checkout reflects the annual billing choice', async () => {
   const { html } = await page('/checkout?plan=grow&billing=annual');
-  assert.match(html, /R18,000\/year/);
+  assert.match(html, /R16,000\/year/);
   assert.match(html, /noindex/);
 });
 
