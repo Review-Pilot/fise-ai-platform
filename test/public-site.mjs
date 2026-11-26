@@ -72,9 +72,10 @@ test('homepage renders every redesigned section with accessible controls', async
   assert.match(html, /role="radiogroup" aria-label="Billing period"/);
   assert.match(html, /data-carousel/);
   assert.match(html, /aria-controls="fx-mobile-menu"/);
-  assert.match(html, /R16,000 billed yearly · 4 months free/, 'annual price is 8x monthly (4 months free)');
+  assert.match(html, /R16,000 billed yearly/, 'annual price is 8x monthly');
   assert.match(html, /Annual <em>4 months free<\/em>/);
-  assert.match(html, /33% off/);
+  assert.doesNotMatch(html, /Billed monthly · 33% off/);
+  assert.doesNotMatch(html, /billed yearly · 4 months free/);
   assert.doesNotMatch(html, /Why choose Fise AI/, 'the why-choose section is gone');
   if (Date.now() < Date.parse('2026-12-31T23:59:00+02:00')) assert.match(html, /<div class="fx-promo" id="fx-promo"/, 'promo bar above the header');
   else assert.doesNotMatch(html, /fx-promo/, 'promo bar disappears after the offer ends');

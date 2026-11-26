@@ -5548,8 +5548,8 @@ var WebsiteModule = (() => {
       const annual = price === 0 ? "R0" : fxRand(price * 8 / 12);
       const showWas = price > 0 && p.base > price;
       const was = showWas ? html2`<s class="fx-was" data-monthly="${fxRand(p.base)}" data-annual="${fxRand(p.base * 8 / 12)}"><span class="sr-only">Was </span>${fxRand(p.base)}</s>` : "";
-      const noteMonthly = price === 0 ? "Free forever" : showWas ? "Billed monthly · 33% off" : "Billed monthly";
-      const noteAnnual = price === 0 ? "Free forever" : `${fxRand(price * 8)} billed yearly · 4 months free`;
+      const noteMonthly = price === 0 ? "Free forever" : "Billed monthly";
+      const noteAnnual = price === 0 ? "Free forever" : `${fxRand(price * 8)} billed yearly`;
       const href = p.key === "free" ? "/login?mode=signup" : `/checkout?plan=${p.key}`;
       const items = p.items.map(([label, ok]) => html2`<li class="${ok ? "" : "is-off"}">${ok ? FX_CHECK : FX_CROSS}<span>${label}${ok ? "" : '<span class="sr-only"> (not included)</span>'}</span></li>`).join("");
       return html2`<article class="fx-plan fx-reveal${p.featured ? " is-featured" : ""}" aria-label="${p.name} plan"><div class="fx-plan-top"><h3>${p.name}</h3>${p.featured ? '<span class="fx-badge">Recommended</span>' : ""}</div><p class="fx-plan-blurb">${p.blurb}</p><p class="fx-price">${was}<strong data-monthly="${monthly}" data-annual="${annual}">${monthly}</strong><span>/month</span></p><p class="fx-price-note" data-note-monthly="${noteMonthly}" data-note-annual="${noteAnnual}">${noteMonthly}</p><a class="fx-btn fx-btn-primary" href="${href}" data-plan-link>${p.monthly === 0 ? "Start free" : "Get started"} ${FX_ARROW}</a><ul>${items}</ul></article>`;
