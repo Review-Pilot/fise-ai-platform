@@ -439,3 +439,13 @@ body.fx h1,body.fx h2,body.fx h3,body.fx h4{font-family:var(--fx-font);color:inh
 .account-dialog .am-legal{margin:20px 0 0;font-size:12px;line-height:1.5;color:var(--fx-g500)}
 .am-legal a{color:var(--fx-g600);text-decoration:underline;text-underline-offset:3px}
 .am-social+.am-social{margin-top:10px}
+/* pricing cards: every card shares the same rows, so names, prices, buttons and lists line up */
+@supports (grid-template-rows:subgrid){
+  .fx-plans{row-gap:0}
+  .fx-plan{display:grid;grid-template-rows:subgrid;grid-row:span 6;row-gap:0;margin-bottom:16px}
+  .fx-plan-top,.fx-plan-blurb{min-height:0}
+  .fx-plan-blurb{align-self:start}
+  .fx-price{min-height:0;align-self:end;align-content:flex-end}
+  .fx-price-note{align-self:start}
+  .fx-plan .fx-btn{align-self:start}
+}

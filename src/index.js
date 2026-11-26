@@ -5381,7 +5381,7 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
-  const FX_ASSET_VERSION = "20261126-fx12";
+  const FX_ASSET_VERSION = "20261126-fx13";
   const FX_SITE_NAME = "Fise AI";
   function fxText(c, key) {
     const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
