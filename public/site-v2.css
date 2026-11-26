@@ -413,3 +413,24 @@ body.fx h1,body.fx h2,body.fx h3,body.fx h4{font-family:var(--fx-font);color:inh
 .blog-copy ol{margin:0 0 20px;padding-left:22px}
 .blog-copy ol li{margin-bottom:6px}
 .blog-copy code{padding:2px 6px;border-radius:6px;background:#f2f2f2;font-size:.92em}
+/* sign-in / sign-up pop-up */
+.account-modal-backdrop{background:rgba(10,10,10,.3)!important;-webkit-backdrop-filter:blur(6px)!important;backdrop-filter:blur(6px)!important}
+.account-dialog{width:min(440px,100%)!important;max-height:calc(100vh - 32px);padding:clamp(26px,5vw,40px)!important;overflow:auto;text-align:center;border-radius:24px!important}
+.account-dialog h2{margin:14px 0 6px!important;font-size:28px!important;letter-spacing:-.035em}
+.account-dialog .am-lead{margin:0 0 22px;color:var(--fx-g600)}
+.am-pill{display:inline-flex;align-items:center;min-height:26px;padding:0 12px;border-radius:8px;background:var(--fx-ink);color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.am-social{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:52px;border-radius:14px;background:var(--fx-ink);color:#fff!important;font-size:16px;font-weight:600;text-decoration:none;transition:background-color .2s,transform .2s}
+.am-social:hover{background:var(--fx-g800);transform:translateY(-1px)}
+.am-social-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff}
+.am-or{display:flex;align-items:center;gap:14px;margin:18px 0;color:var(--fx-g500);font-size:14px}
+.am-or::before,.am-or::after{content:"";flex:1;height:1px;background:var(--fx-g200)}
+.account-dialog .am-form{display:grid;gap:12px;margin:0}
+.account-dialog .am-form input{min-height:52px;padding:0 16px;border-radius:14px;font-size:16px}
+.account-dialog .am-form .account-field{margin:0}
+.account-dialog .am-form .password-field input{padding-right:76px}
+.am-btn{min-height:52px;border:0;border-radius:14px;background:var(--fx-ink);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:background-color .2s}
+.am-btn:hover{background:var(--fx-g800)}
+.account-dialog .am-alt{margin:16px 0 0;font-size:13px;color:var(--fx-g500)}
+.am-link{padding:0;border:0;background:none;color:var(--fx-ink);font:inherit;font-size:13px;font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.account-dialog .am-legal{margin:20px 0 0;font-size:12px;line-height:1.5;color:var(--fx-g500)}
+.am-legal a{color:var(--fx-g600);text-decoration:underline;text-underline-offset:3px}
