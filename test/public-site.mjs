@@ -79,7 +79,9 @@ test('homepage renders every redesigned section with accessible controls', async
   if (Date.now() < Date.parse('2026-12-31T23:59:00+02:00')) assert.match(html, /<div class="fx-promo" id="fx-promo"/, 'promo bar above the header');
   else assert.doesNotMatch(html, /fx-promo/, 'promo bar disappears after the offer ends');
   assert.match(html, /data-controls/, 'install videos have custom controls');
-  assert.match(html, /function openAccount\(\)\{location\.assign\('\/login'\)\}/, 'sign-in clicks go to the new login page, not the old modal');
+  assert.match(html, /data-account-panel="register"[\s\S]*Continue with Email/, 'the pop-up uses the new Continue-with design');
+  assert.doesNotMatch(html, /Access Fise AI/, 'the old pop-up heading is gone');
+  assert.match(html, /querySelectorAll\('a\[href\^="\/login"\]'\)/, 'login links open the pop-up on the current page');
   assert.match(html, /src="\/fise-ui-answer\.webp"/, 'capabilities use real product screenshots');
   assert.match(html, /application\/ld\+json/);
   assert.doesNotMatch(html, /\\u[0-9a-f]{4}/i, 'no raw unicode escapes leak into markup');
