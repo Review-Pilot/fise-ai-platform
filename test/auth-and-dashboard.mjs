@@ -163,3 +163,28 @@ test('Google sign-in starts with PKCE and a state cookie, and rejects a callback
   assert.equal(badCallback.status, 400);
   assert.match(await badCallback.text(), /expired/);
 });
+
+test('Microsoft, Facebook and LinkedIn sign-in only show with keys and start a safe redirect', async () => {
+  const { env } = authEnvironment();
+  const plain = await (await worker.fetch(new Request(origin + '/login?mode=signup'), env)).text();
+  for (const name of ['Microsoft', 'Facebook', 'LinkedIn']) assert.doesNotMatch(plain, new RegExp('Continue with ' + name));
+  const configured = { ...env, MICROSOFT_CLIENT_ID: 'ms-id', MICROSOFT_CLIENT_SECRET: 'ms-secret', FACEBOOK_CLIENT_ID: 'fb-id', FACEBOOK_CLIENT_SECRET: 'fb-secret', LINKEDIN_CLIENT_ID: 'li-id', LINKEDIN_CLIENT_SECRET: 'li-secret' };
+  const page = await (await worker.fetch(new Request(origin + '/login?mode=signup'), configured)).text();
+  for (const name of ['Microsoft', 'Facebook', 'LinkedIn']) assert.match(page, new RegExp('Continue with ' + name));
+  assert.equal((await worker.fetch(new Request(origin + '/auth/microsoft'), env)).status, 503);
+  const expected = { microsoft: ['https://login.microsoftonline.com/common/oauth2/v2.0/authorize', 'ms-id', true], facebook: ['https://www.facebook.com/v22.0/dialog/oauth', 'fb-id', false], linkedin: ['https://www.linkedin.com/oauth/v2/authorization', 'li-id', false] };
+  for (const [provider, [base, clientId, pkce]] of Object.entries(expected)) {
+    const start = await worker.fetch(new Request(origin + '/auth/' + provider), configured);
+    assert.equal(start.status, 303, provider);
+    const location = new URL(start.headers.get('location'));
+    assert.equal(location.origin + location.pathname, base, provider);
+    assert.equal(location.searchParams.get('client_id'), clientId);
+    assert.equal(location.searchParams.get('redirect_uri'), origin + '/auth/' + provider + '/callback');
+    assert.equal(Boolean(location.searchParams.get('code_challenge')), pkce, provider + ' PKCE');
+    assert.ok(location.searchParams.get('state'));
+    assert.match(start.headers.get('set-cookie'), new RegExp('fise_oauth_' + provider + '=.*HttpOnly.*Secure'));
+    const bad = await worker.fetch(new Request(origin + '/auth/' + provider + '/callback?code=abc&state=nope'), configured);
+    assert.equal(bad.status, 400, provider);
+    assert.match(await bad.text(), /expired/);
+  }
+});

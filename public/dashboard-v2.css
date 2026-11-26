@@ -208,3 +208,4 @@ body.app-auth .auth-card .lead{margin:0 0 22px}
 .auth-card .auth-alt{margin:16px 0 0}
 .auth-legal{margin:20px 0 0;font-size:12px;color:var(--g500);line-height:1.5}
 .auth-legal a{color:var(--g600);text-decoration:underline;text-underline-offset:3px}
+.auth-social+.auth-social{margin-top:10px}
