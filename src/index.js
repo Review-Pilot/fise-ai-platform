@@ -5042,13 +5042,14 @@ var WebsiteModule = (() => {
     const profile=document.getElementById('profile-layer');
     let authenticated=false;
     let profileLoaded=false;
-    function openAccount(){modal?.classList.add('open');modal?.setAttribute('aria-hidden','false');setTimeout(()=>email?.focus(),30)}
+    function openAccount(){location.assign('/login')}
+    function openAccountModal(){modal?.classList.add('open');modal?.setAttribute('aria-hidden','false');setTimeout(()=>email?.focus(),30)}
     function showAccountView(name){
       accountStandard?.classList.toggle('hide',name==='setup');
       accountSetup?.classList.toggle('show',name==='setup');
       document.querySelectorAll('[data-account-view]').forEach((button)=>button.classList.toggle('active',button.dataset.accountView===name));
       document.querySelectorAll('[data-account-panel]').forEach((panel)=>panel.classList.toggle('active',panel.dataset.accountPanel===name));
-      openAccount();
+      openAccountModal();
       const focusTarget=name==='setup'?document.getElementById('setup-password'):document.querySelector('[data-account-panel="'+name+'"] input');
       setTimeout(()=>focusTarget?.focus(),30);
     }
