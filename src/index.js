@@ -4826,7 +4826,7 @@ var WebsiteModule = (() => {
   }
   __name(videoCustomerStories, "videoCustomerStories");
   function accountModal() {
-    const google = googleSignInEnabled ? html2`<a class="am-social" href="/auth/google"><span class="am-social-icon">${GOOGLE_LOGO}</span><span>Continue with Google</span></a><div class="am-or" role="separator"><span>or</span></div>` : "";
+    const google = socialSignInButtons("am", false);
     const legal = html2`<p class="am-legal">By continuing you agree to our <a href="/terms-and-conditions">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>`;
     return html2`<div class="account-modal" id="account-modal" aria-hidden="true"><button class="account-modal-backdrop" type="button" data-close-account aria-label="Close sign in"></button><section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title"><button class="account-close" type="button" data-close-account aria-label="Close sign in">×</button><div class="account-standard" id="account-standard"><div class="account-sent" id="account-sent">Check your email and click the one-time verification link. That verification window is only used to approve this sign-in; return here when it is complete.</div><div class="account-access-panel active" data-account-panel="register"><span class="am-pill">Free to start · no card required</span><h2 id="account-title">Create your Fise account</h2><p class="am-lead">Add an AI assistant to your website in minutes.</p>${google}<form class="am-form" method="post" action="/api/auth/request"><label class="sr-only" for="account-email">Email address</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="Enter your email"><button class="am-btn" type="submit">Continue with Email</button></form><p class="am-alt">Already have an account? <button class="am-link" type="button" data-account-view="password">Sign in</button></p>${legal}</div><div class="account-access-panel" data-account-panel="password"><h2>Welcome back</h2><p class="am-lead">Sign in to manage your assistant.</p>${google}<form class="am-form" method="post" action="/api/auth/password"><label class="sr-only" for="signin-identifier">Email address</label><input id="signin-identifier" name="identifier" type="email" autocomplete="email" maxlength="254" required placeholder="Email address"><div class="account-field password-field"><label class="sr-only" for="signin-password">Password</label><input id="signin-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Password"><button class="password-toggle" type="button" data-password-toggle="signin-password">Show</button></div><button class="am-btn" type="submit">Sign in</button></form><p class="am-alt">Forgot your password? <button class="am-link" type="button" data-account-view="email">Get a one-time sign-in link</button></p><p class="am-alt">New to Fise? <button class="am-link" type="button" data-account-view="register">Create an account</button></p>${legal}</div><div class="account-access-panel" data-account-panel="email"><h2>Sign in with an email link</h2><p class="am-lead">We will email you a one-time link. No password needed.</p><form class="am-form" method="post" action="/api/auth/request"><label class="sr-only" for="signin-email-link">Email address</label><input id="signin-email-link" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="Enter your email"><button class="am-btn" type="submit">Email me a sign-in link</button></form><p class="am-alt">The link expires after 15 minutes and can be used once. <button class="am-link" type="button" data-account-view="password">Back to sign in</button></p></div></div><div class="account-setup" id="account-setup"><h2>Finish your account</h2><p>Your email is verified. Choose a password before continuing.</p><form method="post" action="/api/account/credentials"><div class="account-field password-field"><label for="setup-password">Password</label><input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="setup-password">Show</button></div><button class="reference-button dark" type="submit">Save and continue</button></form><div class="account-note">For security, saved passwords cannot be viewed. You can show the password while typing it or replace it later.</div><button class="account-setup-skip" type="button" id="account-setup-skip">Remind me later</button></div></section></div>`;
   }
@@ -5381,7 +5381,7 @@ var WebsiteModule = (() => {
     return String.raw`(()=>{const main=document.querySelector('main');if(!main||!main.querySelector('.reference-hero'))return;const headline=main.querySelector('.reference-hero h1');if(headline)headline.innerHTML='<span class="hero-line"><span class="hero-stat">82% of visitors</span> lose interest</span><span class="hero-line">due to unanswered questions</span>';main.querySelector('.hero-trust span:last-child')?.remove();['.features-section','.customer-stories','.demo-section','.pricing-section','.steps-section','.closing-section'].forEach(selector=>{const section=main.querySelector(selector);if(section)main.appendChild(section)})})();`;
   }
   __name(requestedJavascript, "requestedJavascript");
-  const FX_ASSET_VERSION = "20261121-fx11";
+  const FX_ASSET_VERSION = "20261126-fx12";
   const FX_SITE_NAME = "Fise AI";
   function fxText(c, key) {
     const value = String(c && c[key] != null ? c[key] : "").trim() || String(WEBSITE_DEFAULTS[key] || "");
@@ -7780,7 +7780,7 @@ function fiseEmailFooter(origin) {
   return '<div style="margin-top:34px;padding:34px 30px 24px;background:#000;color:#fff"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Product</strong>' + link("/#features", "Features") + link("/#clients", "Our Clients") + link("/#pricing", "Pricing") + '</td><td width="33%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Company</strong>' + link("/about", "About") + link("/blog", "Blog") + link("/contact", "Contact") + link("/help", "Help") + '</td><td width="34%" valign="top"><strong style="display:block;margin-bottom:16px;color:#fff">Legal</strong>' + link("/privacy-policy", "Privacy Policy") + link("/cookies", "Cookies") + link("/terms-and-conditions", "T&amp;C\'s") + '</td></tr></table><p style="margin:12px 0 30px;text-align:center"><a href="' + escapeHtml(base + "/dashboard") + '" style="display:inline-block;padding:12px 24px;border-radius:999px;color:#000;background:#fff;font-weight:bold;text-decoration:none">Chatbot</a></p><div style="padding-top:20px;border-top:1px solid #333;color:#fff;font-size:12px;line-height:1.6"><span>© 2026 Fise AI. All rights reserved.</span><span style="float:right">Built for businesses that care about every conversation.</span></div></div>';
 }
 __name(fiseEmailFooter, "fiseEmailFooter");
-var APP_ASSET_VERSION = "20260924-app4";
+var APP_ASSET_VERSION = "20260924-app5";
 function appHead(title) {
   return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#FAFAFA"><title>${escapeHtml(title)} · Fise AI</title><link rel="icon" href="/favicon.png" type="image/png" sizes="256x256"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="preload" href="/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site.css?v=${APP_ASSET_VERSION}"><link rel="stylesheet" href="/dashboard-v2.css?v=${APP_ASSET_VERSION}">`;
 }
@@ -7950,7 +7950,7 @@ function loginPage(message = "", isError = false, embedded = false, mode = "") {
   const embedField = embedded ? html`<input type="hidden" name="embed" value="1" />` : "";
   const initial = mode === "signup" || mode === "email" ? "register" : "password";
   const tab = (key, label) => html`<button type="button" role="tab" id="auth-tab-${key}" aria-controls="auth-panel-${key}" aria-selected="${initial === key}" tabindex="${initial === key ? 0 : -1}">${label}</button>`;
-  const google = googleSignInEnabled && !embedded ? html`<a class="auth-social" href="/auth/google"><span class="auth-social-icon">${GOOGLE_LOGO}</span><span>Continue with Google</span></a><div class="auth-or" role="separator"><span>or</span></div>` : "";
+  const google = socialSignInButtons("auth", embedded);
   const legal = html`<p class="auth-legal">By continuing you agree to our <a href="/terms-and-conditions">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>`;
   return page(
     "Sign in",
@@ -8004,6 +8004,163 @@ function loginPage(message = "", isError = false, embedded = false, mode = "") {
   );
 }
 __name(loginPage, "loginPage");
+var enabledSignInProviders = [];
+var MICROSOFT_PERSONAL_TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad";
+function decodeJwtClaims(token) {
+  const payload = String(token || "").split(".")[1] || "";
+  const base64 = payload.replaceAll("-", "+").replaceAll("_", "/");
+  return JSON.parse(atob(base64 + "=".repeat((4 - base64.length % 4) % 4)));
+}
+__name(decodeJwtClaims, "decodeJwtClaims");
+var OAUTH_PROVIDERS = {
+  microsoft: {
+    name: "Microsoft",
+    idEnv: "MICROSOFT_CLIENT_ID",
+    secretEnv: "MICROSOFT_CLIENT_SECRET",
+    authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    token: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    scope: "openid email profile",
+    pkce: true,
+    extra: { response_mode: "query", prompt: "select_account" },
+    async identity(tokens, env) {
+      const claims = decodeJwtClaims(tokens.id_token);
+      const tenant = String(claims.tid || "");
+      const email = normalizeEmail(claims.email);
+      if (claims.iss !== `https://login.microsoftonline.com/${tenant}/v2.0` || claims.aud !== env.MICROSOFT_CLIENT_ID || !(Number(claims.exp) * 1e3 > Date.now()) || !email)
+        return { error: "Microsoft did not share an email address for this account. Please try again or use your email." };
+      const verified = tenant === MICROSOFT_PERSONAL_TENANT || claims.xms_edov === true || claims.xms_edov === 1 || claims.xms_edov === "1" || claims.xms_edov === "true";
+      if (!verified)
+        return { error: "Microsoft could not confirm that you own this work email address. Please use Continue with Email instead." };
+      return { email };
+    }
+  },
+  facebook: {
+    name: "Facebook",
+    idEnv: "FACEBOOK_CLIENT_ID",
+    secretEnv: "FACEBOOK_CLIENT_SECRET",
+    authorize: "https://www.facebook.com/v22.0/dialog/oauth",
+    token: "https://graph.facebook.com/v22.0/oauth/access_token",
+    tokenMethod: "GET",
+    scope: "email,public_profile",
+    pkce: false,
+    extra: {},
+    async identity(tokens) {
+      const response = await fetch("https://graph.facebook.com/v22.0/me?" + new URLSearchParams({ fields: "id,name,email", access_token: tokens.access_token }).toString());
+      const profile = await response.json();
+      const email = normalizeEmail(profile?.email);
+      if (!response.ok || !email)
+        return { error: "Facebook did not share an email address for this account. Please use Continue with Email instead." };
+      return { email };
+    }
+  },
+  linkedin: {
+    name: "LinkedIn",
+    idEnv: "LINKEDIN_CLIENT_ID",
+    secretEnv: "LINKEDIN_CLIENT_SECRET",
+    authorize: "https://www.linkedin.com/oauth/v2/authorization",
+    token: "https://www.linkedin.com/oauth/v2/accessToken",
+    scope: "openid profile email",
+    pkce: false,
+    extra: {},
+    async identity(tokens, env) {
+      const claims = decodeJwtClaims(tokens.id_token);
+      const email = normalizeEmail(claims.email);
+      const verified = claims.email_verified === true || claims.email_verified === "true";
+      if (claims.iss !== "https://www.linkedin.com" || claims.aud !== env.LINKEDIN_CLIENT_ID || !(Number(claims.exp) * 1e3 > Date.now()) || !email || !verified)
+        return { error: "LinkedIn did not confirm a verified email address for this account. Please try again or use your email." };
+      return { email };
+    }
+  }
+};
+var OAUTH_BUTTONS = [
+  { key: "google", label: "Google", logo: GOOGLE_LOGO },
+  { key: "microsoft", label: "Microsoft", logo: '<svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#F25022" d="M1 1h10v10H1z"/><path fill="#7FBA00" d="M12 1h10v10H12z"/><path fill="#00A4EF" d="M1 12h10v10H1z"/><path fill="#FFB900" d="M12 12h10v10H12z"/></svg>' },
+  { key: "facebook", label: "Facebook", logo: '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0866FF" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg>' },
+  { key: "linkedin", label: "LinkedIn", logo: '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0A66C2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>' }
+];
+function oauthConfigured(env, provider) {
+  const config = OAUTH_PROVIDERS[provider];
+  return Boolean(config && env?.[config.idEnv] && env?.[config.secretEnv]);
+}
+__name(oauthConfigured, "oauthConfigured");
+function socialSignInButtons(prefix, embedded) {
+  if (embedded) return "";
+  const buttons = OAUTH_BUTTONS.filter((item) => item.key === "google" ? googleSignInEnabled : enabledSignInProviders.includes(item.key)).map((item) => `<a class="${prefix}-social" href="/auth/${item.key}"><span class="${prefix}-social-icon">${item.logo}</span><span>Continue with ${item.label}</span></a>`).join("");
+  return buttons ? buttons + `<div class="${prefix}-or" role="separator"><span>or</span></div>` : "";
+}
+__name(socialSignInButtons, "socialSignInButtons");
+async function startOAuth(provider, request, env) {
+  const config = OAUTH_PROVIDERS[provider];
+  if (!config || !oauthConfigured(env, provider))
+    return loginPageResponse(`${config ? config.name : "That"} sign-in is not available yet. Please continue with your email instead.`, true, false, 503);
+  const url = new URL(request.url);
+  const state = randomToken();
+  const verifier = config.pkce ? randomToken() + randomToken() : "";
+  const params = new URLSearchParams({
+    client_id: env[config.idEnv],
+    redirect_uri: `${url.origin}/auth/${provider}/callback`,
+    response_type: "code",
+    scope: config.scope,
+    state,
+    ...config.extra
+  });
+  if (config.pkce) {
+    params.set("code_challenge", googleBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)))));
+    params.set("code_challenge_method", "S256");
+  }
+  const returnTo = safeReturnPath(url.searchParams.get("return_to"), "/dashboard");
+  const cookie = `fise_oauth_${provider}=${encodeURIComponent(JSON.stringify([state, verifier, returnTo]))}; Path=/auth/${provider}; Max-Age=600; HttpOnly; Secure; SameSite=Lax`;
+  return redirect(config.authorize + "?" + params.toString(), { "set-cookie": cookie });
+}
+__name(startOAuth, "startOAuth");
+async function finishOAuth(provider, request, env) {
+  const config = OAUTH_PROVIDERS[provider];
+  const url = new URL(request.url);
+  const cookieName = `fise_oauth_${provider}`;
+  const clearCookie = `${cookieName}=; Path=/auth/${provider}; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+  const fail = (message, status = 400) => {
+    const response = loginPageResponse(message, true, false, status);
+    response.headers.append("set-cookie", clearCookie);
+    return response;
+  };
+  if (!config || !oauthConfigured(env, provider))
+    return fail(`${config ? config.name : "That"} sign-in is not available yet. Please continue with your email instead.`, 503);
+  if (url.searchParams.get("error"))
+    return fail(`${config.name} sign-in was cancelled. You can try again or continue with your email.`);
+  let saved = null;
+  try {
+    saved = JSON.parse(cookieValue(request, cookieName) || "null");
+  } catch {
+    saved = null;
+  }
+  const code = url.searchParams.get("code") || "";
+  if (!Array.isArray(saved) || !code || saved[0] !== url.searchParams.get("state"))
+    return fail(`That ${config.name} sign-in has expired. Please try again.`);
+  let identity = null;
+  try {
+    const body = new URLSearchParams({
+      code,
+      client_id: env[config.idEnv],
+      client_secret: env[config.secretEnv],
+      redirect_uri: `${url.origin}/auth/${provider}/callback`,
+      grant_type: "authorization_code"
+    });
+    if (config.pkce) body.set("code_verifier", String(saved[1] || ""));
+    const tokenResponse = config.tokenMethod === "GET" ? await fetch(config.token + "?" + body.toString()) : await fetch(config.token, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body });
+    const tokens = await tokenResponse.json();
+    if (!tokenResponse.ok || !(tokens.id_token || tokens.access_token)) throw new Error(tokens.error || "token exchange failed");
+    identity = await config.identity(tokens, env);
+  } catch (error) {
+    console.error(`${config.name} sign-in failed`, error?.message || error);
+    return fail(`We could not complete ${config.name} sign-in. Please try again or continue with your email.`);
+  }
+  if (!identity || identity.error || !identity.email)
+    return fail(identity?.error || `${config.name} did not confirm an email address for this account.`);
+  const response = await createEmailSession(identity.email, env, safeReturnPath(saved[2], "/dashboard"));
+  response.headers.append("set-cookie", clearCookie);
+  return response;
+}
+__name(finishOAuth, "finishOAuth");
 function googleBase64Url(bytes) {
   let binary = "";
   for (const value of bytes) binary += String.fromCharCode(value);
@@ -10935,6 +11092,9 @@ async function routeFiseRequest(request, env, url) {
         return passwordLogin(request, env);
       if (url.pathname === "/api/account/credentials" && request.method === "POST")
         return saveAccountCredentials(request, env);
+      const oauthMatch = url.pathname.match(/^\/auth\/(microsoft|facebook|linkedin)(\/callback)?$/);
+      if (oauthMatch && request.method === "GET")
+        return oauthMatch[2] ? finishOAuth(oauthMatch[1], request, env) : startOAuth(oauthMatch[1], request, env);
       if (url.pathname === "/auth/google" && request.method === "GET")
         return startGoogleSignIn(request, env);
       if (url.pathname === "/auth/google/callback" && request.method === "GET")
@@ -11080,6 +11240,7 @@ var index_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
     googleSignInEnabled = Boolean(env?.GOOGLE_CLIENT_ID && env?.GOOGLE_CLIENT_SECRET);
+    enabledSignInProviders = Object.keys(OAUTH_PROVIDERS).filter((provider) => oauthConfigured(env, provider));
     try {
       return await routeFiseRequest(request, env, url);
     } catch (error) {
