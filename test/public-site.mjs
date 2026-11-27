@@ -70,7 +70,8 @@ test('homepage renders every redesigned section with accessible controls', async
   for (const id of ['features', 'how', 'install', 'insights', 'pricing', 'faq']) assert.match(html, new RegExp(`id="${id}"`), id);
   assert.match(html, /role="tablist"/);
   assert.match(html, /role="radiogroup" aria-label="Billing period"/);
-  assert.match(html, /data-carousel/);
+  // The logo strip and the testimonials (the carousel) are switched together by FX_SHOW_TESTIMONIALS.
+  assert.equal(/data-carousel/.test(html), /Helping businesses answer every visitor/.test(html), 'logo strip and testimonials show or hide together');
   assert.match(html, /aria-controls="fx-mobile-menu"/);
   assert.match(html, /R16,000 billed yearly/, 'annual price is 8x monthly');
   assert.match(html, /Annual <em>4 months free<\/em>/);
