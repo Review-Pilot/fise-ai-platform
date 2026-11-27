@@ -5578,8 +5578,11 @@ var WebsiteModule = (() => {
     return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\<")}<\/script>`;
   }
   __name(fxJsonLd, "fxJsonLd");
+  // The "Helping businesses answer every visitor" logo strip and the "Customer stories"
+  // testimonials are hidden for now. Set this to true ("turn on testimonials") to show both again.
+  const FX_SHOW_TESTIMONIALS = false;
   function referenceHome(c) {
-    const body = html2`<main>${fxHero(c)}${fxLogoBar()}${fxHowItWorks(c)}${fxVideo()}${fxCapabilities()}${fxTestimonials()}${fxStats()}${fxPricing(c)}${fxFaq(c)}${fxCta(c)}</main>`;
+    const body = html2`<main>${fxHero(c)}${FX_SHOW_TESTIMONIALS ? fxLogoBar() : ""}${fxHowItWorks(c)}${fxVideo()}${fxCapabilities()}${FX_SHOW_TESTIMONIALS ? fxTestimonials() : ""}${fxStats()}${fxPricing(c)}${fxFaq(c)}${fxCta(c)}</main>`;
     return referenceShell(fxText(c, "seo_home_title"), fxText(c, "seo_home_description"), body, c, "fx-home", { jsonLd: fxJsonLd(c) });
   }
   __name(referenceHome, "referenceHome");
